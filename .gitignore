@@ -1,0 +1,33 @@
+# Secrets
+.env
+*.env
+
+# Claude Code
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+*.egg-info/
+
+# Uploads (user CV files — never commit)
+Backend/uploads/
+
+# ChromaDB local data
+chroma_db/
+
+# Node / Frontend
+node_modules/
+dist/
+.next/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
