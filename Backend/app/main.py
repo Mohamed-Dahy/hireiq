@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import cv
+from routers import cv, auth
+from database import create_tables
 
 app = FastAPI(
     title="HireIQ API",
@@ -19,15 +20,19 @@ app.add_middleware(
 )
 
 
+# Create DB tables on startup if they don't exist
+@app.on_event("startup")
+def startup():
+    create_tables()
+
+
 # --- Health check (confirms the server is running) ---
 @app.get("/health")
 def health_check():
     return {"status": "ok", "service": "HireIQ API"}
 
 
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(cv.router, prefix="/cv", tags=["cv"])
-
-# Uncommented as we build each feature:
-# app.include_router(auth.router,      prefix="/auth",      tags=["auth"])
 # app.include_router(analysis.router,  prefix="/analyze",   tags=["analysis"])
 # app.include_router(interview.router, prefix="/interview", tags=["interview"])

@@ -5,7 +5,7 @@ Pydantic models that define what the API accepts (requests)
 and what it returns (responses). No raw dicts ever leave the API.
 """
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
 from datetime import datetime
 
@@ -16,7 +16,17 @@ from datetime import datetime
 
 class RegisterRequest(BaseModel):
     email: EmailStr
+    username: str
     password: str
+
+    @field_validator("password")
+    @classmethod
+    def password_length(cls, v: str) -> str:
+        if len(v.encode("utf-8")) > 72:
+            raise ValueError("Password must be 72 characters or fewer")
+        if len(v) < 6:
+            raise ValueError("Password must be at least 6 characters")
+        return v
 
 
 class LoginRequest(BaseModel):
