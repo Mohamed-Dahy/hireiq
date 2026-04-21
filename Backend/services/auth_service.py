@@ -7,33 +7,29 @@ All auth logic lives here — routers just call these functions.
 
 from datetime import datetime, timedelta
 
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from database import get_db
 from models.user import User
 
-# bcrypt context for hashing passwords
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# Tells FastAPI where to find the token (POST /auth/login returns it)
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+bearer_scheme = HTTPBearer()
 
 
 # ---------------------------------------------------------------------------
-# Password helpers
+# Password helpers — using bcrypt directly (passlib incompatible with bcrypt 4.x)
 # ---------------------------------------------------------------------------
 
 def hash_password(plain: str) -> str:
-    return pwd_context.hash(plain)
+    return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
 
 
 # ---------------------------------------------------------------------------
@@ -71,14 +67,14 @@ def decode_token(token: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> User:
     """
     Dependency for protected endpoints.
     Usage: current_user: User = Depends(get_current_user)
     """
-    payload = decode_token(token)
+    payload = decode_token(credentials.credentials)
 
     if payload.get("type") != "access":
         raise HTTPException(status_code=401, detail="Invalid token type")

@@ -1,8 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer
 
-from routers import cv, auth
+from routers import cv, auth, analysis
 from database import create_tables
+
+security = HTTPBearer()
 
 app = FastAPI(
     title="HireIQ API",
@@ -32,7 +35,8 @@ def health_check():
     return {"status": "ok", "service": "HireIQ API"}
 
 
-app.include_router(auth.router, prefix="/auth", tags=["auth"])
-app.include_router(cv.router, prefix="/cv", tags=["cv"])
+app.include_router(auth.router,     prefix="/auth",    tags=["auth"])
+app.include_router(cv.router,       prefix="/cv",      tags=["cv"])
+app.include_router(analysis.router, prefix="/analyze", tags=["analysis"])
 # app.include_router(analysis.router,  prefix="/analyze",   tags=["analysis"])
 # app.include_router(interview.router, prefix="/interview", tags=["interview"])

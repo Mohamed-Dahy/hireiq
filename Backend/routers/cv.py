@@ -13,11 +13,12 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from database import get_db
-from models.user import CVSession
+from models.user import CVSession, User
 from models.schemas import CVUploadResponse, CVSessionResponse
 from services.cv_parser import parse_cv
 from services.rag_scorer import store_embeddings, compute_match_score
 from services.cache import get_cached_score, set_cached_score
+from services.auth_service import get_current_user
 
 router = APIRouter()
 
@@ -27,6 +28,7 @@ async def upload_cv(
     cv_file: UploadFile = File(..., description="PDF version of the candidate's CV"),
     jd_text: str = Form(..., description="Plain-text job description to match against"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     1. Save the uploaded PDF to disk
@@ -53,6 +55,7 @@ async def upload_cv(
 
     # --- 4. Save to Postgres ---
     session = CVSession(
+        user_id=current_user.id,
         cv_filename=cv_file.filename,
         jd_text=jd_text,
         match_score=score,

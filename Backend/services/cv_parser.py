@@ -11,8 +11,13 @@ a small built-in list. We will expand this with a proper spaCy pipeline later.
 import fitz  # PyMuPDF — reads PDF pages
 import spacy
 
-# Load the small English model (run: python -m spacy download en_core_web_sm)
-nlp = spacy.load("en_core_web_sm")
+_nlp = None
+
+def _get_nlp():
+    global _nlp
+    if _nlp is None:
+        _nlp = spacy.load("en_core_web_sm")
+    return _nlp
 
 # Basic skill keywords — we will grow this list or replace with a spaCy EntityRuler
 COMMON_SKILLS = [
@@ -38,7 +43,7 @@ def extract_entities(text: str) -> dict:
     - orgs        : companies / schools detected by spaCy
     - dates       : years / date ranges (for experience calculation later)
     """
-    doc = nlp(text)
+    doc = _get_nlp()(text)
     lower_text = text.lower()
 
     skills_found = [skill for skill in COMMON_SKILLS if skill in lower_text]
