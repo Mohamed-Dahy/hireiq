@@ -91,6 +91,21 @@ class InterviewResultResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# CV session detail (session + all its interview results)
+# ---------------------------------------------------------------------------
+
+class CVSessionDetailResponse(BaseModel):
+    id: int
+    cv_filename: str
+    match_score: Optional[float]
+    created_at: datetime
+    interview_results: list[InterviewResultResponse]
+
+    class Config:
+        from_attributes = True
+
+
+# ---------------------------------------------------------------------------
 # Analysis (skill gap)
 # ---------------------------------------------------------------------------
 
@@ -100,3 +115,21 @@ class AnalysisRequest(BaseModel):
 
 # The response for analysis is streamed via SSE, not a single JSON blob,
 # so no response schema is needed here — the stream sends plain text chunks.
+
+
+# ---------------------------------------------------------------------------
+# User profile + stats
+# ---------------------------------------------------------------------------
+
+class UserProfileResponse(BaseModel):
+    id: int
+    email: str
+    username: str
+    created_at: datetime
+    total_sessions: int
+    avg_match_score: Optional[float]
+    total_interviews: int
+    best_score: Optional[float]
+
+    class Config:
+        from_attributes = True

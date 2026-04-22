@@ -1,53 +1,50 @@
 """
 routers/analysis.py
 -------------------
-POST /analyze  — streams skill gap analysis + interview questions via SSE.
+GET /analyze?session_id=X&token=JWT  — streams skill gap analysis via SSE.
 
-The frontend connects and receives tokens as they arrive from Groq,
-so the user sees results appear live instead of waiting for the full response.
+EventSource (browser) only supports GET and cannot set Authorization headers,
+so we accept the JWT as a query param and validate it manually here.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+import os
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from database import get_db
-from models.user import CVSession, User
-from models.schemas import AnalysisRequest
+from models.user import CVSession
 from services.llm_analyzer import stream_analysis
-from services.auth_service import get_current_user
+from services.auth_service import decode_token
+from services.cv_parser import extract_text_from_pdf
 
 router = APIRouter()
 
 
-@router.post("")
+@router.get("")
 def analyze(
-    payload: AnalysisRequest,
+    session_id: int = Query(...),
+    token: str = Query(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
     """
-    Stream skill gap analysis for a CV session.
-    Returns Server-Sent Events (SSE) — each chunk is a piece of the LLM response.
-
-    Frontend usage:
-        const source = new EventSource('/analyze')
-        source.onmessage = (e) => appendText(e.data)
+    Stream skill gap analysis for a CV session via Server-Sent Events.
+    The token query param is used because EventSource cannot send headers.
     """
 
-    # Load the session and verify it belongs to the current user
-    session = db.query(CVSession).filter(CVSession.id == payload.session_id).first()
+    # Validate JWT manually (can't use Depends(get_current_user) with SSE GET)
+    payload = decode_token(token)
+    if payload.get("type") != "access":
+        raise HTTPException(status_code=401, detail="Invalid token type")
+    user_id = int(payload.get("sub", 0))
 
+    session = db.query(CVSession).filter(CVSession.id == session_id).first()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-
-    if session.user_id != current_user.id:
+    if session.user_id != user_id:
         raise HTTPException(status_code=403, detail="Not your session")
-
-    # Read CV text from the stored file
-    import os
-    from app.config import settings
-    from services.cv_parser import extract_text_from_pdf
 
     cv_path = os.path.join(settings.upload_dir, session.cv_filename)
     if not os.path.exists(cv_path):
@@ -56,9 +53,7 @@ def analyze(
     cv_text = extract_text_from_pdf(cv_path)
 
     def event_stream():
-        """Wrap each LLM chunk in SSE format: 'data: <chunk>\n\n'"""
         for chunk in stream_analysis(cv_text=cv_text, jd_text=session.jd_text):
-            # Replace newlines so SSE protocol isn't broken
             safe_chunk = chunk.replace("\n", "\\n")
             yield f"data: {safe_chunk}\n\n"
         yield "data: [DONE]\n\n"
@@ -68,6 +63,6 @@ def analyze(
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",   # disables Nginx buffering if deployed
+            "X-Accel-Buffering": "no",
         },
     )
