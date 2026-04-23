@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import type { Variants } from 'framer-motion'
+import confetti from 'canvas-confetti'
 import ScoreGauge from '../components/ScoreGauge'
 import SkillGapList from '../components/SkillGapList'
 import QuestionCard from '../components/QuestionCard'
+import { useToast } from '../components/Toast'
 import type { CVUploadResponse } from '../api'
 import { parseQuestions } from '../utils/parseQuestions'
 
@@ -20,11 +22,29 @@ const fadeUp: Variants = {
 
 export default function Results({ result, onBack, onPractice }: Props) {
   const reduced = useReducedMotion()
+  const toast = useToast()
   const [analysis, setAnalysis] = useState('')
   const [streaming, setStreaming] = useState(true)
   const [downloading, setDownloading] = useState(false)
 
   const questions = parseQuestions(analysis)
+
+  // Celebrate high scores
+  useEffect(() => {
+    if (reduced || result.match_score < 70) return
+    const t = setTimeout(() => {
+      const colors = ['#7c3aed', '#a78bfa', '#c4b5fd', '#ddd6fe']
+      confetti({
+        particleCount: 90,
+        spread: 70,
+        origin: { y: 0.35 },
+        colors,
+        scalar: 0.9,
+        ticks: 220,
+      })
+    }, 600)
+    return () => clearTimeout(t)
+  }, [result.match_score, reduced])
 
   useEffect(() => {
     const token = localStorage.getItem('access_token')
@@ -46,7 +66,7 @@ export default function Results({ result, onBack, onPractice }: Props) {
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: 'Unknown error' }))
-        alert(`Report failed: ${err.detail ?? res.statusText}`)
+        toast.error(`Report failed: ${err.detail ?? res.statusText}`)
         return
       }
       const blob = await res.blob()
@@ -58,8 +78,9 @@ export default function Results({ result, onBack, onPractice }: Props) {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
-    } catch (e) {
-      alert('Could not download report — is the backend running?')
+      toast.success('Report downloaded')
+    } catch {
+      toast.error('Could not download report — is the backend running?')
     } finally {
       setDownloading(false)
     }

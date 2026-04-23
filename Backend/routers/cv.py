@@ -18,7 +18,7 @@ from models.user import CVSession, InterviewResult, User
 from models.schemas import CVUploadResponse, CVSessionResponse, CVSessionDetailResponse
 from services.cv_parser import parse_cv, extract_text_from_pdf
 from services.rag_scorer import store_embeddings, compute_match_score
-from services.cache import get_cached_score, set_cached_score
+from services.cache import get_cached_score, set_cached_score, clear_cached_score
 from services.auth_service import get_current_user
 from services.report_generator import generate_report
 from services.llm_analyzer import run_analysis
@@ -170,6 +170,26 @@ def download_report(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.delete("/{session_id}", status_code=204)
+def delete_session(
+    session_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a CV session, its interview results, and any cached score."""
+    session = db.query(CVSession).filter(CVSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not your session")
+
+    db.query(InterviewResult).filter(InterviewResult.session_id == session_id).delete()
+    db.delete(session)
+    db.commit()
+    clear_cached_score(session_id)
+    return Response(status_code=204)
 
 
 @router.get("/{session_id}/score", response_model=CVSessionResponse)

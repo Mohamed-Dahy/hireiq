@@ -92,6 +92,9 @@ export const getSessions = () =>
 export const getSessionDetail = (sessionId: number) =>
   api.get<CVSessionDetail>(`/cv/${sessionId}/detail`)
 
+export const deleteSession = (sessionId: number) =>
+  api.delete(`/cv/${sessionId}`)
+
 // ── Analysis (SSE stream) ─────────────────────────────────────────────────────
 
 export const startAnalysisStream = (sessionId: number): EventSource =>

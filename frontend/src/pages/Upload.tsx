@@ -73,22 +73,47 @@ export default function Upload({ onDone }: Props) {
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           />
           <motion.div
-            animate={file ? { scale: reduced ? 1 : 1.1 } : { scale: 1 }}
+            animate={file ? { scale: reduced ? 1 : 1.02 } : { scale: 1 }}
             transition={{ duration: 0.25 }}
             className="flex flex-col items-center gap-2"
           >
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-1 ${file ? 'bg-purple-100' : 'bg-gray-100'}`}>
+            <motion.div
+              animate={dragging ? { y: reduced ? 0 : -4 } : { y: 0 }}
+              transition={{ duration: 0.2, repeat: dragging && !reduced ? Infinity : 0, repeatType: 'reverse' }}
+              className={`w-12 h-12 rounded-xl flex items-center justify-center mb-1 ${file ? 'bg-purple-100' : 'bg-gray-100'}`}
+            >
               <svg viewBox="0 0 24 24" fill="none" stroke={file ? '#7c3aed' : '#9ca3af'} strokeWidth="1.8" className="w-6 h-6">
                 <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-            </div>
-            {file
-              ? <p className="text-sm font-semibold text-purple-700">{file.name}</p>
-              : <>
-                  <p className="text-sm font-medium text-gray-600">Drop your PDF here or click to browse</p>
-                  <p className="text-xs text-gray-400">PDF files only</p>
-                </>
-            }
+            </motion.div>
+            {file ? (
+              <div className="flex items-center gap-2 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 max-w-full">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="1.8" className="w-4 h-4 shrink-0">
+                  <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <div className="min-w-0 text-left">
+                  <p className="text-sm font-semibold text-purple-800 truncate max-w-[260px]">{file.name}</p>
+                  <p className="text-xs text-purple-500">{(file.size / 1024).toFixed(1)} KB</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setFile(null) }}
+                  aria-label="Remove file"
+                  className="ml-1 text-purple-400 hover:text-red-500 cursor-pointer p-1"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                    <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm font-medium text-gray-600">
+                  {dragging ? 'Drop to upload' : 'Drop your PDF here or click to browse'}
+                </p>
+                <p className="text-xs text-gray-400">PDF files only</p>
+              </>
+            )}
           </motion.div>
         </motion.div>
 

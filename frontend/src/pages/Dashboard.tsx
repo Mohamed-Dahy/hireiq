@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
+import {
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+} from 'recharts'
 import { getMe, getSessions } from '../api'
 import type { UserProfile, CVSession } from '../api'
 
@@ -89,6 +92,18 @@ export default function Dashboard({ onAnalyze, onHistory, onInterview, onSession
 
   const recent = sessions.slice(0, 4)
 
+  // Chart data: last 10 scored sessions, oldest → newest for left-to-right reading
+  const chartData = [...sessions]
+    .filter((s) => s.match_score != null)
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    .slice(-10)
+    .map((s, i) => ({
+      idx: i + 1,
+      score: s.match_score,
+      date: new Date(s.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+      filename: s.cv_filename,
+    }))
+
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto py-20 px-4 space-y-4">
@@ -161,7 +176,7 @@ export default function Dashboard({ onAnalyze, onHistory, onInterview, onSession
       {/* Quick actions */}
       <div>
         <h2 className="text-sm font-semibold text-gray-700 mb-3">Quick Actions</h2>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <QuickAction
             primary
             onClick={onAnalyze}
@@ -195,6 +210,74 @@ export default function Dashboard({ onAnalyze, onHistory, onInterview, onSession
           />
         </div>
       </div>
+
+      {/* Score trend chart */}
+      {chartData.length >= 2 && (
+        <motion.div
+          variants={fadeUp}
+          initial="hidden"
+          animate="show"
+          className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-700">Score Trend</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Last {chartData.length} sessions</p>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-gray-400">
+              <span className="w-2 h-2 rounded-full bg-purple-500" />
+              Match score
+            </div>
+          </div>
+
+          <div className="h-48 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="scoreFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#7c3aed" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#7c3aed" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 10, fill: '#9ca3af' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  domain={[0, 100]}
+                  tick={{ fontSize: 10, fill: '#9ca3af' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: '#fff',
+                    border: '1px solid #ede9fe',
+                    borderRadius: 8,
+                    fontSize: 12,
+                    boxShadow: '0 4px 12px rgba(124,58,237,0.1)',
+                  }}
+                  labelStyle={{ color: '#6b7280', fontWeight: 600 }}
+                  formatter={(value) => [`${value}%`, 'Match']}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="score"
+                  stroke="#7c3aed"
+                  strokeWidth={2.5}
+                  fill="url(#scoreFill)"
+                  dot={{ r: 3.5, fill: '#7c3aed', stroke: '#fff', strokeWidth: 2 }}
+                  activeDot={{ r: 5, fill: '#7c3aed', stroke: '#fff', strokeWidth: 2 }}
+                  animationDuration={reduced ? 0 : 800}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+      )}
 
       {/* Recent sessions */}
       {recent.length > 0 && (

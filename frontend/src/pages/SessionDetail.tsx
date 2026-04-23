@@ -6,6 +6,7 @@ import { parseQuestions } from '../utils/parseQuestions'
 import type { CVSessionDetail, InterviewResult } from '../api'
 import ScoreGauge from '../components/ScoreGauge'
 import SkillGapList from '../components/SkillGapList'
+import { useToast } from '../components/Toast'
 
 interface Props {
   sessionId: number
@@ -112,6 +113,7 @@ function InterviewCard({ result, index }: { result: InterviewResult; index: numb
 
 export default function SessionDetail({ sessionId, onBack, onPractice }: Props) {
   const reduced = useReducedMotion()
+  const toast = useToast()
   const [detail, setDetail] = useState<CVSessionDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -147,7 +149,7 @@ export default function SessionDetail({ sessionId, onBack, onPractice }: Props) 
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: 'Unknown error' }))
-        alert(`Report failed: ${err.detail ?? res.statusText}`)
+        toast.error(`Report failed: ${err.detail ?? res.statusText}`)
         return
       }
       const blob = await res.blob()
@@ -159,8 +161,9 @@ export default function SessionDetail({ sessionId, onBack, onPractice }: Props) 
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
+      toast.success('Report downloaded')
     } catch {
-      alert('Could not download report — is the backend running?')
+      toast.error('Could not download report — is the backend running?')
     }
   }
 

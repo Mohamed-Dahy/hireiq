@@ -50,6 +50,7 @@ export default function App() {
   const [interviewSessionId, setInterviewSessionId] = useState<number | undefined>()
   const [detailSessionId, setDetailSessionId] = useState<number | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   // Fetch user profile once logged in
   useEffect(() => {
@@ -86,11 +87,13 @@ export default function App() {
   const activeNav = (id: Page) =>
     page === id || (page === 'detail' && id === 'history') || (page === 'results' && id === 'upload')
 
+  const goToPage = (id: Page) => { setPage(id); setMobileOpen(false) }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Nav */}
-      <nav className="bg-white border-b border-purple-100 px-6 py-3 flex items-center justify-between sticky top-0 z-40 shadow-sm shadow-purple-50">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setPage('home')}>
+      <nav className="bg-white border-b border-purple-100 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-40 shadow-sm shadow-purple-50">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => goToPage('home')}>
           <div className="w-7 h-7 rounded-lg bg-purple-600 flex items-center justify-center">
             <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
@@ -99,7 +102,8 @@ export default function App() {
           <span className="font-bold text-purple-700 text-lg tracking-tight">HireIQ</span>
         </div>
 
-        <div className="flex items-center gap-6">
+        {/* Desktop nav */}
+        <div className="hidden md:flex items-center gap-6">
           {navItems.map(({ id, label }) => (
             <motion.button
               key={id}
@@ -117,11 +121,92 @@ export default function App() {
               )}
             </motion.button>
           ))}
-
-          {/* Profile avatar */}
           <NavAvatar profile={profile} onClick={() => setPage('profile')} />
         </div>
+
+        {/* Mobile: avatar + hamburger */}
+        <div className="flex md:hidden items-center gap-3">
+          <NavAvatar profile={profile} onClick={() => goToPage('profile')} />
+          <button
+            onClick={() => setMobileOpen((v) => !v)}
+            aria-label="Menu"
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-600 hover:bg-purple-50 hover:text-purple-600 transition-colors cursor-pointer"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+              {mobileOpen ? (
+                <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/>
+              ) : (
+                <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" strokeLinejoin="round"/>
+              )}
+            </svg>
+          </button>
+        </div>
       </nav>
+
+      {/* Mobile drawer */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              onClick={() => setMobileOpen(false)}
+              className="fixed inset-0 bg-gray-900/30 backdrop-blur-sm z-50 md:hidden"
+            />
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ duration: 0.25, ease: [0, 0, 0.2, 1] }}
+              className="fixed top-0 right-0 bottom-0 w-72 bg-white z-[60] shadow-2xl flex flex-col md:hidden"
+            >
+              <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                <span className="text-sm font-semibold text-gray-700">Menu</span>
+                <button
+                  onClick={() => setMobileOpen(false)}
+                  aria-label="Close menu"
+                  className="text-gray-400 hover:text-gray-700 cursor-pointer"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+                    <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+              <nav className="flex flex-col p-2 gap-1 flex-1">
+                {navItems.map(({ id, label }) => (
+                  <button
+                    key={id}
+                    onClick={() => goToPage(id)}
+                    className={`text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
+                      activeNav(id)
+                        ? 'bg-purple-50 text-purple-700'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+                <button
+                  onClick={() => goToPage('profile')}
+                  className={`text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
+                    page === 'profile' ? 'bg-purple-50 text-purple-700' : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Profile
+                </button>
+              </nav>
+              <button
+                onClick={() => { setMobileOpen(false); logout() }}
+                className="m-4 px-4 py-2.5 rounded-xl border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50 transition-colors cursor-pointer"
+              >
+                Log out
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence mode="wait">
         {page === 'home' && (

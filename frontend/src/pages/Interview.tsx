@@ -16,7 +16,7 @@ export default function Interview({ sessionId, questions = [] }: Props) {
   const [active, setActive] = useState(false)
   const [selectedQ, setSelectedQ] = useState(questions[0] ?? '')
   const [customQ, setCustomQ] = useState('')
-  const { recording, audioBlob, start, stop } = useRecorder()
+  const { recording, audioBlob, start, stop, error: micError } = useRecorder()
   const [feedback, setFeedback] = useState<null | {
     transcript: string
     clarity_score: number
@@ -27,7 +27,7 @@ export default function Interview({ sessionId, questions = [] }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  useWebcam(videoRef, active)
+  const { error: camError } = useWebcam(videoRef, active)
 
   const activeQuestion = selectedQ || customQ
 
@@ -119,15 +119,53 @@ export default function Interview({ sessionId, questions = [] }: Props) {
           transition={{ duration: 0.3 }}
           className="space-y-4"
         >
-          <div className="relative rounded-2xl overflow-hidden bg-gray-900">
-            <video ref={videoRef} autoPlay muted className="w-full rounded-2xl" />
-            {recording && (
-              <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-red-500 text-white text-xs font-medium px-2.5 py-1 rounded-full">
-                <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                Recording
+          {camError ? (
+            <motion.div
+              initial={reduced ? {} : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="bg-amber-50 border border-amber-200 rounded-2xl p-6"
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="1.8" className="w-5 h-5">
+                    <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-amber-900 mb-1">
+                    {camError === 'permission' && 'Camera permission denied'}
+                    {camError === 'not-found' && 'No camera detected'}
+                    {camError === 'unknown' && 'Could not access camera'}
+                  </h3>
+                  <p className="text-xs text-amber-700 mb-3 leading-relaxed">
+                    {camError === 'permission' && 'HireIQ needs camera access to track your eye contact. Click the camera icon in your address bar, select "Allow", then click Try again. (Most browsers cache the denial — you must change it manually first.)'}
+                    {camError === 'not-found' && 'Make sure a webcam is connected to your device, then click Try again.'}
+                    {camError === 'unknown' && 'Something went wrong accessing your camera. Try refreshing the page.'}
+                  </p>
+                  <motion.button
+                    onClick={() => { setActive(false); setTimeout(() => setActive(true), 100) }}
+                    whileHover={reduced ? {} : { scale: 1.03 }}
+                    whileTap={reduced ? {} : { scale: 0.97 }}
+                    transition={{ duration: 0.15 }}
+                    className="text-xs bg-amber-600 text-white font-semibold px-4 py-1.5 rounded-lg hover:bg-amber-700 transition-colors cursor-pointer"
+                  >
+                    Try again
+                  </motion.button>
+                </div>
               </div>
-            )}
-          </div>
+            </motion.div>
+          ) : (
+            <div className="relative rounded-2xl overflow-hidden bg-gray-900">
+              <video ref={videoRef} autoPlay muted className="w-full rounded-2xl" />
+              {recording && (
+                <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-red-500 text-white text-xs font-medium px-2.5 py-1 rounded-full">
+                  <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                  Recording
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex gap-3">
             {!recording ? (
@@ -180,6 +218,16 @@ export default function Interview({ sessionId, questions = [] }: Props) {
             <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
               Select or type a question before recording.
             </p>
+          )}
+
+          {micError && (
+            <motion.p
+              initial={reduced ? {} : { opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-amber-700 text-xs bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg"
+            >
+              {micError}
+            </motion.p>
           )}
 
           {error && (
