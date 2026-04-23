@@ -8,10 +8,11 @@ POST /interview/answer  — receive audio + optional webcam frames,
 GET  /interview/history — return all interview results for the current user.
 """
 
-from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
+from fastapi import APIRouter, Request, UploadFile, File, Form, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
+from limiter import limiter
 from models.user import CVSession, InterviewResult, User
 from models.schemas import InterviewResultResponse
 from services.auth_service import get_current_user
@@ -22,7 +23,9 @@ router = APIRouter()
 
 
 @router.post("/answer", response_model=InterviewResultResponse)
+@limiter.limit("5/minute")
 async def submit_answer(
+    request: Request,
     audio: UploadFile = File(..., description="Recorded answer as audio/webm"),
     session_id: int = Form(..., description="CV session this question belongs to"),
     question: str = Form(..., description="The interview question that was asked"),

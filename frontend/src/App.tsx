@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import type { Variants } from 'framer-motion'
 import Landing from './pages/Landing'
@@ -12,6 +12,7 @@ import Dashboard from './pages/Dashboard'
 import Profile from './pages/Profile'
 import { getMe } from './api'
 import type { CVUploadResponse, UserProfile } from './api'
+import { useToast } from './components/Toast'
 
 type Page = 'home' | 'upload' | 'results' | 'history' | 'detail' | 'interview' | 'profile'
 type View = 'landing' | 'auth' | 'app'
@@ -40,6 +41,7 @@ function NavAvatar({ profile, onClick }: { profile: UserProfile | null; onClick:
 }
 
 export default function App() {
+  const toast = useToast()
   const [view, setView] = useState<View>(
     localStorage.getItem('access_token') ? 'app' : 'landing'
   )
@@ -51,6 +53,20 @@ export default function App() {
   const [detailSessionId, setDetailSessionId] = useState<number | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  // Force logout when the token refresh fails (interceptor dispatches this)
+  const toastRef = useRef(toast)
+  toastRef.current = toast
+  useEffect(() => {
+    const handle = () => {
+      localStorage.clear()
+      setProfile(null)
+      setView('landing')
+      toastRef.current.error('Your session expired. Please sign in again.')
+    }
+    window.addEventListener('auth:expired', handle)
+    return () => window.removeEventListener('auth:expired', handle)
+  }, [])
 
   // Fetch user profile once logged in
   useEffect(() => {

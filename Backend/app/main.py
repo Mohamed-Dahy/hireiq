@@ -1,9 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from routers import cv, auth, analysis, interview
 from database import create_tables
+from limiter import limiter
 
 security = HTTPBearer()
 
@@ -12,6 +15,9 @@ app = FastAPI(
     version="1.0.0",
     description="AI-powered CV screener and interview coach",
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Allow the React frontend (port 5173) to talk to this backend
 app.add_middleware(

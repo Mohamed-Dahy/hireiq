@@ -19,6 +19,8 @@ langchain-groq==0.1.3
 groq==0.8.0
 fpdf2==2.7.9
 opencv-python==4.9.0.80
+slowapi==0.1.9
+limits==3.6.0
 pytest==8.2.0
 httpx==0.27.0
 email-validator==2.3.0

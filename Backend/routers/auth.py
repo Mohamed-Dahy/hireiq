@@ -6,11 +6,12 @@ POST /auth/login     — get access + refresh tokens
 POST /auth/refresh   — exchange refresh token for a new access token
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database import get_db
+from limiter import limiter
 from models.user import User, CVSession, InterviewResult
 from models.schemas import RegisterRequest, LoginRequest, TokenResponse, UserProfileResponse
 from services.auth_service import (
@@ -26,7 +27,8 @@ router = APIRouter()
 
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
-def register(payload: RegisterRequest, db: Session = Depends(get_db)):
+@limiter.limit("3/minute")
+async def register(request: Request, payload: RegisterRequest, db: Session = Depends(get_db)):
     """Create a new user account and return tokens immediately."""
 
     # Block duplicate emails or usernames
@@ -52,7 +54,8 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+async def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)):
     """Verify credentials and return tokens."""
 
     user = db.query(User).filter(User.email == payload.email).first()
@@ -99,7 +102,7 @@ def get_me(
 
 
 @router.post("/refresh", response_model=TokenResponse)
-def refresh(refresh_token: str, db: Session = Depends(get_db)):
+def refresh(refresh_token: str = Body(..., embed=True), db: Session = Depends(get_db)):
     """Exchange a valid refresh token for a new access token."""
 
     payload = decode_token(refresh_token)

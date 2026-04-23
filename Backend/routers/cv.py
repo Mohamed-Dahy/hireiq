@@ -8,12 +8,13 @@ GET  /cv/{id}/score  — return the stored score for a session (Redis-cached)
 import os
 import shutil
 
-from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
+from fastapi import APIRouter, Request, UploadFile, File, Form, Depends, HTTPException
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from database import get_db
+from limiter import limiter
 from models.user import CVSession, InterviewResult, User
 from models.schemas import CVUploadResponse, CVSessionResponse, CVSessionDetailResponse
 from services.cv_parser import parse_cv, extract_text_from_pdf
@@ -27,7 +28,9 @@ router = APIRouter()
 
 
 @router.post("/upload", response_model=CVUploadResponse)
+@limiter.limit("2/minute")
 async def upload_cv(
+    request: Request,
     cv_file: UploadFile = File(..., description="PDF version of the candidate's CV"),
     jd_text: str = Form(..., description="Plain-text job description to match against"),
     db: Session = Depends(get_db),

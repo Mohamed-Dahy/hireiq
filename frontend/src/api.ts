@@ -3,12 +3,78 @@ import axios from 'axios'
 const api = axios.create({ baseURL: '/' })
 export default api
 
-// Attach JWT token to every request if present
+// Attach JWT to every outgoing request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
+
+// ── Token refresh interceptor ────────────────────────────────────────────────
+// When any request gets a 401, silently try to refresh the access token.
+// Concurrent requests that fail while a refresh is in-flight are queued and
+// replayed once the new token arrives. If the refresh itself fails, all
+// queued requests are rejected and the app dispatches 'auth:expired' so the
+// router can send the user back to the login screen.
+
+let isRefreshing = false
+let failedQueue: Array<{ resolve: (t: string) => void; reject: (e: unknown) => void }> = []
+
+const flushQueue = (error: unknown, token: string | null = null) => {
+  failedQueue.forEach(({ resolve, reject }) => (error ? reject(error) : resolve(token!)))
+  failedQueue = []
+}
+
+api.interceptors.response.use(
+  (res) => res,
+  async (error) => {
+    const original = error.config
+
+    // Pass through non-401 errors or already-retried requests
+    if (error.response?.status !== 401 || original._retry) {
+      return Promise.reject(error)
+    }
+
+    // Queue this request while a refresh is already in progress
+    if (isRefreshing) {
+      return new Promise<string>((resolve, reject) => {
+        failedQueue.push({ resolve, reject })
+      }).then((token) => {
+        original.headers.Authorization = `Bearer ${token}`
+        return api(original)
+      })
+    }
+
+    original._retry = true
+    isRefreshing = true
+
+    const storedRefresh = localStorage.getItem('refresh_token')
+    if (!storedRefresh) {
+      isRefreshing = false
+      localStorage.clear()
+      window.dispatchEvent(new CustomEvent('auth:expired'))
+      return Promise.reject(error)
+    }
+
+    try {
+      // Use the base axios instance (not `api`) to avoid re-triggering this interceptor
+      const { data } = await axios.post<TokenResponse>('/auth/refresh', { refresh_token: storedRefresh })
+      localStorage.setItem('access_token', data.access_token)
+      localStorage.setItem('refresh_token', data.refresh_token)
+      api.defaults.headers.common.Authorization = `Bearer ${data.access_token}`
+      flushQueue(null, data.access_token)
+      original.headers.Authorization = `Bearer ${data.access_token}`
+      return api(original)
+    } catch (refreshError) {
+      flushQueue(refreshError, null)
+      localStorage.clear()
+      window.dispatchEvent(new CustomEvent('auth:expired'))
+      return Promise.reject(refreshError)
+    } finally {
+      isRefreshing = false
+    }
+  },
+)
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -65,9 +131,6 @@ export const register = (email: string, username: string, password: string) =>
 
 export const login = (email: string, password: string) =>
   api.post<TokenResponse>('/auth/login', { email, password })
-
-export const refresh = (refresh_token: string) =>
-  api.post<TokenResponse>('/auth/refresh', { refresh_token })
 
 export const getMe = () =>
   api.get<UserProfile>('/auth/me')
