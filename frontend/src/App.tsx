@@ -55,8 +55,12 @@ export default function App() {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   // Force logout when the token refresh fails (interceptor dispatches this)
+  const [offline, setOffline] = useState(false)
+
   const toastRef = useRef(toast)
   toastRef.current = toast
+
+  // Session expiry — interceptor fires this when refresh token is invalid
   useEffect(() => {
     const handle = () => {
       localStorage.clear()
@@ -66,6 +70,21 @@ export default function App() {
     }
     window.addEventListener('auth:expired', handle)
     return () => window.removeEventListener('auth:expired', handle)
+  }, [])
+
+  // Backend connectivity banner
+  useEffect(() => {
+    const goOffline = () => setOffline(true)
+    const goOnline  = () => {
+      setOffline(false)
+      toastRef.current.success('Connection restored.')
+    }
+    window.addEventListener('network:offline', goOffline)
+    window.addEventListener('network:online',  goOnline)
+    return () => {
+      window.removeEventListener('network:offline', goOffline)
+      window.removeEventListener('network:online',  goOnline)
+    }
   }, [])
 
   // Fetch user profile once logged in
@@ -158,6 +177,25 @@ export default function App() {
           </button>
         </div>
       </nav>
+
+      {/* Offline banner */}
+      <AnimatePresence>
+        {offline && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-center gap-2 text-xs text-amber-800 font-medium"
+          >
+            <svg className="w-3.5 h-3.5 animate-spin text-amber-500 shrink-0" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+            </svg>
+            Cannot reach the server — waiting for connection…
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Mobile drawer */}
       <AnimatePresence>

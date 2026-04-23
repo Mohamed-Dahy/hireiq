@@ -10,13 +10,12 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// ── Token refresh interceptor ────────────────────────────────────────────────
-// When any request gets a 401, silently try to refresh the access token.
-// Concurrent requests that fail while a refresh is in-flight are queued and
-// replayed once the new token arrives. If the refresh itself fails, all
-// queued requests are rejected and the app dispatches 'auth:expired' so the
-// router can send the user back to the login screen.
+// ── Network connectivity tracking ────────────────────────────────────────────
+// Dispatches 'network:offline' / 'network:online' on transitions only,
+// so App.tsx can show / hide the "server unreachable" banner.
+let _offline = false
 
+// ── Token refresh interceptor ────────────────────────────────────────────────
 let isRefreshing = false
 let failedQueue: Array<{ resolve: (t: string) => void; reject: (e: unknown) => void }> = []
 
@@ -26,16 +25,38 @@ const flushQueue = (error: unknown, token: string | null = null) => {
 }
 
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    // Transition: was offline, now a response succeeded → back online
+    if (_offline) {
+      _offline = false
+      window.dispatchEvent(new CustomEvent('network:online'))
+    }
+    return res
+  },
   async (error) => {
     const original = error.config
 
-    // Pass through non-401 errors or already-retried requests
-    if (error.response?.status !== 401 || original._retry) {
+    // No response at all → backend unreachable
+    if (!error.response) {
+      if (!_offline) {
+        _offline = true
+        window.dispatchEvent(new CustomEvent('network:offline'))
+      }
       return Promise.reject(error)
     }
 
-    // Queue this request while a refresh is already in progress
+    // Transition back from network error (got a real HTTP error, server IS up)
+    if (_offline) {
+      _offline = false
+      window.dispatchEvent(new CustomEvent('network:online'))
+    }
+
+    // Pass through non-401 errors or already-retried requests
+    if (error.response.status !== 401 || original._retry) {
+      return Promise.reject(error)
+    }
+
+    // Queue concurrent 401s while a refresh is in flight
     if (isRefreshing) {
       return new Promise<string>((resolve, reject) => {
         failedQueue.push({ resolve, reject })
@@ -57,7 +78,7 @@ api.interceptors.response.use(
     }
 
     try {
-      // Use the base axios instance (not `api`) to avoid re-triggering this interceptor
+      // Use base axios (not `api`) to skip this interceptor on the refresh call
       const { data } = await axios.post<TokenResponse>('/auth/refresh', { refresh_token: storedRefresh })
       localStorage.setItem('access_token', data.access_token)
       localStorage.setItem('refresh_token', data.refresh_token)
