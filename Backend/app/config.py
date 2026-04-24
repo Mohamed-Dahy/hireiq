@@ -22,7 +22,10 @@ class Settings(BaseSettings):
     # --- File uploads ---
     upload_dir: str = "./uploads"
 
-    class Config:
+    # --- CORS ---
+    allowed_origins: str = "http://localhost:5173"
+
+class Config:
         env_file = ".env"
 
 

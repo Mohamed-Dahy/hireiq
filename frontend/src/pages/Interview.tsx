@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { useRecorder } from '../hooks/useRecorder'
 import { useWebcam } from '../hooks/useWebcam'
@@ -28,6 +28,23 @@ export default function Interview({ sessionId, questions = [] }: Props) {
   const [error, setError] = useState('')
 
   const { error: camError } = useWebcam(videoRef, active)
+  const framesRef = useRef<Blob[]>([])
+
+  // Capture a JPEG frame every 500 ms while recording
+  useEffect(() => {
+    if (!recording) return
+    framesRef.current = []
+    const id = setInterval(() => {
+      const video = videoRef.current
+      if (!video || video.readyState < 2) return
+      const canvas = document.createElement('canvas')
+      canvas.width = video.videoWidth || 320
+      canvas.height = video.videoHeight || 240
+      canvas.getContext('2d')?.drawImage(video, 0, 0)
+      canvas.toBlob((b) => { if (b) framesRef.current.push(b) }, 'image/jpeg', 0.7)
+    }, 500)
+    return () => clearInterval(id)
+  }, [recording])
 
   const activeQuestion = selectedQ || customQ
 
@@ -41,7 +58,25 @@ export default function Interview({ sessionId, questions = [] }: Props) {
       form.append('session_id', String(sessionId ?? 0))
       form.append('question', activeQuestion)
       const res = await api.post('/interview/answer', form)
-      setFeedback(res.data)
+      const answerData = res.data
+
+      // Submit captured frames for eye-contact scoring (best-effort)
+      let eyeContactRatio: number | null = null
+      const frames = framesRef.current
+      if (frames.length > 0 && !camError) {
+        try {
+          const ecForm = new FormData()
+          ecForm.append('result_id', String(answerData.id))
+          frames.forEach((f, i) => ecForm.append('frames', f, `frame_${i}.jpg`))
+          const ecRes = await api.post('/interview/eye-contact', ecForm)
+          eyeContactRatio = ecRes.data.eye_contact_ratio
+        } catch {
+          // Eye contact is optional — don't fail the whole submission
+        }
+      }
+
+      framesRef.current = []
+      setFeedback({ ...answerData, eye_contact_ratio: eyeContactRatio })
     } catch (err: any) {
       const detail = err.response?.data?.detail
       setError(Array.isArray(detail) ? detail.map((d: any) => d.msg).join(', ') : detail || 'Submission failed')

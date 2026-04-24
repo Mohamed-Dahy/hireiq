@@ -83,3 +83,10 @@ def compute_match_score(cv_text: str, jd_text: str) -> float:
     keyword  = _keyword_score(cv_text, jd_text)
     combined = (0.7 * semantic) + (0.3 * keyword)
     return round(min(max(combined * 100, 0.0), 100.0), 2)
+
+
+def delete_embeddings(session_id: int) -> None:
+    try:
+        _get_collection().delete(ids=[f"cv_{session_id}", f"jd_{session_id}"])
+    except Exception:
+        pass

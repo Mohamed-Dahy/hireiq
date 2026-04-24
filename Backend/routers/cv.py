@@ -7,6 +7,7 @@ GET  /cv/{id}/score  — return the stored score for a session (Redis-cached)
 
 import os
 import shutil
+from pathlib import Path
 
 from fastapi import APIRouter, Request, UploadFile, File, Form, Depends, HTTPException
 from fastapi.responses import Response
@@ -18,7 +19,7 @@ from limiter import limiter
 from models.user import CVSession, InterviewResult, User
 from models.schemas import CVUploadResponse, CVSessionResponse, CVSessionDetailResponse
 from services.cv_parser import parse_cv, extract_text_from_pdf
-from services.rag_scorer import store_embeddings, compute_match_score
+from services.rag_scorer import store_embeddings, compute_match_score, delete_embeddings
 from services.cache import get_cached_score, set_cached_score, clear_cached_score
 from services.auth_service import get_current_user
 from services.report_generator import generate_report
@@ -47,7 +48,8 @@ async def upload_cv(
 
     # --- 1. Save PDF to upload directory ---
     os.makedirs(settings.upload_dir, exist_ok=True)
-    file_path = os.path.join(settings.upload_dir, cv_file.filename)
+    safe_name = Path(cv_file.filename or "upload.pdf").name  # strip any directory components
+    file_path = os.path.join(settings.upload_dir, safe_name)
 
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(cv_file.file, buffer)
@@ -62,7 +64,7 @@ async def upload_cv(
     # --- 4. Save to Postgres ---
     session = CVSession(
         user_id=current_user.id,
-        cv_filename=cv_file.filename,
+        cv_filename=safe_name,
         jd_text=jd_text,
         match_score=score,
     )
@@ -76,7 +78,7 @@ async def upload_cv(
 
     return CVUploadResponse(
         session_id=session.id,
-        cv_filename=cv_file.filename,
+        cv_filename=safe_name,
         match_score=score,
         skills_found=parsed["skills"],
     )
@@ -192,6 +194,7 @@ def delete_session(
     db.delete(session)
     db.commit()
     clear_cached_score(session_id)
+    delete_embeddings(session_id)
     return Response(status_code=204)
 
 
