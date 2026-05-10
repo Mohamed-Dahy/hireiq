@@ -1,7 +1,9 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
     # --- Groq (free LLM + Whisper) ---
     groq_api_key: str
 
@@ -24,9 +26,6 @@ class Settings(BaseSettings):
 
     # --- CORS ---
     allowed_origins: str = "http://localhost:5173"
-
-class Config:
-        env_file = ".env"
 
 
 # One shared instance imported everywhere
