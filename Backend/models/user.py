@@ -24,7 +24,7 @@ class CVSession(Base):
     __tablename__ = "cv_sessions"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # nullable until auth is wired
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     cv_filename = Column(String, nullable=False)       # original uploaded filename
     jd_text = Column(Text, nullable=False)             # the pasted job description
     match_score = Column(Float, nullable=True)         # 0.0 – 100.0, set after scoring

@@ -2,6 +2,28 @@ version: "3.9"
 
 services:
 
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    env_file:
+      - ./Backend/.env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  adminer:
+    image: adminer:latest
+    restart: always
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   redis:
     image: redis:7-alpine
     restart: always
@@ -30,6 +52,8 @@ services:
     volumes:
       - uploads:/app/uploads
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
@@ -50,6 +74,7 @@ services:
         condition: service_healthy
 
 volumes:
+  postgres_data:
   redis_data:
   chroma_data:
   uploads:
