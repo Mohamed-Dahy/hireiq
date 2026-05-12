@@ -271,17 +271,25 @@ export interface JobApplication {
   location: string | null
   remote_type: string | null
   job_url: string | null
+  jd_text: string | null
   status: JobStatus
   source: string | null
   priority: string | null
   deadline_date: string | null
   followup_date: string | null
+  applied_date: string | null
   salary_min: number | null
   salary_max: number | null
   notes: string | null
+  cover_letter: string | null
+  rejection_reason: string | null
+  cv_session_id: number | null
   match_score: number | null
   ai_gap_summary: string | null
+  ai_prep_questions: string | null
+  stage_entered_at: string
   is_archived: boolean
+  is_stale: boolean
   created_at: string
   updated_at: string
 }
@@ -315,6 +323,7 @@ export interface JobStatsResponse {
   interview_rate: number
   offer_rate: number
   stale_count: number
+  upcoming_count: number
   weekly_trend: { week: string; count: number }[]
 }
 

@@ -9,7 +9,7 @@ description: "Task list for HireIQ Production SaaS Launch — Revised Phase Orde
 
 **Tests**: Required per constitution (Principle II) — unit + integration for every new endpoint.
 
-**Phase Status**: Phases 1–6 ✅ COMPLETE | Phases 7–14 pending
+**Phase Status**: Phases 1–6 ✅ COMPLETE (168 tests pass, 1 skipped) | Phases 7–14 pending
 
 **Organization**: Phases 1–2 shared foundations. Phases 3–4 security hardening. Phases 5–8 core product features. Phases 9–11 growth & platform features (new). Phase 12 subscriptions & payments. Phase 13 full system testing. Phase 14 polish.
 
@@ -220,13 +220,15 @@ description: "Task list for HireIQ Production SaaS Launch — Revised Phase Orde
 ### Tests for User Story 8
 
 > **Write these FIRST — confirm they FAIL before implementing**
+>
+> **Execution order within this phase**: T095 (write tests, confirm FAIL) → T096 (models) → T097 (migration — required before tests can pass) → T098 (schemas) → T099 (router) → T100 (PDF service) → T101 (register + nginx) → T102–T105 (frontend, all parallel). T096 + T097 must both be done before re-running T095 tests.
 
 - [ ] T095 [P] [US8] Integration test for recruiter dashboard in `Backend/tests/integration/test_recruiter.py`: list CRUD, add candidate, 20-candidate limit enforcement, rank update, PDF export returns PDF
 
 ### Implementation for User Story 8
 
 - [ ] T096 [P] [US8] Add `RecruiterList` and `RecruiterCandidate` models to `Backend/models/jobs.py` per data-model.md
-- [ ] T097 [US8] Update `Backend/migrations/versions/004_jobs_recruiter.py` — add `recruiter_lists` and `recruiter_candidates` tables
+- [ ] T097 [US8] Create `Backend/migrations/versions/006_recruiter_tables.py` (`down_revision="005"`) — add `recruiter_lists` and `recruiter_candidates` tables. NOTE: do NOT edit 004_jobs_recruiter.py — it is already applied to the DB; 005 is `005_user_sessions_revoked_at.py`
 - [ ] T098 [P] [US8] Add `RecruiterListCreate`, `RecruiterListResponse`, `RecruiterCandidateResponse`, `RecruiterCandidateUpdate` schemas to `Backend/models/schemas.py`
 - [ ] T099 [US8] Create `Backend/routers/recruiter.py` — full CRUD for lists and candidates; `GET /recruiter/lists/{id}/export`; all require ownership check
 - [ ] T100 [US8] Extend `Backend/services/report_generator.py` — `generate_recruiter_report(recruiter_list, candidates)` produces PDF with ranked candidate table
@@ -493,7 +495,7 @@ All tasks marked `[P]` within a phase can run simultaneously.
 Key parallel windows:
 - Phase 5: T070–T071 (tests) in parallel; T074, T079, T080, T081 in parallel (different files)
 - Phase 6: T085 + T085b (tests) in parallel; T086 + T086b + T086c (models) in parallel; T089b + T089c added after T089; T091 + T091b + T091c + T091d + T091e all in parallel (different component files)
-- Phase 6 → 7: Phase 7 starts after T087 (migration 004 created); T096 extends Backend/models/jobs.py, T097 extends the migration
+- Phase 6 → 7: Phase 7 starts after Phase 6 is complete; T096 extends Backend/models/jobs.py, T097 creates new migration 006_recruiter_tables.py (down_revision="005") — 004 is already applied and must not be edited
 - Phase 8: All T106–T114 in parallel (different page files); start during Phase 6/7 for Landing + Auth pages
 - Phase 9: T123–T124 (tests) in parallel; T125, T127, T132, T133 in parallel
 - Phase 10: T136–T137 (tests) in parallel; T139, T140, T144, T145 in parallel

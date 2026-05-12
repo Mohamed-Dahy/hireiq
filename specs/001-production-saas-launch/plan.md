@@ -121,12 +121,12 @@ Backend/
 │   ├── env.py
 │   ├── alembic.ini
 │   └── versions/
-│       ├── 001_initial.py           # baseline: users, cv_sessions, interview_results
-│       ├── 002_auth_hardening.py    # email_verified, lockout fields, token tables
-│       ├── 003_subscriptions.py     # plans, subscriptions, payments, entitlements + seed data
-│       ├── 004_jobs_recruiter.py    # job_applications, recruiter_lists, recruiter_candidates
-│       ├── 005_cv_session_extended.py  # skill_inventory, gap_report, study_roadmap columns
-│       └── 006_security_audit_log.py   # security_audit_logs table
+│       ├── 001_initial.py                  # baseline: users, cv_sessions, interview_results
+│       ├── 002_auth_hardening.py           # email_verified, lockout fields, token tables, security_audit_logs
+│       ├── 003_cv_session_extended.py      # skill_inventory, gap_report, study_roadmap, is_linkedin columns
+│       ├── 004_jobs_recruiter.py           # job_applications, application_activities, application_contacts
+│       ├── 005_user_sessions_revoked_at.py # sessions_revoked_at column on users (FR-004)
+│       └── 006_recruiter_tables.py         # recruiter_lists, recruiter_candidates (Phase 7 — pending)
 ├── tests/                   # NEW: full test suite
 │   ├── conftest.py          # pytest fixtures: test DB, test client, auth helpers, subscription helpers
 │   ├── unit/

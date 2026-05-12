@@ -264,11 +264,14 @@ class JobResponse(BaseModel):
     notes:            Optional[str]
     cover_letter:     Optional[str]
     rejection_reason: Optional[str]
-    match_score:      Optional[float]
-    ai_gap_summary:   Optional[str]
-    is_archived:      bool
-    created_at:       datetime
-    updated_at:       datetime
+    match_score:        Optional[float]
+    ai_gap_summary:     Optional[str]
+    ai_prep_questions:  Optional[str]
+    stage_entered_at:   datetime
+    is_archived:        bool
+    is_stale:           bool = False
+    created_at:         datetime
+    updated_at:         datetime
 
 
 class StatusTransitionRequest(BaseModel):
