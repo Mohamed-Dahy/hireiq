@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
+import models.security  # noqa: F401 — registers SecurityAuditLog on shared Base
 from models.user import Base, User
 from services.auth_service import create_access_token, hash_password
 from database import get_db
@@ -21,6 +22,15 @@ TEST_DATABASE_URL = os.getenv(
 
 _test_engine = create_engine(TEST_DATABASE_URL)
 _TestSession = sessionmaker(autocommit=False, autoflush=False, bind=_test_engine)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _disable_rate_limits():
+    """All test requests come from 127.0.0.1 — disable slowapi so login tests don't trip the limit."""
+    from limiter import limiter
+    limiter.enabled = False
+    yield
+    limiter.enabled = True
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -58,11 +68,27 @@ def test_client(test_db: Session):
 
 @pytest.fixture()
 def test_user(test_db: Session) -> User:
-    """A plain registered user with no subscription."""
+    """A verified registered user — email_verified=True so login tests work."""
     user = User(
         email="testuser@example.com",
         username="testuser",
         hashed_password=hash_password("TestPass123!"),
+        email_verified=True,
+    )
+    test_db.add(user)
+    test_db.commit()
+    test_db.refresh(user)
+    return user
+
+
+@pytest.fixture()
+def unverified_user(test_db: Session) -> User:
+    """A registered but unverified user — for testing the verification flow."""
+    user = User(
+        email="unverified@example.com",
+        username="unverified",
+        hashed_password=hash_password("TestPass123!"),
+        email_verified=False,
     )
     test_db.add(user)
     test_db.commit()
@@ -72,22 +98,22 @@ def test_user(test_db: Session) -> User:
 
 @pytest.fixture()
 def auth_headers(test_user: User) -> dict:
-    """Bearer token headers for the plain test user."""
-    token = create_access_token({"sub": str(test_user.id)})
+    """Bearer token headers for the verified test user."""
+    token = create_access_token(test_user.id)
     return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture()
 def subscribed_headers(test_db: Session) -> dict:
     # Placeholder — upgraded to a real Professional-tier fixture in Phase 5 (T055)
-    # once the Subscription model exists.
     user = User(
         email="pro@example.com",
         username="prouser",
         hashed_password=hash_password("TestPass123!"),
+        email_verified=True,
     )
     test_db.add(user)
     test_db.commit()
     test_db.refresh(user)
-    token = create_access_token({"sub": str(user.id)})
+    token = create_access_token(user.id)
     return {"Authorization": f"Bearer {token}"}

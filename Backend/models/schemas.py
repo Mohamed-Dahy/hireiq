@@ -40,6 +40,33 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class RegisterResponse(BaseModel):
+    message: str
+    email: str
+
+
+class MessageResponse(BaseModel):
+    message: str
+
+
+class EmailRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def password_length(cls, v: str) -> str:
+        if len(v.encode("utf-8")) > 72:
+            raise ValueError("Password must be 72 characters or fewer")
+        if len(v) < 6:
+            raise ValueError("Password must be at least 6 characters")
+        return v
+
+
 # ---------------------------------------------------------------------------
 # CV upload
 # ---------------------------------------------------------------------------

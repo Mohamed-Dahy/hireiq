@@ -10,12 +10,22 @@ import SessionDetail from './pages/SessionDetail'
 import Interview from './pages/Interview'
 import Dashboard from './pages/Dashboard'
 import Profile from './pages/Profile'
-import { getMe } from './api'
+import { getMe, logout as apiLogout } from './api'
 import type { CVUploadResponse, UserProfile } from './api'
 import { useToast } from './components/Toast'
 
 type Page = 'home' | 'upload' | 'results' | 'history' | 'detail' | 'interview' | 'profile'
 type View = 'landing' | 'auth' | 'app'
+
+function getInitialViewAndMode(): { view: View; authMode: 'register' | 'login' | 'verify-email' | 'reset-password'; urlToken?: string } {
+  const path = window.location.pathname
+  const params = new URLSearchParams(window.location.search)
+  const token = params.get('token') ?? undefined
+  if (path === '/verify-email' && token) return { view: 'auth', authMode: 'verify-email', urlToken: token }
+  if (path === '/reset-password' && token) return { view: 'auth', authMode: 'reset-password', urlToken: token }
+  if (localStorage.getItem('access_token')) return { view: 'app', authMode: 'login' }
+  return { view: 'landing', authMode: 'register' }
+}
 
 const pageVariants: Variants = {
   initial: { opacity: 0, y: 10 },
@@ -42,10 +52,10 @@ function NavAvatar({ profile, onClick }: { profile: UserProfile | null; onClick:
 
 export default function App() {
   const toast = useToast()
-  const [view, setView] = useState<View>(
-    localStorage.getItem('access_token') ? 'app' : 'landing'
-  )
-  const [authMode, setAuthMode] = useState<'register' | 'login'>('register')
+  const _init = getInitialViewAndMode()
+  const [view, setView] = useState<View>(_init.view)
+  const [authMode, setAuthMode] = useState<'register' | 'login' | 'verify-email' | 'reset-password'>(_init.authMode)
+  const [urlToken] = useState<string | undefined>(_init.urlToken)
   const [page, setPage] = useState<Page>('home')
   const [result, setResult] = useState<CVUploadResponse | null>(null)
   const [interviewQuestions, setInterviewQuestions] = useState<string[]>([])
@@ -60,13 +70,22 @@ export default function App() {
   const toastRef = useRef(toast)
   toastRef.current = toast
 
+  // True only after the user has authenticated in THIS browser session.
+  // Prevents the "session expired" toast from firing on page load when the
+  // user simply has stale tokens from a previous session.
+  const sessionAuthenticated = useRef(false)
+
   // Session expiry — interceptor fires this when refresh token is invalid
   useEffect(() => {
     const handle = () => {
+      const wasActive = sessionAuthenticated.current
+      sessionAuthenticated.current = false
       localStorage.clear()
       setProfile(null)
       setView('landing')
-      toastRef.current.error('Your session expired. Please sign in again.')
+      if (wasActive) {
+        toastRef.current.error('Your session expired. Please sign in again.')
+      }
     }
     window.addEventListener('auth:expired', handle)
     return () => window.removeEventListener('auth:expired', handle)
@@ -90,13 +109,24 @@ export default function App() {
   // Fetch user profile once logged in
   useEffect(() => {
     if (view === 'app') {
-      getMe().then((res) => setProfile(res.data)).catch(() => {})
+      getMe()
+        .then((res) => {
+          setProfile(res.data)
+          sessionAuthenticated.current = true  // tokens confirmed valid
+        })
+        .catch(() => {})
     }
   }, [view])
 
-  const goToAuth = (mode: 'register' | 'login') => { setAuthMode(mode); setView('auth') }
-  const onAuth = () => { setView('app'); setPage('home') }
-  const logout = () => { localStorage.clear(); setProfile(null); setView('landing') }
+  const goToAuth = (mode: 'register' | 'login') => { setAuthMode(mode as any); setView('auth') }
+  const onAuth = () => { sessionAuthenticated.current = true; setView('app'); setPage('home') }
+  const logout = () => {
+    const refreshToken = localStorage.getItem('refresh_token') ?? undefined
+    apiLogout(refreshToken).catch(() => {})
+    localStorage.clear()
+    setProfile(null)
+    setView('landing')
+  }
 
   const goToPractice = (questions: string[], sessionId?: number) => {
     setInterviewQuestions(questions)
@@ -110,7 +140,7 @@ export default function App() {
   }
 
   if (view === 'landing') return <Landing onGetStarted={() => goToAuth('register')} onLogin={() => goToAuth('login')} />
-  if (view === 'auth') return <Auth defaultMode={authMode} onAuth={onAuth} onBack={() => setView('landing')} />
+  if (view === 'auth') return <Auth defaultMode={authMode as any} urlToken={urlToken} onAuth={onAuth} onBack={authMode === 'login' || authMode === 'register' ? () => setView('landing') : undefined} />
 
   const navItems = [
     { id: 'home'      as const, label: 'Home' },
