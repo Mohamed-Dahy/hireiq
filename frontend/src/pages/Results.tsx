@@ -5,14 +5,17 @@ import confetti from 'canvas-confetti'
 import ScoreGauge from '../components/ScoreGauge'
 import SkillGapList from '../components/SkillGapList'
 import QuestionCard from '../components/QuestionCard'
+import SkillsInventory from '../components/SkillsInventory'
+import SkillGapChart from '../components/SkillGapChart'
+import StudyRoadmap from '../components/StudyRoadmap'
 import { useToast } from '../components/Toast'
-import type { CVUploadResponse } from '../api'
+import type { CVUploadResponse, StructuredAnalysis } from '../api'
 import { parseQuestions } from '../utils/parseQuestions'
 
 interface Props {
   result: CVUploadResponse
   onBack: () => void
-  onPractice: (questions: string[]) => void  // navigate to interview with questions
+  onPractice: (questions: string[]) => void
 }
 
 const fadeUp: Variants = {
@@ -25,6 +28,7 @@ export default function Results({ result, onBack, onPractice }: Props) {
   const toast = useToast()
   const [analysis, setAnalysis] = useState('')
   const [streaming, setStreaming] = useState(true)
+  const [structured, setStructured] = useState<StructuredAnalysis | null>(null)
   const [downloading, setDownloading] = useState(false)
 
   const questions = parseQuestions(analysis)
@@ -34,14 +38,7 @@ export default function Results({ result, onBack, onPractice }: Props) {
     if (reduced || result.match_score < 70) return
     const t = setTimeout(() => {
       const colors = ['#7c3aed', '#a78bfa', '#c4b5fd', '#ddd6fe']
-      confetti({
-        particleCount: 90,
-        spread: 70,
-        origin: { y: 0.35 },
-        colors,
-        scalar: 0.9,
-        ticks: 220,
-      })
+      confetti({ particleCount: 90, spread: 70, origin: { y: 0.35 }, colors, scalar: 0.9, ticks: 220 })
     }, 600)
     return () => clearTimeout(t)
   }, [result.match_score, reduced])
@@ -49,6 +46,16 @@ export default function Results({ result, onBack, onPractice }: Props) {
   useEffect(() => {
     const token = localStorage.getItem('access_token')
     const es = new EventSource(`/analyze?session_id=${result.session_id}&token=${token}`)
+
+    // Register the structured handler BEFORE onmessage so it fires before [DONE] closes the stream
+    es.addEventListener('structured', (e: MessageEvent) => {
+      try {
+        setStructured(JSON.parse(e.data) as StructuredAnalysis)
+      } catch {
+        // Ignore malformed JSON from LLM
+      }
+    })
+
     es.onmessage = (e) => {
       if (e.data === '[DONE]') { setStreaming(false); es.close(); return }
       setAnalysis((prev) => prev + e.data.replace(/\\n/g, '\n'))
@@ -128,6 +135,16 @@ export default function Results({ result, onBack, onPractice }: Props) {
       >
         <ScoreGauge score={result.match_score} />
 
+        {/* LinkedIn badge */}
+        {result.is_linkedin && (
+          <span className="flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full">
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
+              <path d="M19 3a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h14m-.5 15.5v-5.3a3.26 3.26 0 00-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 011.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 001.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 00-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/>
+            </svg>
+            LinkedIn Profile
+          </span>
+        )}
+
         <motion.div
           initial="hidden"
           animate="show"
@@ -149,11 +166,42 @@ export default function Results({ result, onBack, onPractice }: Props) {
         </motion.div>
       </motion.div>
 
-      {/* Skill gap analysis */}
+      {/* Narrative skill gap analysis */}
       <motion.div variants={fadeUp} initial="hidden" animate="show">
         <h3 className="text-base font-semibold text-gray-800 mb-3">Skill Gap Analysis</h3>
         <SkillGapList text={analysis} loading={streaming} />
       </motion.div>
+
+      {/* Structured analysis — appears when structured SSE event arrives */}
+      {structured && (
+        <motion.div
+          initial={reduced ? {} : { opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0, 0, 0.2, 1] }}
+          className="space-y-8"
+        >
+          {structured.skill_inventory?.length > 0 && (
+            <div>
+              <h3 className="text-base font-semibold text-gray-800 mb-3">Your Skills</h3>
+              <SkillsInventory skills={structured.skill_inventory} />
+            </div>
+          )}
+
+          {structured.gap_report?.length > 0 && (
+            <div>
+              <h3 className="text-base font-semibold text-gray-800 mb-3">Priority Gaps</h3>
+              <SkillGapChart gaps={structured.gap_report} />
+            </div>
+          )}
+
+          {structured.study_roadmap?.length > 0 && (
+            <div>
+              <h3 className="text-base font-semibold text-gray-800 mb-3">Study Roadmap</h3>
+              <StudyRoadmap roadmap={structured.study_roadmap} />
+            </div>
+          )}
+        </motion.div>
+      )}
 
       {/* Interview questions */}
       {questions.length > 0 && (

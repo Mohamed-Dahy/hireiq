@@ -27,12 +27,18 @@ class User(Base):
 class CVSession(Base):
     __tablename__ = "cv_sessions"
 
-    id          = Column(Integer, primary_key=True, index=True)
-    user_id     = Column(Integer, ForeignKey("users.id"), nullable=False)
-    cv_filename = Column(String, nullable=False)
-    jd_text     = Column(Text, nullable=False)
-    match_score = Column(Float, nullable=True)
-    created_at  = Column(DateTime, default=datetime.utcnow)
+    id               = Column(Integer, primary_key=True, index=True)
+    user_id          = Column(Integer, ForeignKey("users.id"), nullable=False)
+    cv_filename      = Column(String, nullable=False)
+    jd_text          = Column(Text, nullable=False)
+    match_score      = Column(Float, nullable=True)
+    created_at       = Column(DateTime, default=datetime.utcnow)
+
+    # Phase 5: structured analysis (stored as JSON text)
+    skill_inventory  = Column(Text, nullable=True)
+    gap_report       = Column(Text, nullable=True)
+    study_roadmap    = Column(Text, nullable=True)
+    is_linkedin      = Column(Boolean, default=False, nullable=False)
 
     user             = relationship("User", back_populates="sessions")
     interview_results = relationship("InterviewResult", back_populates="session")

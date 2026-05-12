@@ -1,28 +1,31 @@
 """
 routers/cv.py
 -------------
-POST /cv/upload      — receive a PDF CV + JD text, parse, score, save to DB
-GET  /cv/{id}/score  — return the stored score for a session (Redis-cached)
+POST /cv/upload           — receive a PDF CV + JD text, parse, score, save to DB
+GET  /cv/{id}/score       — return the stored score for a session (Redis-cached)
+GET  /cv/{id}/analysis    — return stored structured analysis (202 if not yet computed)
 """
 
+import json
 import os
 import uuid
 
 from fastapi import APIRouter, Request, UploadFile, File, Form, Depends, HTTPException
-from fastapi.responses import Response
+from fastapi.responses import Response, JSONResponse
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from database import get_db
 from limiter import limiter
 from models.user import CVSession, InterviewResult, User
-from models.schemas import CVUploadResponse, CVSessionResponse, CVSessionDetailResponse
+from models.schemas import CVUploadResponse, CVSessionResponse, CVSessionDetailResponse, EnhancedAnalysisResponse
 from services.cv_parser import parse_cv
 from services.rag_scorer import store_embeddings, compute_match_score, delete_embeddings
 from services.cache import get_cached_score, set_cached_score, clear_cached_score
 from services.auth_service import get_current_user, require_ownership
 from services.report_generator import generate_report
 from services.llm_analyzer import run_analysis
+from services.linkedin_service import is_linkedin_pdf
 
 router = APIRouter()
 
@@ -73,18 +76,22 @@ async def upload_cv(
     # --- 4. Score ---
     score = compute_match_score(cv_text, jd_text)
 
-    # --- 5. Save to Postgres ---
+    # --- 5. Detect LinkedIn export ---
+    linkedin = is_linkedin_pdf(contents)
+
+    # --- 6. Save to Postgres ---
     session = CVSession(
         user_id=current_user.id,
         cv_filename=uuid_name,
         jd_text=jd_text,
         match_score=score,
+        is_linkedin=linkedin,
     )
     db.add(session)
     db.commit()
     db.refresh(session)
 
-    # --- 6. Store embeddings + cache score ---
+    # --- 7. Store embeddings + cache score ---
     store_embeddings(session_id=session.id, cv_text=cv_text, jd_text=jd_text)
     set_cached_score(session_id=session.id, score=score)
 
@@ -93,6 +100,7 @@ async def upload_cv(
         cv_filename=uuid_name,
         match_score=score,
         skills_found=parsed["skills"],
+        is_linkedin=linkedin,
     )
 
 
@@ -183,6 +191,38 @@ def download_report(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.get("/{session_id}/analysis")
+def get_analysis(
+    session_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Return the stored structured analysis for a session.
+    Returns 202 with status=pending if the SSE stream hasn't run yet.
+    Returns 200 with skill_inventory, gap_report, and study_roadmap when available.
+    """
+    session = db.query(CVSession).filter(CVSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Not found")
+    require_ownership(session.user_id, current_user.id)
+
+    if session.skill_inventory is None:
+        return JSONResponse(
+            status_code=202,
+            content={
+                "status": "pending",
+                "message": "Analysis not yet computed. Stream it first via /analyze.",
+            },
+        )
+
+    return {
+        "skill_inventory": json.loads(session.skill_inventory),
+        "gap_report": json.loads(session.gap_report) if session.gap_report else [],
+        "study_roadmap": json.loads(session.study_roadmap) if session.study_roadmap else [],
+    }
 
 
 @router.delete("/{session_id}", status_code=204)

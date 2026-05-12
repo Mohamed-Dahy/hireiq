@@ -74,9 +74,50 @@ class ResetPasswordRequest(BaseModel):
 class CVUploadResponse(BaseModel):
     session_id: int
     cv_filename: str
-    match_score: float          # 0.0 – 100.0
-    skills_found: list[str]     # skills extracted from the CV
+    match_score: float
+    skills_found: list[str]
+    is_linkedin: bool = False
     message: str = "CV processed successfully"
+
+
+# ---------------------------------------------------------------------------
+# Phase 5: Structured analysis response schemas
+# ---------------------------------------------------------------------------
+
+class SkillItem(BaseModel):
+    skill: str
+    category: str
+    level: str
+
+
+class GapItem(BaseModel):
+    skill: str
+    importance: str
+    reason: str
+    resource: str
+
+
+class RoadmapItem(BaseModel):
+    topic: str
+    priority: str
+    estimated_hours: int
+    resources: list[str]
+
+
+class QuestionItem(BaseModel):
+    question: str
+    model_answer: str
+
+
+class EnhancedAnalysisResponse(BaseModel):
+    skill_inventory: list[SkillItem]
+    gap_report: list[GapItem]
+    study_roadmap: list[RoadmapItem]
+
+
+class AnalysisPendingResponse(BaseModel):
+    status: str = "pending"
+    message: str = "Analysis not yet computed. Stream it first via /analyze."
 
 
 # ---------------------------------------------------------------------------

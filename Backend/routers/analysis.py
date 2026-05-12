@@ -5,8 +5,13 @@ GET /analyze?session_id=X&token=JWT  — streams skill gap analysis via SSE.
 
 EventSource (browser) only supports GET and cannot set Authorization headers,
 so we accept the JWT as a query param and validate it manually here.
+
+After the narrative stream completes, a named `structured` event is emitted
+with the JSON analysis payload — BEFORE the [DONE] sentinel so the client
+EventSource is still open when the structured event arrives.
 """
 
+import json
 import os
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -16,7 +21,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from database import get_db
 from models.user import CVSession
-from services.llm_analyzer import stream_analysis
+from services.llm_analyzer import stream_analysis, analyze_structured
 from services.auth_service import decode_token
 from services.cv_parser import extract_text_from_pdf
 
@@ -32,9 +37,12 @@ def analyze(
     """
     Stream skill gap analysis for a CV session via Server-Sent Events.
     The token query param is used because EventSource cannot send headers.
-    """
 
-    # Validate JWT manually (can't use Depends(get_current_user) with SSE GET)
+    Event sequence:
+      1. data: <text chunk>  (repeated, narrative analysis)
+      2. event: structured / data: <json>
+      3. data: [DONE]
+    """
     payload = decode_token(token)
     if payload.get("type") != "access":
         raise HTTPException(status_code=401, detail="Invalid token type")
@@ -53,9 +61,28 @@ def analyze(
     cv_text = extract_text_from_pdf(cv_path)
 
     def event_stream():
+        # 1. Stream narrative analysis text
         for chunk in stream_analysis(cv_text=cv_text, jd_text=session.jd_text):
             safe_chunk = chunk.replace("\n", "\\n")
             yield f"data: {safe_chunk}\n\n"
+
+        # 2. Compute structured analysis
+        structured = analyze_structured(cv_text=cv_text, jd_text=session.jd_text)
+
+        # 3. Persist to DB (skill_inventory, gap_report, study_roadmap)
+        try:
+            session.skill_inventory = json.dumps(structured.get("skill_inventory", []))
+            session.gap_report = json.dumps(structured.get("gap_report", []))
+            session.study_roadmap = json.dumps(structured.get("study_roadmap", []))
+            db.commit()
+        except Exception:
+            db.rollback()
+
+        # 4. Emit structured event BEFORE [DONE] — client closes on [DONE]
+        structured_payload = json.dumps(structured)
+        yield f"event: structured\ndata: {structured_payload}\n\n"
+
+        # 5. Signal end of stream
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(

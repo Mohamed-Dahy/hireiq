@@ -6,6 +6,49 @@ All LangChain prompt templates live here — never inline them in service files.
 
 from langchain_core.prompts import PromptTemplate
 
+# ---------------------------------------------------------------------------
+# Structured analysis — returns a strict JSON object (used by analyze_structured)
+# Double-braces {{ }} escape literal braces inside PromptTemplate.
+# ---------------------------------------------------------------------------
+
+STRUCTURED_ANALYSIS_TEMPLATE = """You are an expert technical recruiter and career coach.
+Analyze the CV and job description below and return ONLY a JSON object — no explanation, no markdown fences.
+
+Required JSON schema:
+{{
+  "skill_inventory": [
+    {{"skill": "string", "category": "hard|soft", "level": "beginner|intermediate|advanced"}}
+  ],
+  "gap_report": [
+    {{"skill": "string", "importance": "high|medium|low", "reason": "string", "resource": "string"}}
+  ],
+  "study_roadmap": [
+    {{"topic": "string", "priority": "high|medium|low", "estimated_hours": integer, "resources": ["string"]}}
+  ],
+  "questions": [
+    {{"question": "string", "model_answer": "string"}}
+  ]
+}}
+
+Rules:
+- skill_inventory: ALL skills found in CV (hard + soft), max 15 items
+- gap_report: TOP 5 skills required by JD but missing/weak in CV, ranked high → low
+- study_roadmap: 5 learning topics to close the gaps, ordered by priority
+- questions: 5 interview questions the interviewer will ask, with concise model answers
+
+CV:
+{cv_text}
+
+Job Description:
+{jd_text}
+
+Return ONLY the JSON object:"""
+
+structured_analysis_prompt = PromptTemplate(
+    input_variables=["cv_text", "jd_text"],
+    template=STRUCTURED_ANALYSIS_TEMPLATE,
+)
+
 SKILL_GAP_TEMPLATE = """
 You are an expert technical recruiter and career coach.
 

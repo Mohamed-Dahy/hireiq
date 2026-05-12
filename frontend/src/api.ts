@@ -141,6 +141,39 @@ export interface CVUploadResponse {
   cv_filename: string
   match_score: number
   skills_found: string[]
+  is_linkedin?: boolean
+}
+
+export interface SkillItem {
+  skill: string
+  category: string
+  level: string
+}
+
+export interface GapItem {
+  skill: string
+  importance: string
+  reason: string
+  resource: string
+}
+
+export interface RoadmapItem {
+  topic: string
+  priority: string
+  estimated_hours: number
+  resources: string[]
+}
+
+export interface QuestionItem {
+  question: string
+  model_answer: string
+}
+
+export interface StructuredAnalysis {
+  skill_inventory: SkillItem[]
+  gap_report: GapItem[]
+  study_roadmap: RoadmapItem[]
+  questions?: QuestionItem[]
 }
 
 export interface CVSession {
@@ -221,3 +254,6 @@ export const deleteSession = (sessionId: number) =>
 
 export const startAnalysisStream = (sessionId: number): EventSource =>
   new EventSource(`/analyze?session_id=${sessionId}&token=${localStorage.getItem('access_token')}`)
+
+export const getEnhancedAnalysis = (sessionId: number) =>
+  api.get<StructuredAnalysis>(`/cv/${sessionId}/analysis`)
