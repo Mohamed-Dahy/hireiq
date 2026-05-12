@@ -280,6 +280,18 @@ def get_current_user(
     if user is None:
         raise HTTPException(status_code=401, detail="User not found")
 
+    # Reject tokens issued before the last session revocation (password reset)
+    if user.sessions_revoked_at:
+        iat = payload.get("iat")
+        if iat is not None:
+            token_issued = datetime.utcfromtimestamp(int(iat))
+            if token_issued < user.sessions_revoked_at:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token revoked — please log in again",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
     check_account_locked(user)
 
     return user

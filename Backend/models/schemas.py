@@ -5,9 +5,9 @@ Pydantic models that define what the API accepts (requests)
 and what it returns (responses). No raw dicts ever leave the API.
 """
 
-from pydantic import BaseModel, EmailStr, field_validator
-from typing import Optional
-from datetime import datetime
+from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
+from typing import Any, Optional
+from datetime import date, datetime
 
 
 # ---------------------------------------------------------------------------
@@ -125,13 +125,12 @@ class AnalysisPendingResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 class CVSessionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     cv_filename: str
     match_score: Optional[float]
     created_at: datetime
-
-    class Config:
-        from_attributes = True  # allows building from a SQLAlchemy row
 
 
 # ---------------------------------------------------------------------------
@@ -145,6 +144,8 @@ class InterviewAnswerRequest(BaseModel):
 
 
 class InterviewResultResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     question: str
     transcript: Optional[str]
@@ -154,23 +155,19 @@ class InterviewResultResponse(BaseModel):
     eye_contact_ratio: Optional[float]
     created_at: datetime
 
-    class Config:
-        from_attributes = True
-
 
 # ---------------------------------------------------------------------------
 # CV session detail (session + all its interview results)
 # ---------------------------------------------------------------------------
 
 class CVSessionDetailResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     cv_filename: str
     match_score: Optional[float]
     created_at: datetime
     interview_results: list[InterviewResultResponse]
-
-    class Config:
-        from_attributes = True
 
 
 # ---------------------------------------------------------------------------
@@ -190,6 +187,8 @@ class AnalysisRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 class UserProfileResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     email: str
     username: str
@@ -199,5 +198,144 @@ class UserProfileResponse(BaseModel):
     total_interviews: int
     best_score: Optional[float]
 
-    class Config:
-        from_attributes = True
+
+# ---------------------------------------------------------------------------
+# Phase 6: ATS Job Tracker
+# ---------------------------------------------------------------------------
+
+class JobCreateRequest(BaseModel):
+    company:          str
+    title:            str
+    location:         Optional[str] = None
+    remote_type:      Optional[str] = None
+    job_url:          Optional[str] = None
+    jd_text:          Optional[str] = None
+    source:           Optional[str] = None
+    priority:         Optional[str] = None
+    cv_session_id:    Optional[int] = None
+    applied_date:     Optional[date] = None
+    deadline_date:    Optional[date] = None
+    followup_date:    Optional[date] = None
+    salary_min:       Optional[int] = None
+    salary_max:       Optional[int] = None
+    notes:            Optional[str] = None
+    cover_letter:     Optional[str] = None
+    rejection_reason: Optional[str] = None
+
+
+class JobUpdateRequest(BaseModel):
+    company:          Optional[str] = None
+    title:            Optional[str] = None
+    location:         Optional[str] = None
+    remote_type:      Optional[str] = None
+    job_url:          Optional[str] = None
+    jd_text:          Optional[str] = None
+    source:           Optional[str] = None
+    priority:         Optional[str] = None
+    cv_session_id:    Optional[int] = None
+    applied_date:     Optional[date] = None
+    deadline_date:    Optional[date] = None
+    followup_date:    Optional[date] = None
+    salary_min:       Optional[int] = None
+    salary_max:       Optional[int] = None
+    notes:            Optional[str] = None
+    cover_letter:     Optional[str] = None
+    rejection_reason: Optional[str] = None
+
+
+class JobResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id:               int
+    company:          str
+    title:            str
+    location:         Optional[str]
+    remote_type:      Optional[str]
+    job_url:          Optional[str]
+    status:           str
+    source:           Optional[str]
+    priority:         Optional[str]
+    cv_session_id:    Optional[int]
+    applied_date:     Optional[date]
+    deadline_date:    Optional[date]
+    followup_date:    Optional[date]
+    salary_min:       Optional[int]
+    salary_max:       Optional[int]
+    notes:            Optional[str]
+    cover_letter:     Optional[str]
+    rejection_reason: Optional[str]
+    match_score:      Optional[float]
+    ai_gap_summary:   Optional[str]
+    is_archived:      bool
+    created_at:       datetime
+    updated_at:       datetime
+
+
+class StatusTransitionRequest(BaseModel):
+    new_status: str
+    note:       Optional[str] = None
+
+
+class ActivityCreateRequest(BaseModel):
+    event_type:  str
+    event_date:  Optional[date] = None
+    notes:       Optional[str] = None
+
+
+class ActivityResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id:                 int
+    job_application_id: int
+    event_type:         str
+    event_date:         date
+    notes:              Optional[str]
+    created_at:         datetime
+
+
+class ContactCreateRequest(BaseModel):
+    name:         str
+    role:         Optional[str] = None
+    email:        Optional[str] = None
+    phone:        Optional[str] = None
+    linkedin_url: Optional[str] = None
+    notes:        Optional[str] = None
+
+
+class ContactResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id:                 int
+    job_application_id: int
+    name:               str
+    role:               Optional[str]
+    email:              Optional[str]
+    phone:              Optional[str]
+    linkedin_url:       Optional[str]
+    notes:              Optional[str]
+    created_at:         datetime
+
+
+class JobAnalyzeRequest(BaseModel):
+    jd_text: Optional[str] = None
+
+
+class JobAnalyzeResponse(BaseModel):
+    match_score:    Optional[float]
+    ai_gap_summary: Optional[str]
+
+
+class PrepQuestionsResponse(BaseModel):
+    questions: list[dict]
+
+
+class JobStatsResponse(BaseModel):
+    total_active:   int
+    by_status:      dict[str, int]
+    by_source:      dict[str, int]
+    response_rate:  float
+    interview_rate: float
+    offer_rate:     float
+    stale_count:    int
+    upcoming_count: int
+    weekly_trend:   list[Any]

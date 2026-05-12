@@ -353,6 +353,6 @@ class TestAuditLogPersistence:
 # ---------------------------------------------------------------------------
 
 class TestPaymobWebhook:
-    @pytest.mark.skip(reason="Paymob webhook endpoint pending Phase 5")
+    @pytest.mark.skip(reason="Paymob webhook endpoint pending Phase 12")
     def test_forged_webhook_rejected(self, test_client: TestClient):
         pass

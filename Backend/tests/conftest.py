@@ -11,6 +11,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
 import models.security  # noqa: F401 — registers SecurityAuditLog on shared Base
+import models.jobs     # noqa: F401 — registers JobApplication, ApplicationActivity, ApplicationContact
 from models.user import Base, User
 from services.auth_service import create_access_token, hash_password
 from database import get_db
@@ -26,9 +27,16 @@ _TestSession = sessionmaker(autocommit=False, autoflush=False, bind=_test_engine
 
 @pytest.fixture(scope="session", autouse=True)
 def _disable_rate_limits():
-    """All test requests come from 127.0.0.1 — disable slowapi so login tests don't trip the limit."""
+    """Disable slowapi and flush custom Redis rate-limit keys so tests are idempotent across runs."""
     from limiter import limiter
+    from services.cache import redis_client
     limiter.enabled = False
+    # Clear any per-email forgot-password rate keys left by a previous test run
+    try:
+        for key in redis_client.scan_iter("fp:rate:*"):
+            redis_client.delete(key)
+    except Exception:
+        pass
     yield
     limiter.enabled = True
 

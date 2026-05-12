@@ -257,3 +257,139 @@ export const startAnalysisStream = (sessionId: number): EventSource =>
 
 export const getEnhancedAnalysis = (sessionId: number) =>
   api.get<StructuredAnalysis>(`/cv/${sessionId}/analysis`)
+
+// ── Phase 6: ATS Job Tracker ─────────────────────────────────────────────────
+
+export type JobStatus =
+  | 'saved' | 'applied' | 'phone_screen' | 'technical'
+  | 'final_round' | 'offer' | 'accepted' | 'rejected' | 'withdrawn'
+
+export interface JobApplication {
+  id: number
+  company: string
+  title: string
+  location: string | null
+  remote_type: string | null
+  job_url: string | null
+  status: JobStatus
+  source: string | null
+  priority: string | null
+  deadline_date: string | null
+  followup_date: string | null
+  salary_min: number | null
+  salary_max: number | null
+  notes: string | null
+  match_score: number | null
+  ai_gap_summary: string | null
+  is_archived: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ActivityResponse {
+  id: number
+  job_application_id: number
+  event_type: string
+  event_date: string
+  notes: string | null
+  created_at: string
+}
+
+export interface ContactResponse {
+  id: number
+  job_application_id: number
+  name: string
+  role: string | null
+  email: string | null
+  phone: string | null
+  linkedin_url: string | null
+  notes: string | null
+  created_at: string
+}
+
+export interface JobStatsResponse {
+  total_active: number
+  by_status: Record<string, number>
+  by_source: Record<string, number>
+  response_rate: number
+  interview_rate: number
+  offer_rate: number
+  stale_count: number
+  weekly_trend: { week: string; count: number }[]
+}
+
+export interface JobFilters {
+  status?: string
+  priority?: string
+  is_archived?: boolean
+}
+
+export interface CreateJobPayload {
+  company: string
+  title: string
+  location?: string
+  remote_type?: string
+  job_url?: string
+  jd_text?: string
+  source?: string
+  priority?: string
+  deadline_date?: string
+  followup_date?: string
+  salary_min?: number
+  salary_max?: number
+  notes?: string
+}
+
+export const getJobs = (filters?: JobFilters) =>
+  api.get<JobApplication[]>('/jobs', { params: filters })
+
+export const createJob = (data: CreateJobPayload) =>
+  api.post<JobApplication>('/jobs', data)
+
+export const getJob = (id: number) =>
+  api.get<JobApplication>(`/jobs/${id}`)
+
+export const updateJob = (id: number, data: Partial<CreateJobPayload>) =>
+  api.patch<JobApplication>(`/jobs/${id}`, data)
+
+export const deleteJob = (id: number) =>
+  api.delete<JobApplication>(`/jobs/${id}`)
+
+export const transitionStatus = (id: number, newStatus: string, note?: string) =>
+  api.patch<JobApplication>(`/jobs/${id}/status`, { new_status: newStatus, note })
+
+export const analyzeJob = (id: number) =>
+  api.post<{ match_score: number | null; ai_gap_summary: string | null }>(`/jobs/${id}/analyze`)
+
+export const getJobPrep = (id: number) =>
+  api.get<{ questions: { question: string; model_answer: string }[] }>(`/jobs/${id}/prep`)
+
+export const logActivity = (
+  id: number,
+  data: { event_type: string; event_date?: string; notes?: string },
+) =>
+  api.post<ActivityResponse>(`/jobs/${id}/activities`, data)
+
+export const getActivities = (id: number) =>
+  api.get<ActivityResponse[]>(`/jobs/${id}/activities`)
+
+export const addContact = (
+  id: number,
+  data: { name: string; role?: string; email?: string; phone?: string; linkedin_url?: string; notes?: string },
+) =>
+  api.post<ContactResponse>(`/jobs/${id}/contacts`, data)
+
+export const getContacts = (id: number) =>
+  api.get<ContactResponse[]>(`/jobs/${id}/contacts`)
+
+export const deleteContact = (jobId: number, contactId: number) =>
+  api.delete<ContactResponse>(`/jobs/${jobId}/contacts/${contactId}`)
+
+export const getJobStats = () =>
+  api.get<JobStatsResponse>('/jobs/stats')
+
+export const getUpcomingJobs = () =>
+  api.get<JobApplication[]>('/jobs/upcoming')
+
+export const getStaleJobs = () =>
+  api.get<JobApplication[]>('/jobs/stale')

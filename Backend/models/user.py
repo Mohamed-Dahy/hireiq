@@ -18,6 +18,7 @@ class User(Base):
     email_verified      = Column(Boolean, default=False, nullable=False)
     failed_login_count  = Column(Integer, default=0, nullable=False)
     locked_until        = Column(DateTime, nullable=True)
+    sessions_revoked_at = Column(DateTime, nullable=True)
 
     sessions            = relationship("CVSession", back_populates="user")
     verification_tokens = relationship("EmailVerificationToken", back_populates="user")

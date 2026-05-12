@@ -10,11 +10,12 @@ import SessionDetail from './pages/SessionDetail'
 import Interview from './pages/Interview'
 import Dashboard from './pages/Dashboard'
 import Profile from './pages/Profile'
-import { getMe, logout as apiLogout } from './api'
+import Jobs from './pages/Jobs'
+import { getMe, logout as apiLogout, getJobStats } from './api'
 import type { CVUploadResponse, UserProfile } from './api'
 import { useToast } from './components/Toast'
 
-type Page = 'home' | 'upload' | 'results' | 'history' | 'detail' | 'interview' | 'profile'
+type Page = 'home' | 'upload' | 'results' | 'history' | 'detail' | 'interview' | 'profile' | 'jobs'
 type View = 'landing' | 'auth' | 'app'
 
 function getInitialViewAndMode(): { view: View; authMode: 'register' | 'login' | 'verify-email' | 'reset-password'; urlToken?: string } {
@@ -63,6 +64,7 @@ export default function App() {
   const [detailSessionId, setDetailSessionId] = useState<number | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [activePipelineCount, setActivePipelineCount] = useState<number | null>(null)
 
   // Force logout when the token refresh fails (interceptor dispatches this)
   const [offline, setOffline] = useState(false)
@@ -106,14 +108,17 @@ export default function App() {
     }
   }, [])
 
-  // Fetch user profile once logged in
+  // Fetch user profile + pipeline count once logged in
   useEffect(() => {
     if (view === 'app') {
       getMe()
         .then((res) => {
           setProfile(res.data)
-          sessionAuthenticated.current = true  // tokens confirmed valid
+          sessionAuthenticated.current = true
         })
+        .catch(() => {})
+      getJobStats()
+        .then(res => setActivePipelineCount(res.data.total_active))
         .catch(() => {})
     }
   }, [view])
@@ -145,6 +150,7 @@ export default function App() {
   const navItems = [
     { id: 'home'      as const, label: 'Home' },
     { id: 'upload'    as const, label: 'Analyze' },
+    { id: 'jobs'      as const, label: 'Jobs', badge: activePipelineCount ?? undefined },
     { id: 'history'   as const, label: 'History' },
     { id: 'interview' as const, label: 'Interview' },
   ]
@@ -169,18 +175,23 @@ export default function App() {
 
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-6">
-          {navItems.map(({ id, label }) => (
+          {navItems.map(({ id, label, badge }) => (
             <motion.button
               key={id}
               onClick={() => setPage(id)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               transition={{ duration: 0.15 }}
-              className={`text-sm font-medium transition-colors cursor-pointer ${
+              className={`relative text-sm font-medium transition-colors cursor-pointer ${
                 activeNav(id) ? 'text-purple-600' : 'text-gray-500 hover:text-gray-800'
               }`}
             >
               {label}
+              {badge != null && badge > 0 && (
+                <span className="absolute -top-1.5 -right-3 bg-purple-600 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                  {badge > 99 ? '99' : badge}
+                </span>
+              )}
               {activeNav(id) && (
                 <motion.div layoutId="nav-underline" className="h-0.5 bg-purple-600 rounded-full mt-0.5" />
               )}
@@ -259,17 +270,22 @@ export default function App() {
                 </button>
               </div>
               <nav className="flex flex-col p-2 gap-1 flex-1">
-                {navItems.map(({ id, label }) => (
+                {navItems.map(({ id, label, badge }) => (
                   <button
                     key={id}
                     onClick={() => goToPage(id)}
-                    className={`text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
+                    className={`relative text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
                       activeNav(id)
                         ? 'bg-purple-50 text-purple-700'
                         : 'text-gray-700 hover:bg-gray-50'
                     }`}
                   >
                     {label}
+                    {badge != null && badge > 0 && (
+                      <span className="absolute top-3 left-24 bg-purple-600 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5">
+                        {badge}
+                      </span>
+                    )}
                   </button>
                 ))}
                 <button
@@ -345,6 +361,12 @@ export default function App() {
         {page === 'interview' && (
           <motion.div key="interview" variants={pageVariants} initial="initial" animate="animate" exit="exit">
             <Interview sessionId={interviewSessionId} questions={interviewQuestions} />
+          </motion.div>
+        )}
+
+        {page === 'jobs' && (
+          <motion.div key="jobs" variants={pageVariants} initial="initial" animate="animate" exit="exit">
+            <Jobs />
           </motion.div>
         )}
 

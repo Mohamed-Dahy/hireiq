@@ -278,8 +278,10 @@ def reset_password(
     payload: ResetPasswordRequest,
     db: Session = Depends(get_db),
 ):
+    from datetime import datetime as _dt
     user = consume_password_reset_token(db, payload.token)
     user.hashed_password = hash_password(payload.new_password)
+    user.sessions_revoked_at = _dt.utcnow()  # invalidate all tokens issued before now
     reset_failed_login(db, user)
     db.commit()
     write_audit_log(db, "auth.password_change", _client_ip(request), "allowed", user_id=user.id)

@@ -9,7 +9,7 @@ description: "Task list for HireIQ Production SaaS Launch — Revised Phase Orde
 
 **Tests**: Required per constitution (Principle II) — unit + integration for every new endpoint.
 
-**Phase Status**: Phases 1–5 ✅ COMPLETE | Phases 6–14 pending
+**Phase Status**: Phases 1–6 ✅ COMPLETE | Phases 7–14 pending
 
 **Organization**: Phases 1–2 shared foundations. Phases 3–4 security hardening. Phases 5–8 core product features. Phases 9–11 growth & platform features (new). Phase 12 subscriptions & payments. Phase 13 full system testing. Phase 14 polish.
 
@@ -139,31 +139,75 @@ description: "Task list for HireIQ Production SaaS Launch — Revised Phase Orde
 
 ---
 
-## Phase 6: User Story 7 — ATS Job Tracker (Priority: P2)
+## Phase 6: User Story 7 — Competitive ATS Job Tracker (Priority: P2)
 
-**Goal**: Job application tracking with status pipeline and CV-match scoring per job.
+**Goal**: A production-grade job application tracking system that competes with Huntr, Teal, and Simplify — with AI-powered match scoring (leveraging Phase 5's LLM analyzer), auto-generated interview prep per job, validated stage transitions, activity timeline, contact tracking, and a funnel analytics dashboard.
 
-**Independent Test**: User creates a job application, moves it through status stages (saved → applied → interview), links a CV session, and sees the match score on the job card.
+**Independent Test**: User adds a job with a JD text → system auto-scores it against their linked CV session → user advances the application through stages (saved → applied → technical), each transition logged in the activity timeline → user opens AI Prep tab → interview questions generated for that specific role → Stats dashboard shows funnel conversion rates, source effectiveness, and stale application count.
+
+**No new paid services required.** Uses existing Groq API key (same as CV analysis), PostgreSQL, and existing auth/ownership infrastructure from Phase 4.
 
 ### Tests for User Story 7
 
 > **Write these FIRST — confirm they FAIL before implementing**
 
-- [ ] T085 [P] [US7] Integration test for job tracker in `Backend/tests/integration/test_jobs.py`: CRUD operations, status transitions, stats endpoint, ownership check (404 on other user's job)
+- [X] T085 [P] [US7] Unit tests for job service in `Backend/tests/unit/test_job_service.py`: `validate_status_transition` rejects invalid jumps (saved→offer raises 400), accepts valid transitions (saved→applied, applied→phone_screen), `get_stale_jobs` returns only jobs with no activity in 14+ days, `compute_job_stats` returns correct funnel counts and response_rate
+- [X] T085b [P] [US7] Integration tests for job tracker in `Backend/tests/integration/test_jobs.py`: full CRUD with field validation, status transition (valid succeeds + writes activity row, invalid returns 400), activity log creation and retrieval, contact CRUD, `POST /jobs/{id}/analyze` returns updated match_score (LLM mocked), `GET /jobs/{id}/prep` returns questions, `GET /jobs/stats` returns correct funnel shape, `GET /jobs/upcoming` returns only jobs with deadline or followup within 7 days, `GET /jobs/stale` excludes terminal statuses, ownership check returns 404 on another user's job
 
 ### Implementation for User Story 7
 
-- [ ] T086 [P] [US7] Create `Backend/models/jobs.py` — `JobApplication` model per data-model.md
-- [ ] T087 [US7] Create `Backend/migrations/versions/004_jobs_recruiter.py` — add `job_applications` table
-- [ ] T088 [P] [US7] Add `JobApplicationCreate`, `JobApplicationUpdate`, `JobApplicationResponse`, `JobStatsResponse` schemas to `Backend/models/schemas.py`
-- [ ] T089 [US7] Create `Backend/routers/jobs.py` — `GET /jobs`, `POST /jobs`, `PATCH /jobs/{id}`, `DELETE /jobs/{id}`, `GET /jobs/stats`; apply `require_ownership` on `{id}` routes
-- [ ] T090 [US7] Register `jobs` router in `Backend/app/main.py`; add `/jobs` proxy rule to `frontend/nginx.conf`
-- [ ] T091 [P] [US7] Create `frontend/src/components/JobCard.tsx` — card with title, company, status badge, match score, notes snippet, action buttons
-- [ ] T092 [US7] Create `frontend/src/pages/Jobs.tsx` — job list view with status filter tabs (kanban-style columns); add/edit job modal
-- [ ] T093 [US7] Add job tracker calls to `frontend/src/api.ts`: `getJobs(status?)`, `createJob(data)`, `updateJob(id, data)`, `deleteJob(id)`, `getJobStats()`
-- [ ] T094 [US7] Add `/jobs` route to frontend router; add nav item
+#### Models
 
-**Checkpoint**: Job tracker independently testable. T085 passes.
+- [X] T086 [P] [US7] Create `Backend/models/jobs.py` — `JobApplication` model: `id`, `user_id` (FK→users, not null), `company` (String, not null), `title` (String, not null), `location` (String nullable), `remote_type` (String: remote/hybrid/onsite/unknown, default unknown), `salary_min` (Integer nullable), `salary_max` (Integer nullable), `job_url` (String nullable), `jd_text` (Text nullable — stored for AI re-analysis), `source` (String: linkedin/indeed/company/referral/cold_email/other, default other), `status` (String: saved/applied/phone_screen/technical/final_round/offer/accepted/rejected/withdrawn, default saved), `applied_date` (Date nullable), `deadline_date` (Date nullable), `next_followup_date` (Date nullable), `priority` (String: high/medium/low, default medium), `cv_session_id` (FK→cv_sessions nullable), `match_score` (Float nullable), `ai_gap_summary` (Text nullable), `ai_prep_questions` (Text nullable — JSON array), `notes` (Text nullable), `cover_letter` (Text nullable), `rejection_reason` (String nullable), `stage_entered_at` (DateTime, default now), `is_archived` (Boolean, default False), `created_at`, `updated_at`
+- [X] T086b [P] [US7] Add `ApplicationActivity` model to `Backend/models/jobs.py` — `id`, `job_application_id` (FK→job_applications, cascade delete), `user_id` (FK→users), `event_type` (String: status_change/email_sent/call_made/interview_scheduled/note_added/follow_up_sent/offer_received), `event_date` (Date, default today), `notes` (Text nullable), `created_at`
+- [X] T086c [P] [US7] Add `ApplicationContact` model to `Backend/models/jobs.py` — `id`, `job_application_id` (FK→job_applications, cascade delete), `name` (String not null), `role` (String: hr_recruiter/hiring_manager/referrer/other), `email` (String nullable), `linkedin_url` (String nullable), `notes` (Text nullable), `created_at`
+
+#### Migration
+
+- [X] T087 [US7] Create `Backend/migrations/versions/004_jobs_recruiter.py` (`down_revision="003"`) — add `job_applications`, `application_activities`, `application_contacts` tables; note: this migration is extended by Phase 7 (T097) which adds `recruiter_lists` and `recruiter_candidates` to the same file
+
+#### Service
+
+- [X] T087b [US7] Create `Backend/services/job_service.py` — `VALID_TRANSITIONS: dict[str, list[str]]` mapping every status to its allowed next statuses (e.g. saved→[applied, withdrawn], offer→[accepted, rejected, withdrawn], accepted/rejected/withdrawn are terminal); `validate_status_transition(current, next)` raises `HTTPException(400)` on invalid; `is_stale(job, days=14)` True if no `ApplicationActivity` in last 14 days and status not in terminal set; `get_stale_jobs(db, user_id)` returns list; `compute_job_stats(db, user_id)` returns dict: `by_status` (count per status), `response_rate` (jobs that reached phone_screen+ / jobs with applied status), `interview_rate` (technical+ / applied), `offer_rate` (offer+ / applied), `avg_days_per_stage` (mean days spent in each stage from stage_entered_at), `by_source` (count per source), `weekly_trend` (last 8 weeks: [{"week": "2026-W18", "count": 5}]), `stale_count`, `upcoming_count` (deadline or followup within 7 days), `total_active` (non-archived, non-terminal)
+
+#### Schemas
+
+- [X] T088 [P] [US7] Add to `Backend/models/schemas.py`: `JobApplicationCreate` (all create fields, company + title required), `JobApplicationUpdate` (all fields Optional), `JobApplicationResponse` (full response: all fields + `is_stale: bool` computed), `JobApplicationListItem` (lighter: id, company, title, status, match_score, priority, source, applied_date, next_followup_date, is_stale, stage_entered_at), `StatusTransitionRequest` (new_status: str, note: Optional[str]), `ActivityCreate` (event_type, event_date, notes), `ActivityResponse` (id, event_type, event_date, notes, created_at), `ContactCreate` (name, role, email, linkedin_url, notes), `ContactResponse` (id + all contact fields), `JobStatsResponse` (full analytics shape matching job_service output)
+
+#### Routes — Core CRUD
+
+- [X] T089 [US7] Create `Backend/routers/jobs.py` — `GET /jobs` (query params: status, source, priority, is_archived=False, company_search; returns `list[JobApplicationListItem]`), `POST /jobs` (create; if jd_text + cv_session_id provided, immediately call `analyze_structured` and store match_score + ai_gap_summary + ai_prep_questions), `GET /jobs/{id}` (full detail: `JobApplicationResponse` + activities list + contacts list), `PATCH /jobs/{id}` (partial update), `DELETE /jobs/{id}` (soft-archive: set is_archived=True, NOT physical delete); apply `require_ownership` on all `{id}` routes
+
+#### Routes — Status Transitions, Activities, Contacts
+
+- [X] T089b [US7] Add to `Backend/routers/jobs.py` — `PATCH /jobs/{id}/status` (call `validate_status_transition`, update status + stage_entered_at, auto-write `ApplicationActivity` row with event_type=status_change), `POST /jobs/{id}/activities` (manual activity log entry), `GET /jobs/{id}/activities` (chronological list), `POST /jobs/{id}/contacts` (add contact), `GET /jobs/{id}/contacts`, `DELETE /jobs/{id}/contacts/{contact_id}` (require_ownership on job, then ownership implied)
+
+#### Routes — AI & Analytics
+
+- [X] T089c [US7] Add to `Backend/routers/jobs.py` — `POST /jobs/{id}/analyze` (load stored jd_text or accept jd_text in body; if cv_session_id set load cv_text from session; call `analyze_structured(cv_text, jd_text)`; store match_score from Phase 5's scoring logic, top 3 gap items as ai_gap_summary string, prep questions as ai_prep_questions JSON; return updated `JobApplicationResponse`); `GET /jobs/{id}/prep` (return stored ai_prep_questions or trigger generation if null); `GET /jobs/stats` (call `compute_job_stats`, return `JobStatsResponse`); `GET /jobs/upcoming` (deadline_date or next_followup_date within 7 days, not archived/terminal); `GET /jobs/stale` (call `get_stale_jobs`, not archived)
+
+#### Registration
+
+- [X] T090 [US7] Register `jobs` router in `Backend/app/main.py`; add `/jobs` proxy rule to `frontend/nginx.conf`
+
+#### Frontend — Components
+
+- [X] T091 [P] [US7] Create `frontend/src/components/JobCard.tsx` — displays: company + title (bold), status badge (color-coded: grey=saved, blue=applied, yellow=phone_screen, orange=technical, purple=final_round, green=offer, emerald=accepted, red=rejected), match score ring gauge (0–100: red<60, amber<75, green≥75, grey if null), source chip, priority dot (red=high, amber=medium, grey=low), days-in-current-stage counter, follow-up date with red "overdue" highlight if past, stale warning badge if is_stale; action menu: Advance Status, Log Activity, Edit, Archive
+- [X] T091b [P] [US7] Create `frontend/src/components/JobDetailDrawer.tsx` — slide-in side panel (Sheet from shadcn/ui) with 4 tabs: **Overview** (all job fields displayed + inline-edit form, match score gauge at top, ai_gap_summary banner in amber if gaps exist), **Activity** (renders `ApplicationTimeline` + inline log-activity form with event_type select + date + notes), **Contacts** (contact cards with email/LinkedIn links + add contact form), **AI Prep** (gap summary banner, list of prep questions with model answers collapsible; "Generate Prep" button if empty or "Regenerate" if stale)
+- [X] T091c [P] [US7] Create `frontend/src/components/ApplicationTimeline.tsx` — vertical timeline of `ActivityResponse` items; each entry: event_type icon (✉ email, 📞 call, 📅 interview, → status_change, 📝 note, 🔄 followup, 💰 offer), formatted date, notes text; newest first; empty state "No activity logged yet"
+- [X] T091d [P] [US7] Create `frontend/src/components/JobStatsPanel.tsx` — 4 metric cards row (total active, response rate %, interview rate %, offer rate %); funnel visualization (horizontal bars: Saved→Applied→Screened→Technical→Offer→Accepted with counts + conversion % between each step); applications-by-source horizontal bar chart; weekly application trend area chart (last 8 weeks); two alert badges: "X stale applications" (amber) and "Y upcoming deadlines" (blue); uses recharts (already added in Phase 10)
+- [X] T091e [P] [US7] Create `frontend/src/components/AddEditJobModal.tsx` — Dialog (shadcn/ui) with two-column form: left column (company*, title*, location, remote_type select, salary_min–salary_max range, job_url, source select), right column (jd_text textarea tall, cv_session_id select from user sessions with match score preview, priority select, applied_date, deadline_date, next_followup_date); notes textarea full width; validates company + title required; on submit calls createJob or updateJob; if jd_text + cv_session_id provided, auto-analyze on save (show spinner)
+
+#### Frontend — Page
+
+- [X] T092 [US7] Create `frontend/src/pages/Jobs.tsx` — header bar: "Add Job" button (opens `AddEditJobModal`), view toggle (Kanban/List/Stats icons), search input, filter chips (status multi-select, source, priority); **Kanban view**: columns Saved/Applied/Phone Screen/Technical/Final Round/Offer (archived + terminal statuses hidden), each column shows count badge, cards are `JobCard`, column has "Add to [stage]" shortcut; **List view**: sortable table (company, title, status, score, source, applied date, followup date, days in stage), click row opens `JobDetailDrawer`; **Stats tab**: renders `JobStatsPanel`; stale banner at top ("X applications have had no activity in 14+ days — [Review]"); upcoming banner ("Y deadlines in the next 7 days"); empty state with CTA when pipeline is empty
+
+#### Frontend — API & Router
+
+- [X] T093 [US7] Add to `frontend/src/api.ts`: `getJobs(filters?: JobFilters)`, `createJob(data)`, `getJob(id)`, `updateJob(id, data)`, `deleteJob(id)` (archive), `transitionStatus(id, newStatus, note?)`, `analyzeJob(id, jdText?)`, `getJobPrep(id)`, `logActivity(id, data)`, `getActivities(id)`, `addContact(id, data)`, `getContacts(id)`, `deleteContact(jobId, contactId)`, `getJobStats()`, `getUpcomingJobs()`, `getStaleJobs()`; export `JobApplicationResponse`, `JobApplicationListItem`, `ActivityResponse`, `ContactResponse`, `JobStatsResponse` types
+- [X] T094 [US7] Add `/jobs` route to frontend router; add "Jobs" nav item with active pipeline count badge (fetched from `getJobStats().total_active`); add "Track This Job" quick-action on Results page (pre-fills job modal with the analyzed JD and match score)
+
+**Checkpoint**: Full ATS pipeline testable end-to-end. T085 + T085b pass. AI analysis on job applications works with mocked LLM. Stats dashboard shows real funnel data. Status transitions enforce business rules. No regressions in Phase 1–5 tests.
 
 ---
 
@@ -425,7 +469,7 @@ description: "Task list for HireIQ Production SaaS Launch — Revised Phase Orde
 
 - **Phases 1–4**: Complete ✅
 - **Phase 5 (Enhanced AI)**: Depends on Phase 4 — needs auth and ownership checks in place
-- **Phase 6 (ATS Tracker)**: Depends on Phase 4 — ownership check pattern; independent of Phase 5
+- **Phase 6 (ATS Tracker)**: Depends on Phase 4 (ownership checks) AND Phase 5 (AI analysis — `analyze_structured` used for per-job match scoring and prep generation)
 - **Phase 7 (Recruiter)**: Depends on Phase 6 — shares `Backend/models/jobs.py` and migration 004
 - **Phase 8 (Frontend Redesign)**: Depends on Phases 5–7 (redesigns the pages those phases introduce); can start Phase 8 tasks for Landing + Auth independently of Phases 5–7
 - **Phase 9 (Referral)**: Depends on Phase 4 (needs auth). Independent of Phases 5–8. Must complete before Phase 12 so referral rewards integrate into subscription activation
@@ -448,7 +492,8 @@ All tasks marked `[P]` within a phase can run simultaneously.
 
 Key parallel windows:
 - Phase 5: T070–T071 (tests) in parallel; T074, T079, T080, T081 in parallel (different files)
-- Phase 6 + 7: Can start Phase 6 immediately after Phase 4; Phase 7 starts after Phase 6 migration is created
+- Phase 6: T085 + T085b (tests) in parallel; T086 + T086b + T086c (models) in parallel; T089b + T089c added after T089; T091 + T091b + T091c + T091d + T091e all in parallel (different component files)
+- Phase 6 → 7: Phase 7 starts after T087 (migration 004 created); T096 extends Backend/models/jobs.py, T097 extends the migration
 - Phase 8: All T106–T114 in parallel (different page files); start during Phase 6/7 for Landing + Auth pages
 - Phase 9: T123–T124 (tests) in parallel; T125, T127, T132, T133 in parallel
 - Phase 10: T136–T137 (tests) in parallel; T139, T140, T144, T145 in parallel

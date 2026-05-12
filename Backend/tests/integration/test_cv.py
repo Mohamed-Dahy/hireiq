@@ -187,6 +187,27 @@ class TestUploadLinkedInDetection:
         assert resp.status_code == 200
         assert resp.json()["is_linkedin"] is False
 
+    def test_regular_upload_returns_is_linkedin_false_and_session_id(
+        self, test_client: TestClient, auth_headers: dict
+    ):
+        with patch("routers.cv.compute_match_score", return_value=0.65), \
+             patch("routers.cv.store_embeddings"), \
+             patch("routers.cv.set_cached_score"), \
+             patch("routers.cv.parse_cv", return_value={"raw_text": "Jane Doe", "skills": ["Java"]}), \
+             patch("routers.cv.is_linkedin_pdf", return_value=False):
+
+            resp = test_client.post(
+                "/cv/upload",
+                files={"cv_file": ("cv.pdf", io.BytesIO(_PDF_STUB), "application/pdf")},
+                data={"jd_text": _JD},
+                headers=auth_headers,
+            )
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert "session_id" in body
+        assert body["is_linkedin"] is False
+
     def test_linkedin_flag_persisted_in_db(
         self, test_client: TestClient, test_db: Session, auth_headers: dict
     ):
@@ -207,3 +228,96 @@ class TestUploadLinkedInDetection:
         db_session = test_db.query(CVSession).filter(CVSession.id == session_id).first()
         assert db_session is not None
         assert db_session.is_linkedin is True
+
+
+# ---------------------------------------------------------------------------
+# GET /analyze — SSE stream persists structured analysis to CVSession
+# ---------------------------------------------------------------------------
+
+class TestAnalyzeStream:
+    def test_stream_persists_structured_fields_to_session(
+        self, test_client: TestClient, test_db: Session, test_user: User, auth_headers: dict
+    ):
+        """Verifies that after the SSE stream completes, CVSession has structured data."""
+        import json as _json
+        import tempfile, os
+        from services.auth_service import create_access_token
+
+        # Create a CV session with a real (temp) file on disk
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
+            f.write(_PDF_STUB)
+            tmp_path = f.name
+        cv_filename = os.path.basename(tmp_path)
+
+        session = CVSession(
+            user_id=test_user.id,
+            cv_filename=cv_filename,
+            jd_text=_JD,
+            match_score=0.7,
+        )
+        test_db.add(session)
+        test_db.commit()
+        test_db.refresh(session)
+
+        token = create_access_token(test_user.id)
+        structured_payload = {
+            "skill_inventory": [{"skill": "Python", "category": "hard", "level": "advanced"}],
+            "gap_report": [{"skill": "K8s", "importance": "high", "reason": "Required", "resource": "k8s.io"}],
+            "study_roadmap": [{"topic": "Containers", "priority": "high", "estimated_hours": 10, "resources": []}],
+            "questions": [{"question": "Tell me about Python.", "model_answer": "..."}],
+        }
+
+        with patch("routers.analysis.stream_analysis", return_value=iter(["chunk1"])), \
+             patch("routers.analysis.analyze_structured", return_value=structured_payload), \
+             patch("routers.analysis.extract_text_from_pdf", return_value="John Doe Python developer"), \
+             patch("routers.analysis.os.path.exists", return_value=True):
+
+            resp = test_client.get(
+                f"/analyze?session_id={session.id}&token={token}",
+            )
+
+        os.unlink(tmp_path)
+
+        assert resp.status_code == 200
+        assert "text/event-stream" in resp.headers.get("content-type", "")
+
+        # Consume the stream and verify structured data was saved
+        test_db.expire_all()
+        updated = test_db.query(CVSession).filter(CVSession.id == session.id).first()
+        assert updated.skill_inventory is not None
+        assert _json.loads(updated.skill_inventory)[0]["skill"] == "Python"
+        assert updated.gap_report is not None
+        assert updated.study_roadmap is not None
+
+    def test_stream_rejects_other_users_session(
+        self, test_client: TestClient, test_db: Session, auth_headers: dict
+    ):
+        other = User(
+            email="other_stream@example.com",
+            username="other_stream_user",
+            hashed_password="x",
+            email_verified=True,
+        )
+        test_db.add(other)
+        test_db.commit()
+        test_db.refresh(other)
+
+        session = CVSession(
+            user_id=other.id,
+            cv_filename="other.pdf",
+            jd_text=_JD,
+            match_score=0.5,
+        )
+        test_db.add(session)
+        test_db.commit()
+        test_db.refresh(session)
+
+        from services.auth_service import create_access_token
+        token = create_access_token(test_db.query(User).filter(User.email == "testuser@example.com").first().id)
+
+        resp = test_client.get(f"/analyze?session_id={session.id}&token={token}")
+        assert resp.status_code == 403
+
+    def test_stream_rejects_invalid_token(self, test_client: TestClient):
+        resp = test_client.get("/analyze?session_id=1&token=not-a-real-token")
+        assert resp.status_code == 401

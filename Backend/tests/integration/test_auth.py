@@ -216,6 +216,33 @@ class TestResetPassword:
         })
         assert resp.status_code == 400
 
+    def test_reset_password_invalidates_existing_sessions(
+        self, test_client: TestClient, test_db: Session, test_user: User
+    ):
+        """FR-004: tokens issued before password reset must be rejected (sessions_revoked_at)."""
+        # Obtain a valid access token first
+        login_resp = test_client.post("/auth/login", json={
+            "email": test_user.email,
+            "password": "TestPass123!",
+        })
+        old_access_token = login_resp.json()["access_token"]
+        old_headers = {"Authorization": f"Bearer {old_access_token}"}
+
+        # Verify the old token works now
+        me_resp = test_client.get("/auth/me", headers=old_headers)
+        assert me_resp.status_code == 200
+
+        # Reset the password
+        reset_token = create_password_reset_token(test_db, test_user.id)
+        test_client.post("/auth/reset-password", json={
+            "token": reset_token,
+            "new_password": "BrandNewPass1!",
+        })
+
+        # The old token must now be rejected (sessions_revoked_at set by reset)
+        me_resp = test_client.get("/auth/me", headers=old_headers)
+        assert me_resp.status_code == 401
+
 
 # ---------------------------------------------------------------------------
 # POST /auth/logout
