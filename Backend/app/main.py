@@ -10,6 +10,7 @@ from routers import cv, auth, analysis, interview
 from limiter import limiter
 from app.config import settings, configure_logging
 from middleware.security_headers import SecurityHeadersMiddleware
+from middleware.csrf import CSRFMiddleware
 
 configure_logging()
 
@@ -26,6 +27,8 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Security headers MUST be registered before CORS
 app.add_middleware(SecurityHeadersMiddleware)
+# CSRF defense-in-depth: require X-Requested-With on state-changing requests
+app.add_middleware(CSRFMiddleware)
 
 origins = [o.strip() for o in settings.allowed_origins.split(",")]
 app.add_middleware(

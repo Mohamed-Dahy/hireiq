@@ -54,7 +54,31 @@ def test_db(_create_test_schema):
 
 @pytest.fixture()
 def test_client(test_db: Session):
-    """FastAPI TestClient wired to the test database session."""
+    """FastAPI TestClient wired to the test database session.
+
+    Includes X-Requested-With: XMLHttpRequest so all POST/DELETE requests pass
+    the CSRF middleware without needing to repeat the header in every test.
+    """
+    from app.main import app
+
+    def _override_get_db():
+        yield test_db
+
+    app.dependency_overrides[get_db] = _override_get_db
+    with TestClient(
+        app,
+        raise_server_exceptions=True,
+        headers={"X-Requested-With": "XMLHttpRequest"},
+    ) as client:
+        yield client
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+def no_csrf_client(test_db: Session):
+    """TestClient WITHOUT the X-Requested-With header.
+    Use only in CSRF-specific tests that verify the middleware blocks unauthenticated requests.
+    """
     from app.main import app
 
     def _override_get_db():

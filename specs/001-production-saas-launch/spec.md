@@ -2,7 +2,7 @@
 
 **Feature Branch**: `001-production-saas-launch`
 **Created**: 2026-05-10
-**Status**: Amended — v1.2 (2026-05-10: Paymob-only payment gateway; cybersecurity requirements added)
+**Status**: Amended — v1.3 (2026-05-12: Phases 1–4 complete; phase order revised; three new growth/platform user stories added: US9 Referral Engine, US10 Admin BI Dashboard, US11 Notification Center)
 **Input**: Customer-driven request to transform HireIQ from a portfolio demo into
 a commercially deployable, subscription-based SaaS product.
 
@@ -252,6 +252,132 @@ and logged without accessing protected data or disrupting other users.
     is returned to the client, **Then** it contains no stack trace, file path,
     database query, or internal system detail — only a safe, user-facing
     message and a reference code.
+
+---
+
+---
+
+### User Story 9 — Referral & Viral Growth Engine (Priority: P2)
+
+Every registered user has a unique, shareable referral link. When a referred user
+subscribes to any paid plan, the referrer automatically earns one month free,
+credited to their next billing cycle. A public leaderboard (usernames only —
+no PII) shows the top referrers and creates social motivation to share.
+
+**Why this priority**: Referral is the highest-ROI acquisition channel for a
+SaaS product targeting job seekers — the audience is inherently social and
+career-motivated. Building it before subscriptions means the reward is wired
+into the billing system from day one, not retrofitted later.
+
+**Independent Test**: User A shares their referral link → User B registers via
+the link → User B pays for a plan → User A's account shows 1 conversion and
+1 earned free month → both receive confirmation emails → leaderboard shows
+User A's referral count.
+
+**Acceptance Scenarios**:
+
+1. **Given** a registered user, **When** they open their profile or referral
+   page, **Then** they see a unique referral link with a one-click copy button
+   and a count of successful referrals.
+2. **Given** a visitor who clicks a referral link, **When** they register,
+   **Then** the referral relationship is recorded and will be credited when
+   they subscribe.
+3. **Given** a referred user who subscribes to a paid plan, **When** the
+   payment is confirmed, **Then** the referrer automatically earns one month
+   free on their next billing cycle, and both users receive a notification.
+4. **Given** a user who tries to refer themselves (same email or same device),
+   **When** they attempt to register via their own link, **Then** the self-
+   referral is silently ignored (no error, no credit).
+5. **Given** 10 or more active referrers, **When** the leaderboard is viewed,
+   **Then** the top 10 referrers are shown by username and referral count —
+   no email addresses, user IDs, or other PII is displayed.
+
+---
+
+### User Story 10 — Platform Owner Admin Business Intelligence Dashboard (Priority: P2)
+
+The platform operator (product owner) has a private admin panel accessible only
+with a separate admin credential — not connected to the regular user auth flow.
+The dashboard shows real-time business health metrics: monthly active users,
+monthly recurring revenue, free-to-paid conversion rate, plan distribution,
+feature usage, and recent security audit events.
+
+**Why this priority**: A SaaS cannot be run without visibility into what is
+working. This dashboard gives the operator the data needed to make decisions
+about pricing, features, and marketing — particularly critical at launch when
+rapid iteration is needed based on real user behaviour.
+
+**Independent Test**: Admin logs in with the admin credential → dashboard shows
+accurate user count, MRR, conversion rate, and recent audit events → logging in
+with a regular user token on `/admin/*` routes returns 403.
+
+**Acceptance Scenarios**:
+
+1. **Given** an operator with the admin credential, **When** they log into the
+   admin panel, **Then** they see a dashboard with: total registered users,
+   monthly active users, MRR, ARR, and free-to-paid conversion rate.
+2. **Given** the admin dashboard, **When** the operator views the plan
+   distribution chart, **Then** they can see the count of users on each plan
+   (free, professional, recruiter) as an up-to-date breakdown.
+3. **Given** the admin dashboard, **When** the operator views the feature usage
+   section, **Then** they see counts of: CV uploads, interviews conducted, job
+   tracker entries, and recruiter lists created — for the last 30 days.
+4. **Given** a regular user's JWT token, **When** it is used to request any
+   `/admin/*` endpoint, **Then** the request is rejected with 403 — the
+   admin panel is completely isolated from the user auth system.
+5. **Given** the admin audit log view, **When** the operator views recent
+   security events, **Then** they can see the last 100 security audit log
+   entries with event type, IP, outcome, and timestamp — no raw PII
+   (email addresses are masked, CVs are referenced by session ID only).
+
+---
+
+### User Story 11 — Personalised Career Growth Roadmap (Priority: P2)
+
+A user selects a CV they have already uploaded, types their dream job or target
+role, and receives a complete, phased career development roadmap. The roadmap
+is not a flat list of missing skills — it is a structured, time-boxed journey
+from the user's current position to their goal, with specific courses, books,
+projects to build, milestones, market salary data, and immediate quick wins
+for the first two weeks.
+
+Users can save multiple roadmaps for different target roles and revisit them
+as their career evolves.
+
+**Why this priority**: The CV scoring feature tells users *where they stand*
+today. The roadmap tells them *how to get where they want to be*. Together,
+these create the core long-term value of the platform — a tool people return
+to throughout their career, not just once per job application.
+
+**Independent Test**: A tester with an uploaded CV types "Senior Data Engineer
+at a FinTech company" and within 30 seconds receives a roadmap with: 3–5 named
+phases, each containing specific resource recommendations (course name, free/paid,
+estimated hours), a project to build, and a milestone; plus a career insight card
+showing local and remote salary ranges, top hiring companies, and in-demand skills;
+plus 3 quick wins the user can start today.
+
+**Acceptance Scenarios**:
+
+1. **Given** an uploaded CV and a specified target role, **When** the user
+   requests a career roadmap, **Then** the system returns a structured plan
+   with 3–5 phases covering the skills gap from their current profile to the
+   target role requirements.
+2. **Given** a career roadmap phase, **When** the user views it, **Then** they
+   see: the phase name, estimated duration in weeks, skills covered, ≥3 specific
+   learning resources (with free/paid status and estimated hours), one project
+   to build to demonstrate the skills, and a measurable milestone.
+3. **Given** a generated roadmap, **When** the career insight section is viewed,
+   **Then** the user sees: salary range for the target role in Egypt (EGP),
+   remote salary range (USD), the top 5 companies currently hiring for this
+   role, and the most in-demand niche skills that differentiate candidates.
+4. **Given** a generated roadmap, **When** the user views the quick wins section,
+   **Then** they see 3 concrete actions they can complete within 2 weeks to
+   immediately begin closing the gap — each with a clear reason why it matters
+   and a time estimate.
+5. **Given** a user who wants to explore multiple career paths, **When** they
+   generate roadmaps for different target roles, **Then** all roadmaps are saved
+   and accessible from a history list — each labelled with the target role and
+   creation date.
 
 ---
 

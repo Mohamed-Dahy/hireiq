@@ -6,12 +6,26 @@
 ## Summary
 
 Transform HireIQ from a portfolio demo into a commercially deployable SaaS
-platform. The work divides into five sequential concerns: (1) harden the
-existing codebase against the critical/high issues identified in the spec
-audit and apply OWASP Top 10 security controls; (2) extend the auth system
-to production standards; (3) build the subscription and Paymob payment layer;
-(4) add the three new premium features (LinkedIn import, ATS job tracker,
-recruiter dashboard); and (5) redesign the frontend with shadcn/ui.
+platform. **Phases 1–4 are complete** (infrastructure, auth hardening, security
+controls — 80 tests passing).
+
+Remaining work divides into four sequential sprints:
+
+1. **Product completeness (Phases 5–8)**: Enhanced AI analysis, ATS job tracker,
+   recruiter dashboard, and a premium frontend redesign — building all product
+   value before asking anyone to pay.
+2. **Growth & platform infrastructure (Phases 9–11)**: Referral engine (viral
+   acquisition), admin BI dashboard (operator visibility), and notification
+   center (retention) — the three levers that determine whether the SaaS
+   grows after launch.
+3. **Monetisation (Phase 12)**: Subscription plans and Paymob payments, wired
+   into the referral and notification systems from day one.
+4. **Validation & launch (Phases 13–14)**: Full system integration testing,
+   Playwright E2E flows, load testing, OWASP walkthrough, and pre-launch polish.
+
+New user stories added: **US9** (Referral & Viral Growth), **US10** (Platform
+Owner Admin BI Dashboard), **US11** (Personalised Career Growth Roadmap — LLM-generated
+phased career plan with resources, projects, salary data, and quick wins).
 All work lands in the existing Backend/frontend folder structure.
 
 ## Technical Context

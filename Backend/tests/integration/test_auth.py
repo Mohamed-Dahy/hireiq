@@ -296,3 +296,48 @@ class TestGetMe:
     def test_get_me_without_token_returns_403(self, test_client: TestClient):
         resp = test_client.get("/auth/me")
         assert resp.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# DELETE /auth/account
+# ---------------------------------------------------------------------------
+
+class TestDeleteAccount:
+    def test_delete_account_returns_200_and_removes_user(
+        self, test_client: TestClient, test_db: Session, test_user: User, auth_headers: dict
+    ):
+        resp = test_client.delete("/auth/account", headers=auth_headers)
+        assert resp.status_code == 200
+        assert "deleted" in resp.json()["message"].lower()
+
+        # User record must be gone from the database
+        gone = test_db.query(User).filter(User.id == test_user.id).first()
+        assert gone is None
+
+    def test_delete_account_blacklists_token(
+        self, test_client: TestClient, test_user: User, auth_headers: dict
+    ):
+        test_client.delete("/auth/account", headers=auth_headers)
+
+        # The same token must now be rejected
+        resp = test_client.get("/auth/me", headers=auth_headers)
+        assert resp.status_code == 401
+
+    def test_delete_account_without_token_returns_403(self, test_client: TestClient):
+        resp = test_client.delete("/auth/account")
+        assert resp.status_code in (401, 403)
+
+    def test_delete_account_writes_audit_log(
+        self, test_client: TestClient, test_db: Session, test_user: User, auth_headers: dict
+    ):
+        from models.security import SecurityAuditLog
+
+        test_client.delete("/auth/account", headers=auth_headers)
+
+        log = (
+            test_db.query(SecurityAuditLog)
+            .filter(SecurityAuditLog.event_type == "auth.account_deleted")
+            .first()
+        )
+        assert log is not None
+        assert log.outcome == "allowed"

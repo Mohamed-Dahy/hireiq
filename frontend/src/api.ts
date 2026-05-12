@@ -1,6 +1,9 @@
 import axios from 'axios'
 
-const api = axios.create({ baseURL: '/' })
+const api = axios.create({
+  baseURL: '/',
+  headers: { 'X-Requested-With': 'XMLHttpRequest' },
+})
 export default api
 
 // Attach JWT to every outgoing request
@@ -187,6 +190,9 @@ export const resetPassword = (token: string, newPassword: string) =>
 
 export const getMe = () =>
   api.get<UserProfile>('/auth/me')
+
+export const deleteAccount = () =>
+  api.delete<MessageResponse>('/auth/account')
 
 // ── CV ───────────────────────────────────────────────────────────────────────
 

@@ -1,5 +1,5 @@
 ---
-description: "Task list for HireIQ Production SaaS Launch"
+description: "Task list for HireIQ Production SaaS Launch — Revised Phase Order v2"
 ---
 
 # Tasks: HireIQ Production SaaS Launch
@@ -9,169 +9,117 @@ description: "Task list for HireIQ Production SaaS Launch"
 
 **Tests**: Required per constitution (Principle II) — unit + integration for every new endpoint.
 
-**Organization**: Phases 1–2 are shared foundations. Phases 3–10 map 1:1 to user stories.
+**Phase Status**: Phases 1–4 ✅ COMPLETE | Phases 5–14 pending
+
+**Organization**: Phases 1–2 shared foundations. Phases 3–4 security hardening. Phases 5–8 core product features. Phases 9–11 growth & platform features (new). Phase 12 subscriptions & payments. Phase 13 full system testing. Phase 14 polish.
 
 ## Format: `[ID] [P?] [Story?] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: US1–US8 maps to spec user stories / premium features
+- **[Story]**: US1–US11 maps to spec user stories
 - Every task includes an exact file path
 
 ---
 
-## Phase 1: Setup (Shared Infrastructure)
+## Phase 1: Setup (Shared Infrastructure) ✅ COMPLETE
 
 **Purpose**: Test runners, dependency updates, TypeScript enforcement. No business logic.
 
-- [ ] T001 Verify `strict: true` is set in `frontend/tsconfig.json`; add it if missing and fix any resulting type errors
-- [ ] T002 [P] Add backend test dependencies to `Backend/requirements.txt`: `pytest>=8`, `httpx`, `pytest-asyncio`, `pytest-cov`, `loguru`, `resend`
-- [ ] T003 [P] Add frontend test dependencies to `frontend/package.json`: `vitest`, `@testing-library/react`, `@testing-library/user-event`, `jsdom`
-- [ ] T004 Create `Backend/tests/__init__.py`, `Backend/tests/unit/__init__.py`, `Backend/tests/integration/__init__.py`
-- [ ] T005 [P] Create `Backend/tests/conftest.py` with fixtures: `test_db` (transaction rollback), `test_client` (FastAPI TestClient), `auth_headers` (pre-authenticated user), `subscribed_headers` (Professional-tier user)
-- [ ] T006 [P] Add `vitest.config.ts` to `frontend/` configuring jsdom environment and coverage
+- [X] T001 Verify `strict: true` is set in `frontend/tsconfig.json`; add it if missing and fix any resulting type errors
+- [X] T002 [P] Add backend test dependencies to `Backend/requirements.txt`: `pytest>=8`, `httpx`, `pytest-asyncio`, `pytest-cov`, `loguru`, `resend`
+- [X] T003 [P] Add frontend test dependencies to `frontend/package.json`: `vitest`, `@testing-library/react`, `@testing-library/user-event`, `jsdom`
+- [X] T004 Create `Backend/tests/__init__.py`, `Backend/tests/unit/__init__.py`, `Backend/tests/integration/__init__.py`
+- [X] T005 [P] Create `Backend/tests/conftest.py` with fixtures: `test_db` (transaction rollback), `test_client` (FastAPI TestClient), `auth_headers` (pre-authenticated user), `subscribed_headers` (Professional-tier user)
+- [X] T006 [P] Add `vitest.config.ts` to `frontend/` configuring jsdom environment and coverage
 
 ---
 
-## Phase 2: Foundational (Blocking Prerequisites)
+## Phase 2: Foundational (Blocking Prerequisites) ✅ COMPLETE
 
 **Purpose**: Infrastructure that every user story depends on. MUST be complete before any story work.
 
-**⚠️ CRITICAL**: No user story implementation can begin until Phase 2 is complete.
-
-- [ ] T007 Fix `Backend/.env.docker` — remove hardcoded `DATABASE_URL`; replace with `DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}`
-- [ ] T008 Fix `Backend/app/config.py` — indent the `Config` inner class inside the `Settings` class body so `.env` loading works correctly; add all new env var fields (`RESEND_API_KEY`, `FROM_EMAIL`, `APP_BASE_URL`, `PAYMOB_API_KEY`, `PAYMOB_INTEGRATION_ID`, `PAYMOB_HMAC_SECRET`, `PAYMOB_IFRAME_ID`, `ADMINER_PASSWORD`)
-- [ ] T009 Add `postgres` service (`postgres:16-alpine`, named volume, env vars from `.env`) and `adminer` service (port 8080, SSH-tunnel-only access) to `docker-compose.yml`; remove `host.docker.internal` reference
-- [ ] T010 Initialise Alembic: run `alembic init Backend/migrations`; configure `Backend/migrations/env.py` to import `Base` from all models and set `target_metadata = Base.metadata`; update `Backend/migrations/alembic.ini` to read `sqlalchemy.url` from env
-- [ ] T011 Create migration `Backend/migrations/versions/001_initial.py` — baseline snapshot of existing `users`, `cv_sessions`, `interview_results` tables
-- [ ] T012 Update `Backend/app/main.py`: remove `create_tables()` startup call; add `alembic upgrade head` as a Docker `CMD` pre-step (or startup event using `subprocess`)
-- [ ] T013 [P] Replace all `print()` calls in `Backend/` with `from loguru import logger` statements; configure loguru JSON sink when `LOG_FORMAT=json` env var is set (in `Backend/app/config.py`)
-- [ ] T014 [P] Create `Backend/middleware/security_headers.py` — `SecurityHeadersMiddleware` class that injects `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Content-Security-Policy`, `Referrer-Policy` on every response
-- [ ] T015 Register `SecurityHeadersMiddleware` in `Backend/app/main.py` before the CORS middleware
-- [ ] T016 Fix `user_id` column in `Backend/models/user.py` CVSession — change `nullable=True` to `nullable=False`
-- [ ] T017 [P] Create `Backend/models/security.py` — `SecurityAuditLog` model with columns: `id`, `event_type`, `user_id` (no FK), `source_ip`, `outcome`, `detail`, `created_at`
-- [ ] T018 [P] Create `Backend/services/security_service.py` — `write_audit_log(db, event_type, source_ip, outcome, user_id=None, detail=None)` and `verify_paymob_hmac(payload, received_hmac)` helpers
-- [ ] T019 Add global exception handler to `Backend/app/main.py` that catches unhandled exceptions and returns `{"detail": "Internal server error", "ref": "<uuid>"}` — never exposing stack traces
-
-**Checkpoint**: All services start via `docker compose up --build`; `/health` returns 200; Adminer accessible at localhost:8080 via tunnel; Alembic migrations run on start.
+- [X] T007 Fix `Backend/.env.docker` — remove hardcoded `DATABASE_URL`; replace with `DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}`
+- [X] T008 Fix `Backend/app/config.py` — indent the `Config` inner class inside the `Settings` class body so `.env` loading works correctly; add all new env var fields (`RESEND_API_KEY`, `FROM_EMAIL`, `APP_BASE_URL`, `PAYMOB_API_KEY`, `PAYMOB_INTEGRATION_ID`, `PAYMOB_HMAC_SECRET`, `PAYMOB_IFRAME_ID`, `ADMINER_PASSWORD`)
+- [X] T009 Add `postgres` service (`postgres:16-alpine`, named volume, env vars from `.env`) and `adminer` service (port 8080, SSH-tunnel-only access) to `docker-compose.yml`; remove `host.docker.internal` reference
+- [X] T010 Initialise Alembic: run `alembic init Backend/migrations`; configure `Backend/migrations/env.py` to import `Base` from all models and set `target_metadata = Base.metadata`; update `Backend/migrations/alembic.ini` to read `sqlalchemy.url` from env
+- [X] T011 Create migration `Backend/migrations/versions/001_initial.py` — baseline snapshot of existing `users`, `cv_sessions`, `interview_results` tables
+- [X] T012 Update `Backend/app/main.py`: remove `create_tables()` startup call; add `alembic upgrade head` as a Docker `CMD` pre-step (or startup event using `subprocess`)
+- [X] T013 [P] Replace all `print()` calls in `Backend/` with `from loguru import logger` statements; configure loguru JSON sink when `LOG_FORMAT=json` env var is set (in `Backend/app/config.py`)
+- [X] T014 [P] Create `Backend/middleware/security_headers.py` — `SecurityHeadersMiddleware` class that injects `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Content-Security-Policy`, `Referrer-Policy` on every response
+- [X] T015 Register `SecurityHeadersMiddleware` in `Backend/app/main.py` before the CORS middleware
+- [X] T016 Fix `user_id` column in `Backend/models/user.py` CVSession — change `nullable=True` to `nullable=False`
+- [X] T017 [P] Create `Backend/models/security.py` — `SecurityAuditLog` model with columns: `id`, `event_type`, `user_id` (no FK), `source_ip`, `outcome`, `detail`, `created_at`
+- [X] T018 [P] Create `Backend/services/security_service.py` — `write_audit_log(db, event_type, source_ip, outcome, user_id=None, detail=None)` and `verify_paymob_hmac(payload, received_hmac)` helpers
+- [X] T019 Add global exception handler to `Backend/app/main.py` that catches unhandled exceptions and returns `{"detail": "Internal server error", "ref": "<uuid>"}` — never exposing stack traces
 
 ---
 
-## Phase 3: User Story 1 — Secure, Verified Registration & Login (Priority: P1) 🎯
+## Phase 3: User Story 1 — Secure, Verified Registration & Login ✅ COMPLETE
 
 **Goal**: Email verification, password reset, account lockout, session invalidation.
 
-**Independent Test**: Register → receive verification email → verify → login → logout → confirm token invalid → request password reset → reset → confirm old password invalid.
-
 ### Tests for User Story 1
 
-> **Write these FIRST — confirm they FAIL before implementing**
-
-- [ ] T020 [P] [US1] Integration tests (registration + verification flow) in `Backend/tests/integration/test_auth.py`: test verified login, unverified login blocked, duplicate email, resend verification, expired token
-- [ ] T021 [P] [US1] Integration tests (password reset flow) in `Backend/tests/integration/test_auth.py`: valid reset, expired token, already-used token, old password invalidated after reset
-- [ ] T022 [P] [US1] Unit tests for lockout logic in `Backend/tests/unit/test_auth_service.py`: 5 failures → lock, lockout expires, notification sent
+- [X] T020 [P] [US1] Integration tests (registration + verification flow) in `Backend/tests/integration/test_auth.py`
+- [X] T021 [P] [US1] Integration tests (password reset flow) in `Backend/tests/integration/test_auth.py`
+- [X] T022 [P] [US1] Unit tests for lockout logic in `Backend/tests/unit/test_auth_service.py`
 
 ### Implementation for User Story 1
 
-- [ ] T023 [P] [US1] Add `email_verified`, `failed_login_count`, `locked_until` columns to `User` in `Backend/models/user.py`
-- [ ] T024 [P] [US1] Add `EmailVerificationToken` model to `Backend/models/user.py` (fields: id, user_id FK, token UUID, expires_at, used_at)
-- [ ] T025 [P] [US1] Add `PasswordResetToken` model to `Backend/models/user.py` (fields: id, user_id FK, token UUID, expires_at 1hr, used_at)
-- [ ] T026 [US1] Create `Backend/migrations/versions/002_auth_hardening.py` — add three User columns, add EmailVerificationToken and PasswordResetToken tables; set `email_verified=false` for existing rows; fix `cv_sessions.user_id NOT NULL`
-- [ ] T027 [P] [US1] Add verification + reset + lockout schemas to `Backend/models/schemas.py`: `VerifyEmailRequest`, `ForgotPasswordRequest`, `ResetPasswordRequest`, `UserProfileResponse` (extended with `email_verified`, `subscription`)
-- [ ] T028 [US1] Extend `Backend/services/auth_service.py` — add: `create_verification_token()`, `consume_verification_token()`, `create_reset_token()`, `consume_reset_token()`, `check_lockout()`, `record_failed_login()`, `clear_failed_logins()`
-- [ ] T029 [US1] Extend `Backend/services/auth_service.py` — add JWT blacklist: `blacklist_jti(jti, ttl)` and `is_blacklisted(jti)` using Redis `SETEX`; add `jti` UUID claim to token creation functions
-- [ ] T030 [P] [US1] Create `Backend/services/email_service.py` — `send_verification_email(to, token)`, `send_password_reset_email(to, token)`, `send_payment_confirmation_email(to, amount, plan)`, `send_subscription_lapse_warning(to, ends_at)` using Resend SDK
-- [ ] T031 [US1] Add `POST /auth/verify-email` to `Backend/routers/auth.py` (consume token, set `email_verified=true`, log to SecurityAuditLog)
-- [ ] T032 [US1] Add `POST /auth/resend-verification` to `Backend/routers/auth.py` (rate-limited 3/hr per user; invalidate previous token)
-- [ ] T033 [US1] Add `POST /auth/forgot-password` to `Backend/routers/auth.py` (always 200; rate-limited 3/hr; log attempt)
-- [ ] T034 [US1] Add `POST /auth/reset-password` to `Backend/routers/auth.py` (consume token, update password, blacklist all existing JTIs for user)
-- [ ] T035 [US1] Update `POST /auth/login` in `Backend/routers/auth.py` — add lockout check before verifying password; call `record_failed_login()` on failure; call `clear_failed_logins()` on success; block login if `email_verified=false`
-- [ ] T036 [US1] Update `POST /auth/refresh` in `Backend/routers/auth.py` — check JTI not blacklisted before issuing new tokens; blacklist old refresh token JTI after rotation
-- [ ] T037 [US1] Add `DELETE /auth/logout` to `Backend/routers/auth.py` — blacklist both access and refresh token JTIs; log to SecurityAuditLog
-- [ ] T038 [US1] Add email verification banner to `frontend/src/pages/Auth.tsx` (shows after registration, hides after verification)
-
-**Checkpoint**: User Story 1 fully testable independently. All T020–T022 tests pass.
+- [X] T023 [P] [US1] Add `email_verified`, `failed_login_count`, `locked_until` columns to `User` in `Backend/models/user.py`
+- [X] T024 [P] [US1] Add `EmailVerificationToken` model to `Backend/models/user.py`
+- [X] T025 [P] [US1] Add `PasswordResetToken` model to `Backend/models/user.py`
+- [X] T026 [US1] Create `Backend/migrations/versions/002_auth_hardening.py`
+- [X] T027 [P] [US1] Add verification + reset + lockout schemas to `Backend/models/schemas.py`
+- [X] T028 [US1] Extend `Backend/services/auth_service.py` — add token helpers, lockout helpers
+- [X] T029 [US1] Extend `Backend/services/auth_service.py` — add JWT blacklist via Redis
+- [X] T030 [P] [US1] Create `Backend/services/email_service.py`
+- [X] T031 [US1] Add `POST /auth/verify-email` to `Backend/routers/auth.py`
+- [X] T032 [US1] Add `POST /auth/resend-verification` to `Backend/routers/auth.py`
+- [X] T033 [US1] Add `POST /auth/forgot-password` to `Backend/routers/auth.py`
+- [X] T034 [US1] Add `POST /auth/reset-password` to `Backend/routers/auth.py`
+- [X] T035 [US1] Update `POST /auth/login` in `Backend/routers/auth.py`
+- [X] T036 [US1] Update `POST /auth/refresh` in `Backend/routers/auth.py`
+- [X] T037 [US1] Add `DELETE /auth/logout` to `Backend/routers/auth.py`
+- [X] T038 [US1] Add email verification banner to `frontend/src/pages/Auth.tsx`
 
 ---
 
-## Phase 4: User Story 6 — Platform Security & Attack Prevention (Priority: P1)
+## Phase 4: User Story 6 — Platform Security & Attack Prevention ✅ COMPLETE
 
 **Goal**: OWASP controls, file upload hardening, IDOR prevention, audit trail, account deletion.
 
-**Independent Test**: Run the security test suite; all 10 attack scenarios in `test_security.py` are blocked and logged.
-
 ### Tests for User Story 6
 
-> **Write these FIRST — confirm they FAIL before implementing**
-
-- [ ] T039 [P] [US6] Unit tests for HMAC verification in `Backend/tests/unit/test_security_service.py`: valid signature accepted, tampered payload rejected, missing signature rejected, duplicate webhook idempotency
-- [ ] T040 [P] [US6] Integration security test suite in `Backend/tests/integration/test_security.py`: SQL injection in all input fields, XSS payload in username/notes, IDOR (access other user's session), forged Paymob webhook, malicious file upload (exe as PDF), rate limit enforcement, missing security headers check
+- [X] T039 [P] [US6] Unit tests in `Backend/tests/unit/test_security_service.py`: HMAC verification, audit log persistence
+- [X] T040 [P] [US6] Integration security test suite in `Backend/tests/integration/test_security.py`: SQL injection, XSS, IDOR, malicious upload, security headers, CSRF, audit log persistence
 
 ### Implementation for User Story 6
 
-- [ ] T041 [US6] Create `Backend/migrations/versions/006_security_audit_log.py` — add `security_audit_logs` table (no FK on user_id to survive user deletion)
-- [ ] T042 [US6] Add MIME-type magic-byte validation to `POST /cv/upload` in `Backend/routers/cv.py` — read first 8 bytes, verify PDF magic (`%PDF`); reject non-PDF with 422; enforce 10 MB limit; store file with UUID filename (discard original)
-- [ ] T043 [US6] Add `require_ownership(resource_user_id, current_user_id)` helper to `Backend/services/auth_service.py` — raises `404 Not Found` (not 403) on mismatch; apply to all `GET /cv/{id}/*` and `DELETE /cv/{id}` endpoints
-- [ ] T044 [US6] Apply `require_ownership` to all resource endpoints: `Backend/routers/cv.py` (sessions, detail, score, report, delete), `Backend/routers/jobs.py` (all), `Backend/routers/recruiter.py` (all)
-- [ ] T045 [US6] Add `write_audit_log()` calls to all auth endpoints in `Backend/routers/auth.py` (login success/failure, logout, password change, verification)
-- [ ] T046 [US6] Add `DELETE /auth/account` to `Backend/routers/auth.py` — delete CV files from disk, delete DB rows (user, sessions, results, jobs, tokens), send confirmation email; complete within 24h guarantee via immediate sync deletion
-- [ ] T047 [US6] Add CSRF protection to state-changing frontend requests in `frontend/src/api.ts` — send `X-Requested-With: XMLHttpRequest` header; validate in `Backend/app/main.py` middleware for non-GET routes
+- [X] T041 [US6] `security_audit_logs` table already created in `Backend/migrations/versions/002_auth_hardening.py`
+- [X] T042 [US6] MIME-type magic-byte validation + 10 MB limit + UUID filename in `Backend/routers/cv.py`
+- [X] T043 [US6] Add `require_ownership(resource_user_id, current_user_id)` to `Backend/services/auth_service.py`
+- [X] T044 [US6] Apply `require_ownership` to all `GET /cv/{id}/*` and `DELETE /cv/{id}` endpoints
+- [X] T045 [US6] Add `write_audit_log()` calls to all auth endpoints in `Backend/routers/auth.py`
+- [X] T046 [US6] Add `DELETE /auth/account` to `Backend/routers/auth.py`
+- [X] T047 [US6] Add CSRF middleware in `Backend/middleware/csrf.py`; add `X-Requested-With` header to `frontend/src/api.ts`
 
-**Checkpoint**: All T039–T040 tests pass. `test_security.py` shows all 10 attack scenarios blocked.
-
----
-
-## Phase 5: User Story 3 — Subscription Plans & Feature Gating (Priority: P2)
-
-**Goal**: Free / Professional / Recruiter tiers, Paymob checkout, feature-gated endpoints, subscription lifecycle.
-
-**Independent Test**: Free user hits gated endpoint → 402 → visits Pricing page → Paymob checkout → webhook fires → account upgraded → gated endpoint now returns 200.
-
-### Tests for User Story 3
-
-> **Write these FIRST — confirm they FAIL before implementing**
-
-- [ ] T048 [P] [US3] Unit tests for subscription service in `Backend/tests/unit/test_subscription_service.py`: entitlement check, plan lookup, activation, lapse, free-tier default
-- [ ] T049 [P] [US3] Unit tests for Paymob service in `Backend/tests/unit/test_payment_paymob.py`: order creation mocked, payment key mocked, auth token mocked
-- [ ] T050 [P] [US3] Integration test for subscription flow in `Backend/tests/integration/test_subscriptions.py`: plans list, checkout creates pending, 402 on gated endpoint, cancel flow
-- [ ] T051 [P] [US3] Integration test for Paymob webhook in `Backend/tests/integration/test_payments.py`: valid signature activates, invalid signature rejected + logged, duplicate delivery idempotent, payment history returned
-
-### Implementation for User Story 3
-
-- [ ] T052 [P] [US3] Create `Backend/models/subscription.py` — `SubscriptionPlan`, `FeatureEntitlement`, `Subscription`, `Payment` models per data-model.md
-- [ ] T053 [US3] Create `Backend/migrations/versions/003_subscriptions.py` — tables + seed data: 3 plans (free/professional/recruiter) and all feature entitlement rows
-- [ ] T054 [P] [US3] Add subscription-related schemas to `Backend/models/schemas.py`: `PlanResponse`, `CheckoutRequest`, `CheckoutResponse`, `SubscriptionStatusResponse`, `PaymentHistoryItem`
-- [ ] T055 [US3] Create `Backend/services/subscription_service.py` — `get_user_subscription(user)`, `check_entitlement(user, feature_slug)`, `activate_subscription(db, subscription_id)`, `lapse_subscription(db, user_id)`, `get_or_create_free_subscription(db, user)`
-- [ ] T056 [US3] Create `Backend/services/payment_paymob.py` — `get_auth_token()`, `create_order(auth_token, amount_piastres, user_email)`, `create_payment_key(auth_token, order_id, integration_id, user_email)` using `httpx` async client
-- [ ] T057 [US3] Create `Backend/middleware/subscription_gate.py` — `require_feature(feature_slug)` returns a FastAPI `Depends()` that checks `check_entitlement()` and raises `HTTPException(402)` with upgrade URL if not entitled
-- [ ] T058 [US3] Create `Backend/routers/subscriptions.py` — `GET /subscriptions/plans` (public), `POST /subscriptions/checkout`, `GET /subscriptions/status`, `POST /subscriptions/cancel`
-- [ ] T059 [US3] Create `Backend/routers/payments.py` — `POST /payments/webhook/paymob` (verify HMAC → idempotency check → activate → send confirmation email → audit log), `GET /payments/history`
-- [ ] T060 [US3] Register `subscriptions` and `payments` routers in `Backend/app/main.py`
-- [ ] T061 [P] [US3] Create `frontend/src/hooks/useSubscription.ts` — fetches `/subscriptions/status`, exposes `planSlug`, `entitlements`, `isEntitled(feature)`
-- [ ] T062 [P] [US3] Create `frontend/src/hooks/usePayment.ts` — manages Paymob iframe state: `initiateCheckout(planSlug)`, `iframeToken`, `isLoading`, `error`
-- [ ] T063 [P] [US3] Create `frontend/src/components/SubscriptionGate.tsx` — wrapper that renders children if entitled, otherwise renders upgrade prompt card
-- [ ] T064 [P] [US3] Create `frontend/src/components/PricingCard.tsx` — plan card with name, price, feature list, CTA button
-- [ ] T065 [US3] Create `frontend/src/pages/Pricing.tsx` — three `PricingCard` components, Paymob iframe modal on checkout
-- [ ] T066 [US3] Extend `frontend/src/pages/Profile.tsx` — add subscription status section: plan name, renewal date, cancel button, payment history
-- [ ] T067 [US3] Add subscription + payment calls to `frontend/src/api.ts`: `getPlans()`, `initiateCheckout(planSlug)`, `getSubscriptionStatus()`, `cancelSubscription()`, `getPaymentHistory()`
-- [ ] T068 [US3] Add `/pricing` route to frontend router; add "Upgrade" link in navigation for free-tier users
-- [ ] T069 [US3] Add `/payments` proxy rule to `frontend/nginx.conf`; add `/subscriptions` proxy rule
-
-**Checkpoint**: Full subscription and payment cycle testable end-to-end. T048–T051 pass.
+**Checkpoint**: 80 tests pass, 1 skipped (Paymob webhook pending Phase 12). All OWASP attack scenarios blocked.
 
 ---
 
-## Phase 6: User Story 4 — Enhanced AI Analysis & Interview Intelligence (Priority: P2)
+## Phase 5: User Story 4 — Enhanced AI Analysis & Interview Intelligence (Priority: P2)
 
 **Goal**: Structured skills inventory, gap report, study roadmap, LinkedIn PDF import.
 
-**Independent Test**: Upload a CV → request enhanced analysis → receive skills inventory with ≥10 skills, gap report, 5+ questions with model answers, study roadmap — all within 30 seconds. Upload a LinkedIn PDF export → same result.
+**Independent Test**: Upload a CV → request enhanced analysis → receive skills inventory with ≥15 skills, gap report, 10+ questions with model answers, study roadmap — all within 30 seconds. Upload a LinkedIn PDF export → same result.
 
 ### Tests for User Story 4
 
 > **Write these FIRST — confirm they FAIL before implementing**
 
 - [ ] T070 [P] [US4] Unit test for enhanced LLM analyzer in `Backend/tests/unit/test_llm_analyzer.py`: structured output schema validation, fallback on AI error, credit not consumed on error
-- [ ] T071 [P] [US4] Integration test for enhanced CV analysis in `Backend/tests/integration/test_cv.py`: skills inventory populated, gap report returned, 402 for free-tier on `/cv/{id}/analysis`
+- [ ] T071 [P] [US4] Integration test for enhanced CV analysis in `Backend/tests/integration/test_cv.py`: skills inventory populated, gap report returned, LinkedIn PDF detected correctly
 
 ### Implementation for User Story 4
 
@@ -179,13 +127,13 @@ description: "Task list for HireIQ Production SaaS Launch"
 - [ ] T073 [US4] Extend `Backend/services/llm_analyzer.py` — `analyze_structured(cv_text, jd_text)` returns parsed JSON dict with `skill_inventory`, `gap_report`, `study_roadmap`, `questions`; handles malformed LLM output gracefully
 - [ ] T074 [P] [US4] Create `Backend/services/linkedin_service.py` — `is_linkedin_pdf(file_bytes)` (checks first page for "LinkedIn" keyword), reuses `cv_parser.py` pipeline for text extraction
 - [ ] T075 [US4] Create `Backend/migrations/versions/005_cv_session_extended.py` — add `skill_inventory` (JSON), `gap_report` (JSON), `study_roadmap` (JSON), `subscription_tier` (String) to `cv_sessions`
-- [ ] T076 [US4] Add `GET /cv/{id}/analysis` endpoint to `Backend/routers/cv.py` — requires `enhanced-analysis` entitlement; returns stored analysis or 202 if still processing
-- [ ] T077 [US4] Extend `GET /analyze` SSE stream in `Backend/routers/analysis.py` — for users with `enhanced-analysis` entitlement, emit `skill_inventory`, `gap_report`, `study_roadmap` events in addition to existing `questions` event; save results to `CVSession` columns
-- [ ] T078 [US4] Extend `POST /cv/upload` in `Backend/routers/cv.py` — call `linkedin_service.is_linkedin_pdf()`; if LinkedIn PDF, require `linkedin-import` entitlement; set `session.is_linkedin = true` (or tag in filename)
+- [ ] T076 [US4] Add `GET /cv/{id}/analysis` endpoint to `Backend/routers/cv.py` — returns stored analysis or 202 if still processing
+- [ ] T077 [US4] Extend `GET /analyze` SSE stream in `Backend/routers/analysis.py` — emit `skill_inventory`, `gap_report`, `study_roadmap` events; save results to `CVSession` columns
+- [ ] T078 [US4] Extend `POST /cv/upload` in `Backend/routers/cv.py` — call `linkedin_service.is_linkedin_pdf()`; tag session if LinkedIn source
 - [ ] T079 [P] [US4] Create `frontend/src/components/SkillsInventory.tsx` — renders hard/soft skills as tagged badges with experience level indicators
 - [ ] T080 [P] [US4] Create `frontend/src/components/SkillGapChart.tsx` — horizontal bar chart showing gap importance per missing skill
 - [ ] T081 [P] [US4] Create `frontend/src/components/StudyRoadmap.tsx` — vertical timeline of roadmap topics with priority badges and resource links
-- [ ] T082 [US4] Extend `frontend/src/pages/Results.tsx` — wrap enhanced sections in `<SubscriptionGate feature="enhanced-analysis">`; render `SkillsInventory`, `SkillGapChart`, `StudyRoadmap` for subscribed users
+- [ ] T082 [US4] Extend `frontend/src/pages/Results.tsx` — render `SkillsInventory`, `SkillGapChart`, `StudyRoadmap`
 - [ ] T083 [US4] Extend `frontend/src/pages/Upload.tsx` — add "Import from LinkedIn" tab with step-by-step export instructions and same file upload widget
 - [ ] T084 [US4] Add enhanced analysis calls to `frontend/src/api.ts`: `getEnhancedAnalysis(sessionId)`
 
@@ -193,35 +141,35 @@ description: "Task list for HireIQ Production SaaS Launch"
 
 ---
 
-## Phase 7: ATS Job Tracker (Priority: P2)
+## Phase 6: User Story 7 — ATS Job Tracker (Priority: P2)
 
 **Goal**: Job application tracking with status pipeline and CV-match scoring per job.
 
-**Independent Test**: Subscribed user creates a job application, moves it through status stages (saved → applied → interview), links a CV session, and sees the match score on the job card.
+**Independent Test**: User creates a job application, moves it through status stages (saved → applied → interview), links a CV session, and sees the match score on the job card.
 
 ### Tests for User Story 7
 
 > **Write these FIRST — confirm they FAIL before implementing**
 
-- [ ] T085 [P] [US7] Integration test for job tracker in `Backend/tests/integration/test_jobs.py`: CRUD operations, status transitions, 402 for free-tier, stats endpoint, ownership check (404 on other user's job)
+- [ ] T085 [P] [US7] Integration test for job tracker in `Backend/tests/integration/test_jobs.py`: CRUD operations, status transitions, stats endpoint, ownership check (404 on other user's job)
 
 ### Implementation for User Story 7
 
 - [ ] T086 [P] [US7] Create `Backend/models/jobs.py` — `JobApplication` model per data-model.md
-- [ ] T087 [US7] Create `Backend/migrations/versions/004_jobs_recruiter.py` — add `job_applications` table (recruiter tables added in Phase 8)
+- [ ] T087 [US7] Create `Backend/migrations/versions/004_jobs_recruiter.py` — add `job_applications` table
 - [ ] T088 [P] [US7] Add `JobApplicationCreate`, `JobApplicationUpdate`, `JobApplicationResponse`, `JobStatsResponse` schemas to `Backend/models/schemas.py`
-- [ ] T089 [US7] Create `Backend/routers/jobs.py` — `GET /jobs`, `POST /jobs`, `PATCH /jobs/{id}`, `DELETE /jobs/{id}`, `GET /jobs/stats`; all require `job-tracker` entitlement; apply `require_ownership` on `{id}` routes
+- [ ] T089 [US7] Create `Backend/routers/jobs.py` — `GET /jobs`, `POST /jobs`, `PATCH /jobs/{id}`, `DELETE /jobs/{id}`, `GET /jobs/stats`; apply `require_ownership` on `{id}` routes
 - [ ] T090 [US7] Register `jobs` router in `Backend/app/main.py`; add `/jobs` proxy rule to `frontend/nginx.conf`
 - [ ] T091 [P] [US7] Create `frontend/src/components/JobCard.tsx` — card with title, company, status badge, match score, notes snippet, action buttons
-- [ ] T092 [US7] Create `frontend/src/pages/Jobs.tsx` — job list view with status filter tabs (kanban-style columns); add/edit job modal using shadcn/ui Dialog
+- [ ] T092 [US7] Create `frontend/src/pages/Jobs.tsx` — job list view with status filter tabs (kanban-style columns); add/edit job modal
 - [ ] T093 [US7] Add job tracker calls to `frontend/src/api.ts`: `getJobs(status?)`, `createJob(data)`, `updateJob(id, data)`, `deleteJob(id)`, `getJobStats()`
-- [ ] T094 [US7] Add `/jobs` route to frontend router; add nav item (gated — hidden or shows upgrade prompt for free users)
+- [ ] T094 [US7] Add `/jobs` route to frontend router; add nav item
 
 **Checkpoint**: Job tracker independently testable. T085 passes.
 
 ---
 
-## Phase 8: Recruiter Dashboard (Priority: P2)
+## Phase 7: User Story 8 — Recruiter Dashboard (Priority: P2)
 
 **Goal**: Employer-facing multi-candidate comparison, ranked shortlist, PDF export.
 
@@ -231,57 +179,245 @@ description: "Task list for HireIQ Production SaaS Launch"
 
 > **Write these FIRST — confirm they FAIL before implementing**
 
-- [ ] T095 [P] [US8] Integration test for recruiter dashboard in `Backend/tests/integration/test_recruiter.py`: list CRUD, add candidate, 20-candidate limit enforcement, rank update, PDF export returns PDF, 402 for non-Recruiter tier
+- [ ] T095 [P] [US8] Integration test for recruiter dashboard in `Backend/tests/integration/test_recruiter.py`: list CRUD, add candidate, 20-candidate limit enforcement, rank update, PDF export returns PDF
 
 ### Implementation for User Story 8
 
 - [ ] T096 [P] [US8] Add `RecruiterList` and `RecruiterCandidate` models to `Backend/models/jobs.py` per data-model.md
 - [ ] T097 [US8] Update `Backend/migrations/versions/004_jobs_recruiter.py` — add `recruiter_lists` and `recruiter_candidates` tables
 - [ ] T098 [P] [US8] Add `RecruiterListCreate`, `RecruiterListResponse`, `RecruiterCandidateResponse`, `RecruiterCandidateUpdate` schemas to `Backend/models/schemas.py`
-- [ ] T099 [US8] Create `Backend/routers/recruiter.py` — `GET /recruiter/lists`, `POST /recruiter/lists`, `DELETE /recruiter/lists/{id}`, `GET /recruiter/lists/{id}/candidates`, `POST /recruiter/lists/{id}/candidates`, `DELETE /recruiter/lists/{id}/candidates/{cid}`, `PATCH /recruiter/lists/{id}/candidates/{cid}`, `GET /recruiter/lists/{id}/export`; all require `recruiter-dashboard` entitlement
-- [ ] T100 [US8] Extend `Backend/services/report_generator.py` — `generate_recruiter_report(recruiter_list, candidates)` produces PDF with ranked candidate table, scores, and top skills per candidate
+- [ ] T099 [US8] Create `Backend/routers/recruiter.py` — full CRUD for lists and candidates; `GET /recruiter/lists/{id}/export`; all require ownership check
+- [ ] T100 [US8] Extend `Backend/services/report_generator.py` — `generate_recruiter_report(recruiter_list, candidates)` produces PDF with ranked candidate table
 - [ ] T101 [US8] Register `recruiter` router in `Backend/app/main.py`; add `/recruiter` proxy rule to `frontend/nginx.conf`
-- [ ] T102 [P] [US8] Create `frontend/src/components/CandidateCompare.tsx` — sortable table of candidates with score, skills chips, rank badge, remove button
-- [ ] T103 [US8] Create `frontend/src/pages/Recruiter.tsx` — list manager (create/delete lists), candidate compare view, export PDF button; wrap in `<SubscriptionGate feature="recruiter-dashboard">`
-- [ ] T104 [US8] Add recruiter calls to `frontend/src/api.ts`: `getRecruiterLists()`, `createList(data)`, `deleteList(id)`, `getCandidates(listId)`, `addCandidate(listId, sessionId)`, `removeCandidate(listId, candidateId)`, `updateCandidateRank(listId, candidateId, rank)`, `exportRecruiterReport(listId)`
-- [ ] T105 [US8] Add `/recruiter` route to frontend router; visible in nav only for Recruiter-tier users
+- [ ] T102 [P] [US8] Create `frontend/src/components/CandidateCompare.tsx` — sortable table with score, skills chips, rank badge, remove button
+- [ ] T103 [US8] Create `frontend/src/pages/Recruiter.tsx` — list manager, candidate compare view, export PDF button
+- [ ] T104 [US8] Add recruiter calls to `frontend/src/api.ts`
+- [ ] T105 [US8] Add `/recruiter` route to frontend router
 
 **Checkpoint**: Recruiter dashboard independently testable. T095 passes.
 
 ---
 
-## Phase 9: User Story 5 — Professional Frontend Redesign (Priority: P3)
+## Phase 8: User Story 5 — Premium Frontend Redesign (Priority: P2)
 
-**Goal**: shadcn/ui component system, polished landing page, mobile-responsive, < 3 s first paint.
+**Goal**: A commercial-grade SaaS UI — polished, consistent, mobile-responsive, conversion-optimised. This is NOT a minor cleanup; the goal is a frontend that looks like a funded product.
+
+**Design References** (study before implementing):
+- Component inspiration: `github.com/shadcn-ui/ui` — full component catalogue + themes
+- SaaS layout patterns: `github.com/vercel/nextjs-subscription-payments` — dashboard + pricing page patterns
+- Animation & microinteractions: `github.com/framer/motion` examples — subtle transitions that feel premium
+- Landing page structure: `github.com/cruip/tailwind-landing-page-template` — hero, features, testimonials, CTA
+- Dashboard layout: `github.com/shadcn-ui/ui/tree/main/apps/www` — sidebar nav, stat cards, data tables
+- Color system: Use shadcn/ui CSS variables for a cohesive theme (zinc/slate base, blue/indigo accent)
 
 **Independent Test**: Independent evaluator rates landing page and app UI ≥ 4/5. Lighthouse mobile score ≥ 80. All pages functional on 375 px viewport.
 
-- [ ] T106 [P] [US5] Install shadcn/ui: run `npx shadcn-ui@latest init` in `frontend/`; add components: Button, Card, Dialog, Sheet, Badge, Tabs, Table, Input, Select, Form, Progress, Avatar, DropdownMenu, Separator, Tooltip
-- [ ] T107 [P] [US5] Create `frontend/src/lib/utils.ts` — export `cn()` helper (Tailwind class merge utility)
-- [ ] T108 [US5] Redesign `frontend/src/pages/Landing.tsx` — hero with value proposition, feature highlights (3 columns), pricing preview section, CTA buttons; use shadcn/ui Card and Button
-- [ ] T109 [P] [US5] Redesign `frontend/src/pages/Auth.tsx` — polished login/register form using shadcn/ui Form, Input; add email verification status banner
-- [ ] T110 [P] [US5] Redesign `frontend/src/pages/Dashboard.tsx` — stat cards (total sessions, avg score, interviews, plan badge), recent sessions list, subscription status card
-- [ ] T111 [P] [US5] Redesign `frontend/src/pages/Upload.tsx` — drag-and-drop file zone, LinkedIn tab, JD template chips; use shadcn/ui Tabs
-- [ ] T112 [P] [US5] Redesign `frontend/src/pages/Results.tsx` — score gauge prominently, skills panel, streaming analysis with progressive loading states
-- [ ] T113 [US5] Audit and fix mobile responsiveness for all 12 pages at 375 px, 768 px, 1 280 px breakpoints; no horizontal overflow, all buttons tappable
-- [ ] T114 [US5] Run Lighthouse on Landing, Dashboard, and Results pages; fix issues until mobile Performance ≥ 80 and FCP ≤ 3 s
+- [ ] T106 [P] [US5] Install and configure shadcn/ui: run `npx shadcn-ui@latest init` in `frontend/`; add components: Button, Card, Dialog, Sheet, Badge, Tabs, Table, Input, Select, Form, Progress, Avatar, DropdownMenu, Separator, Tooltip, Skeleton, Alert, Toast (sonner)
+- [ ] T107 [P] [US5] Create `frontend/src/lib/utils.ts` — export `cn()` helper; create `frontend/src/lib/constants.ts` for site-wide copy and config constants
+- [ ] T108 [US5] Redesign `frontend/src/pages/Landing.tsx` — hero section (bold headline + sub + dual CTA), animated feature grid (3 columns with icons), social proof section (stats: X users, Y interviews, Z avg score), pricing preview (3 plan cards), footer; use framer-motion for scroll reveals
+- [ ] T109 [P] [US5] Redesign `frontend/src/pages/Auth.tsx` — split-panel layout (left: branded illustration + testimonial, right: form); smooth tab switch between Login/Register; inline validation feedback; email verification status alert card
+- [ ] T110 [P] [US5] Redesign `frontend/src/pages/Dashboard.tsx` — sidebar navigation layout; stat cards row (sessions, avg score, interviews, plan badge); "Recent Sessions" table with score gauges; quick-action CTA cards ("Upload CV", "Browse Jobs", "View Recruiter"); subscription status mini-card
+- [ ] T111 [P] [US5] Redesign `frontend/src/pages/Upload.tsx` — drag-and-drop file zone with animated border on hover/drag; LinkedIn import tab (step-by-step instructions with numbered callouts); JD template chip selector; form validation with inline error states
+- [ ] T112 [P] [US5] Redesign `frontend/src/pages/Results.tsx` — large animated score gauge (0–100 arc); tabbed sections (Analysis | Skills | Gap Report | Roadmap | Interview Prep); streaming analysis with skeleton loaders; shareable results card
+- [ ] T113 [P] [US5] Redesign `frontend/src/pages/Jobs.tsx` — kanban-style columns (Saved / Applied / Interview / Offer / Rejected); drag-to-move cards (optional); job card with company logo placeholder, match score badge, quick notes
+- [ ] T114 [US5] Audit and fix mobile responsiveness for all pages at 375 px, 768 px, 1 280 px; create `frontend/src/components/layout/AppShell.tsx` (sidebar collapses to bottom nav on mobile); all interactive elements ≥ 44 px touch target
+- [ ] T115 [US5] Run Lighthouse on Landing, Dashboard, and Results pages; fix issues until mobile Performance ≥ 80 and FCP ≤ 3 s; add `<Suspense>` + lazy loading to all page-level routes in the router
 
-**Checkpoint**: Independent UI evaluation passes ≥ 4/5. Lighthouse scores meet targets.
+**Checkpoint**: Independent UI evaluation passes ≥ 4/5. Lighthouse scores meet targets. All pages render correctly at 375 px.
 
 ---
 
-## Phase 10: Polish & Cross-Cutting Concerns
+## Phase 9: User Story 9 — Referral & Viral Growth Engine (Priority: P2) [NEW]
 
-**Purpose**: Final hardening, documentation, and pre-launch validation.
+**Goal**: Every registered user gets a unique referral link. When a referred user subscribes to any paid plan, the referrer earns 1 month free (credited automatically). This creates a zero-cost acquisition channel and a viral growth loop built directly into the product.
 
-- [ ] T115 [P] Update `Backend/.env.example` with all new variables: Resend, Paymob (4 vars), Postgres (3 vars), Adminer, log format, app base URL
-- [ ] T116 [P] Update `frontend/nginx.conf` — confirm all new proxy routes present: `/subscriptions`, `/payments`, `/jobs`, `/recruiter`, `/auth` (verify-email, forgot-password, reset-password)
-- [ ] T117 [P] Run full `pytest Backend/tests/ -v --cov=Backend` — fix any failures; target ≥ 80% coverage on new code
+**Why now**: Referral drives acquisition, which is the hardest problem for a new SaaS. Adding it before subscriptions means the referral credit is applied at the exact moment of conversion. Building it after subscriptions would require retrofitting the billing logic.
+
+**Independent Test**: User A shares their referral link → User B registers via the link → User B subscribes → User A's next billing cycle is skipped (1 free month applied); both users receive confirmation emails. Referral dashboard shows correct counts and earnings.
+
+### Tests for User Story 9
+
+> **Write these FIRST — confirm they FAIL before implementing**
+
+- [ ] T123 [P] [US9] Unit tests for referral service in `Backend/tests/unit/test_referral_service.py`: code generation is unique, self-referral blocked, duplicate referral blocked, credit applied on conversion, expired referral handled
+- [ ] T124 [P] [US9] Integration tests for referral flow in `Backend/tests/integration/test_referrals.py`: GET own referral code, register via code stores referral, stats endpoint, leaderboard endpoint returns ranked list
+
+### Implementation for User Story 9
+
+- [ ] T125 [P] [US9] Create `Backend/models/referral.py` — `ReferralCode` model (user_id FK, code unique, created_at) and `ReferralConversion` model (referrer_id, referred_user_id, converted_at, reward_applied)
+- [ ] T126 [US9] Create `Backend/migrations/versions/007_referrals.py` — add `referral_codes` and `referral_conversions` tables
+- [ ] T127 [P] [US9] Add `ReferralStatsResponse`, `LeaderboardEntry`, `ReferralCodeResponse` schemas to `Backend/models/schemas.py`
+- [ ] T128 [US9] Create `Backend/services/referral_service.py` — `get_or_create_referral_code(db, user)`, `register_via_referral(db, code, new_user)` (validates, stores conversion), `apply_referral_reward(db, referred_user_id)` (credits 1 free month on subscription activation), `get_referral_stats(db, user)`, `get_leaderboard(db, limit=10)`
+- [ ] T129 [US9] Create `Backend/routers/referrals.py` — `GET /referrals/my-code` (returns or creates code), `GET /referrals/stats` (conversions count, earnings summary), `GET /referrals/leaderboard` (top 10 referrers — usernames only, no emails)
+- [ ] T130 [US9] Extend `POST /auth/register` in `Backend/routers/auth.py` — accept optional `?ref=<code>` query param; call `register_via_referral()` if present; store pending conversion (not yet credited — only credited on subscription activation)
+- [ ] T131 [US9] Register `referrals` router in `Backend/app/main.py`; add `/referrals` proxy rule to `frontend/nginx.conf`
+- [ ] T132 [P] [US9] Create `frontend/src/components/ReferralCard.tsx` — shows unique link with one-click copy button, conversion count badge, earnings summary ("1 free month earned"), mini progress bar toward next reward
+- [ ] T133 [P] [US9] Create `frontend/src/pages/Referrals.tsx` — full referral hub: link + QR code display, stats (total referred, converted, months earned), leaderboard table, social share buttons (WhatsApp, LinkedIn, Twitter/X)
+- [ ] T134 [US9] Extend `frontend/src/pages/Profile.tsx` — add referral stats mini-card linking to `/referrals`
+- [ ] T135 [US9] Add referral calls to `frontend/src/api.ts`: `getMyReferralCode()`, `getReferralStats()`, `getLeaderboard()`; add `/referrals` route to router
+
+**Checkpoint**: Referral flow testable end-to-end. T123–T124 pass. Leaderboard visible without revealing PII.
+
+---
+
+## Phase 10: User Story 10 — Platform Owner Admin BI Dashboard (Priority: P2) [NEW]
+
+**Goal**: A secure, private admin panel — accessible only with a separate admin JWT — that gives the platform owner real-time visibility into business health: MAU, MRR, conversion rates, churn, feature usage, and recent security events. This is not a user-facing feature; it is an operator tool.
+
+**Why now**: You cannot manage a SaaS without metrics. Building this before subscriptions means you can immediately see subscription data flow in real time from the moment payments go live.
+
+**Access model**: Admin login is completely separate from the regular auth flow. `ADMIN_SECRET` in `.env` is checked against a submitted password; on success, a short-lived admin JWT is issued. Admin routes are a separate router with `require_admin` dependency — ordinary user tokens are rejected.
+
+**Independent Test**: Admin logs in with `ADMIN_SECRET` → sees dashboard with accurate user count, plan distribution chart, MRR figure, and top 5 events in audit log. Accessing `/admin/*` with a regular user token returns 403. Admin panel is unreachable on port 443 without the `/admin` path and admin token.
+
+### Tests for User Story 10
+
+> **Write these FIRST — confirm they FAIL before implementing**
+
+- [ ] T136 [P] [US10] Unit tests for analytics service in `Backend/tests/unit/test_analytics_service.py`: user count aggregation, MRR calculation, conversion rate, churn rate, plan distribution
+- [ ] T137 [P] [US10] Integration tests for admin panel in `Backend/tests/integration/test_admin.py`: login with valid secret succeeds, login with wrong secret fails, regular user token rejected on all /admin/* routes, metrics endpoint returns expected shape
+
+### Implementation for User Story 10
+
+- [ ] T138 [P] [US10] Add `ADMIN_SECRET` and `ADMIN_JWT_EXPIRE_MINUTES` to `Backend/app/config.py` Settings; add to `Backend/.env.example`
+- [ ] T139 [US10] Create `Backend/services/analytics_service.py` — `get_user_metrics(db)` (total, new this month, DAU), `get_revenue_metrics(db)` (MRR, ARR, total payments), `get_conversion_metrics(db)` (free-to-paid rate, churn rate, avg days to convert), `get_feature_usage(db)` (CV uploads, interviews, jobs created — last 30 days), `get_plan_distribution(db)` (count per plan)
+- [ ] T140 [P] [US10] Add `AdminLoginRequest`, `AdminMetricsResponse`, `PlanDistributionItem`, `AuditLogEntry` schemas to `Backend/models/schemas.py`
+- [ ] T141 [US10] Create `Backend/services/admin_service.py` — `create_admin_token(secret)` (verifies against `settings.admin_secret`, issues short-lived admin JWT with role claim `"admin"`), `require_admin` FastAPI dependency (validates admin JWT role — rejects regular user tokens)
+- [ ] T142 [US10] Create `Backend/routers/admin.py` — `POST /admin/login` (public — issues admin token), `GET /admin/metrics` (all metrics in one payload), `GET /admin/users` (paginated user list: id, email masked, plan, joined, last_login), `GET /admin/audit-log` (recent 100 security events), `GET /admin/revenue` (monthly revenue chart data, last 12 months); all secured with `require_admin`
+- [ ] T143 [US10] Register `admin` router in `Backend/app/main.py`; add `/admin` proxy rule to `frontend/nginx.conf`; ensure CSP allows admin page assets
+- [ ] T144 [P] [US10] Create `frontend/src/pages/Admin.tsx` — gated behind admin token stored in sessionStorage (never localStorage); shows: key metrics row (users, MRR, conversion %), plan distribution pie chart, feature usage bar chart, monthly revenue line chart, recent audit log table; uses recharts for charts
+- [ ] T145 [P] [US10] Create `frontend/src/components/MetricCard.tsx` — reusable stat card (value, label, delta vs last period, trend icon)
+- [ ] T146 [US10] Add admin calls to `frontend/src/api.ts`: `adminLogin(secret)`, `getAdminMetrics()`, `getAdminUsers(page)`, `getAuditLog()`, `getRevenueChart()`; use separate axios instance with admin token header
+- [ ] T147 [US10] Add `/admin` route to frontend router; admin page is NOT linked from regular navigation — must know the URL; redirect to admin login if no admin token in sessionStorage
+- [ ] T148 [US10] Add `recharts` to `frontend/package.json`; verify all chart components render correctly with mock data before wiring to API
+
+**Checkpoint**: Admin login and metrics work. T136–T137 pass. Regular users cannot access /admin/* routes.
+
+---
+
+## Phase 11: User Story 11 — Personalised Career Growth Roadmap (Priority: P2) [NEW]
+
+**Goal**: A user selects an existing CV session and types their dream job role. The system generates a rich, structured career roadmap that bridges the gap between where they are now and where they want to be — with phased learning plans, curated resources, projects to build, market salary data, and immediate quick wins. Multiple roadmaps can be saved for different target roles.
+
+**What makes it more than a gap report**: A gap report says "you're missing Python." This roadmap says: *"Here is a 6-month, 4-phase plan. In Phase 1 (weeks 1–4) you build the foundation: CS50P (free, 30 hrs), Python Crash Course (book, 20 hrs), and a CLI to-do app project — milestone: you can write Python scripts confidently. In Phase 2…"* It is a complete, actionable career plan, not a list.
+
+**Why now**: This feature directly uses the skills inventory from Phase 5 as input. It must be built after Phase 5 but before subscriptions so it can be a premium gating point.
+
+**Independent Test**: A user with an uploaded CV types "Senior Data Engineer at a FinTech company" → within 30 seconds receives a roadmap with 4 named phases, ≥15 specific resources (mix of free/paid), 4 projects to build, a salary range for Egypt and remotely, top 5 companies hiring for this role, and 3 quick wins for the first 2 weeks.
+
+### Tests for User Story 11
+
+> **Write these FIRST — confirm they FAIL before implementing**
+
+- [ ] T149 [P] [US11] Unit tests for roadmap service in `Backend/tests/unit/test_roadmap_service.py`: structured output schema validation (all required JSON keys present), fallback on LLM error returns graceful message, malformed LLM JSON handled without 500, empty CV text handled
+- [ ] T150 [P] [US11] Integration tests for roadmap endpoints in `Backend/tests/integration/test_roadmap.py`: POST /roadmap/generate returns valid roadmap and saves to DB, GET /roadmap/{id} returns correct data, GET /roadmap lists only user's own roadmaps, 404 on another user's roadmap (IDOR check), 404 on non-existent cv_session_id
+
+### Implementation for User Story 11
+
+- [ ] T151 [P] [US11] Create `Backend/models/roadmap.py` — `CareerRoadmap` model with columns: `id`, `user_id` (FK), `cv_session_id` (FK nullable — user may re-generate without a session), `target_role` (String), `roadmap_data` (JSON — full structured roadmap), `created_at`
+- [ ] T152 [US11] Create `Backend/migrations/versions/008_career_roadmap.py` — add `career_roadmaps` table
+- [ ] T153 [P] [US11] Add schemas to `Backend/models/schemas.py`: `RoadmapGenerateRequest` (cv_session_id, target_role), `RoadmapResource` (name, url, type: course/book/video/project, is_free, estimated_hours), `RoadmapPhase` (name, estimated_weeks, skills_covered, resources: list[RoadmapResource], project_to_build, milestone), `CareerInsight` (salary_range_local, salary_range_remote, top_companies: list[str], hot_skills: list[str], market_demand: high/medium/low), `QuickWin` (action, why, time_required), `RoadmapResponse` (id, target_role, total_estimated_weeks, phases, career_insight, quick_wins, created_at)
+- [ ] T154 [US11] Create `Backend/rag/prompts.py` CAREER_ROADMAP_PROMPT — a detailed system prompt instructing the LLM to return a strict JSON object containing: `phases` (array of 3–5 phases, each with name, estimated_weeks, skills_covered array, resources array with name/url/type/is_free/estimated_hours, project_to_build description, milestone), `career_insight` (salary_range_local in EGP, salary_range_remote in USD, top_companies list, hot_skills list, market_demand), `quick_wins` (3 immediate actions with action text, why it matters, time required); prompt must include "respond ONLY with valid JSON, no markdown, no explanation"
+- [ ] T155 [US11] Create `Backend/services/roadmap_service.py` — `generate_career_roadmap(cv_text: str, current_skills: list, target_role: str) -> dict`: builds the prompt by injecting extracted CV skills + target role, calls the LLM (Groq), parses JSON response, validates required keys, handles malformed output by returning a structured error dict rather than raising; also `save_roadmap(db, user_id, cv_session_id, target_role, roadmap_data)`, `get_roadmap(db, roadmap_id, user_id)`, `list_roadmaps(db, user_id)`
+- [ ] T156 [US11] Create `Backend/routers/roadmap.py` — `POST /roadmap/generate` (auth required; loads cv_session, calls require_ownership, extracts cv_text + skills from session, calls generate_career_roadmap, saves, returns RoadmapResponse), `GET /roadmap` (list user's roadmaps, newest first — id, target_role, total_estimated_weeks, created_at only), `GET /roadmap/{roadmap_id}` (full roadmap, require_ownership); add `require_ownership` on all resource endpoints
+- [ ] T157 [US11] Register `roadmap` router in `Backend/app/main.py`; add `/roadmap` proxy rule to `frontend/nginx.conf`
+- [ ] T158 [P] [US11] Create `frontend/src/components/RoadmapPhaseCard.tsx` — expandable accordion card per phase; header shows phase name + estimated weeks + progress indicator; expanded body shows: skill chips, resource list (each row: name, free/paid badge, type icon, hours estimate, external link), project description card, milestone callout box; use shadcn/ui Accordion
+- [ ] T159 [P] [US11] Create `frontend/src/components/CareerInsightCard.tsx` — displays: salary range (local/remote) as a highlighted stat row, market demand badge (High/Medium/Low with colour), top 5 companies as logo-placeholder chips, hot skills as coloured badge list
+- [ ] T160 [P] [US11] Create `frontend/src/components/QuickWinsCard.tsx` — numbered list of 3 immediate actions; each shows action text, a "why" tooltip/tooltip, and time badge (e.g., "30 min"); UI-only checkboxes for personal tracking (stored in localStorage)
+- [ ] T161 [US11] Create `frontend/src/pages/CareerRoadmap.tsx` — target role input + "Generate" button at top; total timeline summary bar (X weeks, Y phases, Z resources); `CareerInsightCard` (salary + market data); `QuickWinsCard`; vertical timeline of `RoadmapPhaseCard` components; left sidebar (or top dropdown) listing all saved roadmaps for this user with a "New Roadmap" button; loading skeleton while generation is in progress
+- [ ] T162 [US11] Add roadmap API calls to `frontend/src/api.ts`: `generateRoadmap(sessionId, targetRole)`, `listRoadmaps()`, `getRoadmap(id)`; add `/roadmap` route to frontend router; add "Career Roadmap" nav item
+
+**Checkpoint**: Roadmap generates with all required JSON fields. T149–T150 pass. Frontend renders phases, resources, and career insight correctly. IDOR check blocks access to other users' roadmaps.
+
+---
+
+## Phase 12: User Story 3 — Subscription Plans & Feature Gating (Priority: P2)
+
+**Goal**: Free / Professional / Recruiter tiers, Paymob checkout, feature-gated endpoints, subscription lifecycle. Referral credits from Phase 9 are applied at activation time.
+
+**Independent Test**: Free user hits gated endpoint → 402 → visits Pricing page → Paymob checkout → webhook fires → account upgraded → gated endpoint now returns 200 → if referred user, referrer gets 1 free month credited.
+
+### Tests for User Story 3
+
+> **Write these FIRST — confirm they FAIL before implementing**
+
+- [ ] T048 [P] [US3] Unit tests for subscription service in `Backend/tests/unit/test_subscription_service.py`: entitlement check, plan lookup, activation, lapse, free-tier default, referral credit applied on activation
+- [ ] T049 [P] [US3] Unit tests for Paymob service in `Backend/tests/unit/test_payment_paymob.py`: order creation mocked, payment key mocked, auth token mocked
+- [ ] T050 [P] [US3] Integration test for subscription flow in `Backend/tests/integration/test_subscriptions.py`: plans list, checkout creates pending, 402 on gated endpoint, cancel flow
+- [ ] T051 [P] [US3] Integration test for Paymob webhook in `Backend/tests/integration/test_payments.py`: valid signature activates, invalid signature rejected + logged, duplicate delivery idempotent, payment history returned
+
+### Implementation for User Story 3
+
+- [ ] T052 [P] [US3] Create `Backend/models/subscription.py` — `SubscriptionPlan`, `FeatureEntitlement`, `Subscription`, `Payment` models per data-model.md
+- [ ] T053 [US3] Create `Backend/migrations/versions/003_subscriptions.py` — tables + seed data: 3 plans (free/professional/recruiter) and all feature entitlement rows
+- [ ] T054 [P] [US3] Add subscription-related schemas to `Backend/models/schemas.py`: `PlanResponse`, `CheckoutRequest`, `CheckoutResponse`, `SubscriptionStatusResponse`, `PaymentHistoryItem`
+- [ ] T055 [US3] Create `Backend/services/subscription_service.py` — `get_user_subscription(user)`, `check_entitlement(user, feature_slug)`, `activate_subscription(db, subscription_id)` (also calls `apply_referral_reward()` from Phase 9 if applicable), `lapse_subscription(db, user_id)`, `get_or_create_free_subscription(db, user)`
+- [ ] T056 [US3] Create `Backend/services/payment_paymob.py` — `get_auth_token()`, `create_order(auth_token, amount_piastres, user_email)`, `create_payment_key(auth_token, order_id, integration_id, user_email)`
+- [ ] T057 [US3] Create `Backend/middleware/subscription_gate.py` — `require_feature(feature_slug)` FastAPI `Depends()` that calls `check_entitlement()` and raises `HTTPException(402)` with upgrade URL if not entitled
+- [ ] T058 [US3] Create `Backend/routers/subscriptions.py` — `GET /subscriptions/plans` (public), `POST /subscriptions/checkout`, `GET /subscriptions/status`, `POST /subscriptions/cancel`
+- [ ] T059 [US3] Create `Backend/routers/payments.py` — `POST /payments/webhook/paymob` (verify HMAC → idempotency check → activate → send confirmation email → audit log), `GET /payments/history`
+- [ ] T060 [US3] Register `subscriptions` and `payments` routers in `Backend/app/main.py`
+- [ ] T061 [P] [US3] Create `frontend/src/hooks/useSubscription.ts` — fetches `/subscriptions/status`, exposes `planSlug`, `entitlements`, `isEntitled(feature)`
+- [ ] T062 [P] [US3] Create `frontend/src/hooks/usePayment.ts` — manages Paymob iframe state: `initiateCheckout(planSlug)`, `iframeToken`, `isLoading`, `error`
+- [ ] T063 [P] [US3] Create `frontend/src/components/SubscriptionGate.tsx` — wrapper that renders children if entitled, otherwise renders upgrade prompt card
+- [ ] T064 [P] [US3] Create `frontend/src/components/PricingCard.tsx` — plan card with name, price, feature list, CTA button; highlight recommended plan
+- [ ] T065 [US3] Create `frontend/src/pages/Pricing.tsx` — three `PricingCard` components with annual/monthly toggle; Paymob iframe modal on checkout; referral discount applied automatically if user has pending referral credit
+- [ ] T066 [US3] Extend `frontend/src/pages/Profile.tsx` — subscription status section: plan name, renewal date, cancel button, payment history, referral earnings card
+- [ ] T067 [US3] Add subscription + payment calls to `frontend/src/api.ts`: `getPlans()`, `initiateCheckout(planSlug)`, `getSubscriptionStatus()`, `cancelSubscription()`, `getPaymentHistory()`
+- [ ] T068 [US3] Add `/pricing` route to frontend router; add "Upgrade" link in nav for free-tier users; add "Pro" badge for paid users
+- [ ] T069 [US3] Add `/payments` and `/subscriptions` proxy rules to `frontend/nginx.conf`
+
+**Checkpoint**: Full subscription and payment cycle testable end-to-end. T048–T051 pass. Referral credit correctly applied on first subscription activation.
+
+---
+
+## Phase 13: Complete System Integration Testing [NEW]
+
+**Goal**: Test the entire platform as a unified system — not individual features, but the full user journeys from registration to subscription to advanced feature use to account deletion. Catch integration failures that per-feature tests cannot see.
+
+**Scope**: End-to-end test flows, load testing, security walkthrough, and cross-feature contract validation. This phase produces the go-live confidence report.
+
+**Independent Test**: All test suites pass on a clean Docker environment with no prior state.
+
+### E2E Test Flows (Playwright)
+
+- [ ] T168 [P] Add Playwright to `frontend/package.json`: `@playwright/test`; create `frontend/e2e/` directory; configure `playwright.config.ts` to run against `http://localhost:3000`
+- [ ] T169 [P] E2E test: Full new-user journey in `frontend/e2e/new-user.spec.ts` — register → verify email (mock resend) → login → upload CV → see score → view results; asserts no console errors, no broken navigations
+- [ ] T170 [P] E2E test: Subscription journey in `frontend/e2e/subscription.spec.ts` — free user → hit locked feature → upgrade prompt appears → pricing page loads → (mock Paymob webhook) → feature unlocked; asserts 402 before and 200 after
+- [ ] T171 [P] E2E test: Referral journey in `frontend/e2e/referral.spec.ts` — User A copies referral link → User B registers via link → User B subscribes (mocked webhook) → User A's stats show 1 conversion
+- [ ] T172 [P] E2E test: Career roadmap flow in `frontend/e2e/roadmap.spec.ts` — log in → navigate to Career Roadmap → select an existing CV session → enter target role → submit → loading skeleton appears → roadmap renders with phases, resources, and career insight card; assert no console errors and all phase cards are expandable
+
+### Backend System Tests
+
+- [ ] T173 [US_ALL] Create `Backend/tests/system/test_full_user_lifecycle.py` — single test file that runs a complete lifecycle: register → verify → login → upload → analyze → subscribe → use premium feature → delete account; asserts all DB rows cleaned up, audit log intact after deletion
+- [ ] T174 [US_ALL] Security regression: re-run full `test_security.py` suite against the complete system (all phases integrated); confirm 0 regressions; document any new attack surfaces introduced by Phase 5–12 endpoints
+- [ ] T175 Create `Backend/tests/system/__init__.py`; add `Backend/tests/system/` to pytest discovery in `pytest.ini`
+
+### Load & Performance Testing
+
+- [ ] T176 [P] Create `Backend/tests/load/locustfile.py` (using `locust`) — simulate 50 concurrent users performing: login, upload CV (PDF stub), fetch results, get notifications; run 2-minute soak test; assert p95 response time < 500 ms on `/cv/upload` and < 100 ms on `/notifications/unread-count`; add `locust` to `Backend/requirements.txt`
+- [ ] T177 [P] Run Lighthouse CI on Landing, Dashboard, Results pages from a clean Docker build; all must score ≥ 80 Performance on mobile; record scores in `specs/001-production-saas-launch/quality-report.md`
+
+### Pre-Launch Security Walkthrough (FR-032)
+
+- [ ] T178 Complete and document OWASP Top 10 walkthrough in `specs/001-production-saas-launch/security-report.md`: SQL injection, XSS, CSRF, brute force, path traversal, IDOR, directory listing, clickjacking, MitM, webhook replay; result must be "PASS" or "REMEDIATED" for each item before go-live
+
+**Checkpoint**: All E2E tests pass. Lifecycle test passes. Load test meets p95 targets. OWASP walkthrough complete with no open findings.
+
+---
+
+## Phase 14: Polish & Pre-Launch
+
+**Purpose**: Final hardening, documentation, environment validation.
+
+- [ ] T115 [P] Update `Backend/.env.example` with all new variables: Resend, Paymob (4 vars), Postgres (3 vars), Adminer, log format, app base URL, admin secret, APScheduler timezone
+- [ ] T116 [P] Update `frontend/nginx.conf` — confirm all proxy routes present: `/subscriptions`, `/payments`, `/jobs`, `/recruiter`, `/referrals`, `/notifications`, `/admin`, `/auth`
+- [ ] T117 [P] Run full `pytest Backend/tests/ -v --cov=Backend` — fix any failures; target ≥ 80% coverage on all new code
 - [ ] T118 [P] Run full `vitest run` in `frontend/` — fix any failures
-- [ ] T119 Complete FR-032 OWASP Top 10 security walkthrough: test SQL injection, XSS, CSRF, brute force, path traversal, IDOR, file upload bypass, clickjacking (X-Frame-Options), webhook replay, error response leaks — document results
+- [ ] T119 Run final FR-032 OWASP walkthrough (cross-reference with T178 report); confirm all Phase 12+ endpoints are covered
 - [ ] T120 Run `docker compose up --build` on a clean environment (no prior volumes); confirm all services healthy within 5 minutes; confirm Alembic migrations complete; confirm `/health` returns 200
-- [ ] T121 [P] Rotate `JWT_SECRET` in `.env`; confirm all existing sessions are invalidated; confirm new login works
-- [ ] T122 Update `README.md` — reflect new features (subscriptions, payments, LinkedIn import, ATS tracker, recruiter dashboard), updated quick start, new environment variables
+- [ ] T121 [P] Rotate `JWT_SECRET` and `ADMIN_SECRET` in `.env`; confirm all existing sessions are invalidated; confirm new login works
+- [ ] T122 Update `README.md` — reflect all features (subscriptions, payments, LinkedIn import, ATS tracker, recruiter dashboard, referral engine, admin BI, notification center), updated quick start, complete environment variable reference
 
 ---
 
@@ -289,16 +425,17 @@ description: "Task list for HireIQ Production SaaS Launch"
 
 ### Phase Dependencies
 
-- **Setup (Phase 1)**: No dependencies — start immediately
-- **Foundational (Phase 2)**: Depends on Phase 1 completion — BLOCKS all user stories
-- **US1 Auth (Phase 3)**: Depends on Phase 2 — no dependency on other stories
-- **US6 Security (Phase 4)**: Depends on Phase 3 (needs auth endpoints to add audit log calls)
-- **US3 Subscriptions (Phase 5)**: Depends on Phase 4 (security gate must be in place before payments)
-- **US4 Enhanced AI (Phase 6)**: Depends on Phase 5 (entitlement checks required)
-- **US7 ATS Tracker (Phase 7)**: Depends on Phase 5 (entitlement checks required); independent of US4
-- **US8 Recruiter (Phase 8)**: Depends on Phase 7 (shares migration and models/jobs.py)
-- **US5 Frontend (Phase 9)**: Depends on Phases 3–8 (redesigns existing + new pages); can start earlier for Landing page only
-- **Polish (Phase 10)**: Depends on all phases complete
+- **Phases 1–4**: Complete ✅
+- **Phase 5 (Enhanced AI)**: Depends on Phase 4 — needs auth and ownership checks in place
+- **Phase 6 (ATS Tracker)**: Depends on Phase 4 — ownership check pattern; independent of Phase 5
+- **Phase 7 (Recruiter)**: Depends on Phase 6 — shares `Backend/models/jobs.py` and migration 004
+- **Phase 8 (Frontend Redesign)**: Depends on Phases 5–7 (redesigns the pages those phases introduce); can start Phase 8 tasks for Landing + Auth independently of Phases 5–7
+- **Phase 9 (Referral)**: Depends on Phase 4 (needs auth). Independent of Phases 5–8. Must complete before Phase 12 so referral rewards integrate into subscription activation
+- **Phase 10 (Admin BI)**: Depends on Phases 5–9 (metrics are only meaningful when all features exist)
+- **Phase 11 (Career Roadmap)**: Depends on Phase 5 (roadmap uses the skills inventory from Enhanced AI analysis as input). Independent of Phases 9–10
+- **Phase 12 (Subscriptions)**: Depends on Phases 9–11 (referral credits, subscription notifications, admin visibility all needed at activation time)
+- **Phase 13 (System Testing)**: Depends on all Phases 5–12 complete
+- **Phase 14 (Polish)**: Depends on Phase 13 passing
 
 ### Within Each Phase
 
@@ -309,36 +446,52 @@ description: "Task list for HireIQ Production SaaS Launch"
 
 ### Parallel Opportunities
 
-All tasks marked `[P]` within a phase can run simultaneously (different files, no shared state).
+All tasks marked `[P]` within a phase can run simultaneously.
 
 Key parallel windows:
-- Phase 1: T002, T003, T005, T006 all in parallel
-- Phase 2: T013, T014, T017, T018 in parallel after T009–T012 complete
-- Phase 3: T020, T021, T022 (tests) in parallel; T023, T024, T025, T027, T030 in parallel
-- Phase 9: T106–T112 all in parallel (different page files)
+- Phase 5: T070–T071 (tests) in parallel; T074, T079, T080, T081 in parallel (different files)
+- Phase 6 + 7: Can start Phase 6 immediately after Phase 4; Phase 7 starts after Phase 6 migration is created
+- Phase 8: All T106–T114 in parallel (different page files); start during Phase 6/7 for Landing + Auth pages
+- Phase 9: T123–T124 (tests) in parallel; T125, T127, T132, T133 in parallel
+- Phase 10: T136–T137 (tests) in parallel; T139, T140, T144, T145 in parallel
+- Phase 11: T149–T150 (tests) in parallel; T151, T153, T158, T159, T160 in parallel (different component files)
+- Phase 13: T168, T169, T170, T171, T172 (Playwright) all in parallel; T176, T177 in parallel
 
 ---
 
 ## Implementation Strategy
 
-### MVP Scope (Phases 1–4 only)
+### Completed (Phases 1–4) ✅
 
-Complete Phases 1–4 first to produce a shippable hardened application with production-grade auth and security — even without subscriptions. This is demonstrable to the customer as a "Phase 1 delivery."
+HireIQ is hardened and production-ready from a security standpoint. 80 tests pass. All OWASP controls in place.
 
-1. Phase 1: Setup
-2. Phase 2: Foundational (Docker, migrations, security headers)
-3. Phase 3: US1 — Auth hardening
-4. Phase 4: US6 — Security controls
-5. **STOP + VALIDATE**: Deploy to VPS; run security walkthrough on MVP only
+### Current Sprint (Phases 5–8): Product Completeness
 
-### Full SaaS Delivery (Phases 5–10)
+Build all product features before monetisation. Users will see full value before being asked to pay.
 
-1. Phase 5: Subscriptions + Paymob → revenue-ready
-2. Phase 6: Enhanced AI + LinkedIn → premium value
-3. Phase 7: ATS Tracker → daily retention
-4. Phase 8: Recruiter Dashboard → B2B upsell
-5. Phase 9: Frontend redesign → commercial credibility
-6. Phase 10: Polish + pre-launch checklist
+1. Phase 5: Enhanced AI — deepens the core value proposition
+2. Phase 6: ATS Tracker — daily retention hook (users return to update job status)
+3. Phase 7: Recruiter Dashboard — B2B upsell surface
+4. Phase 8: Frontend redesign — commercial credibility before launch
+
+### Next Sprint (Phases 9–11): Platform & Growth Infrastructure
+
+Features that are invisible to users but drive the business metrics:
+
+5. Phase 9: Referral Engine — zero-cost acquisition channel
+6. Phase 10: Admin BI Dashboard — founder visibility into what's working
+7. Phase 11: Notification Center — retention + re-engagement
+
+### Monetisation Sprint (Phase 12): Revenue Layer
+
+All features are live and tested. Now gate them properly and take payments.
+
+8. Phase 12: Subscriptions + Paymob — revenue-ready with referral credits integrated from day one
+
+### Validation & Launch (Phases 13–14): Confidence Gate
+
+9. Phase 13: Full system testing — catch integration failures
+10. Phase 14: Polish + pre-launch checklist → go-live
 
 ---
 
@@ -346,7 +499,7 @@ Complete Phases 1–4 first to produce a shippable hardened application with pro
 
 - `[P]` = different files, no blocking dependencies within the phase
 - `[USn]` maps to user story n for traceability back to spec.md
-- US7 (ATS Tracker) and US8 (Recruiter Dashboard) are premium features defined in spec Assumptions
 - Alembic migrations MUST be created in the phase where their models are first defined; do NOT run `alembic upgrade head` manually — Docker CMD handles it
 - All backend tests use real PostgreSQL (test DB) — no SQLite, no mocks for the DB layer (per constitution Principle II)
 - Commit after each phase checkpoint, not after individual tasks
+- Phase 8 frontend redesign: reference actual open-source SaaS UIs on GitHub before writing a single line — the goal is a product that looks funded, not a tutorial app

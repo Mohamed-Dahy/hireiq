@@ -42,6 +42,16 @@ def send_verification_email(to_email: str, username: str, token: str) -> None:
     _send(to_email, "Verify your HireIQ email", html)
 
 
+def send_account_deletion_email(to_email: str, username: str) -> None:
+    html = f"""
+<p>Hi {username},</p>
+<p>Your HireIQ account has been permanently deleted as requested.</p>
+<p>All your data, including CV sessions and interview results, has been removed.</p>
+<p>If you believe this was done in error, please contact support immediately.</p>
+"""
+    _send(to_email, "Your HireIQ account has been deleted", html)
+
+
 def send_password_reset_email(to_email: str, username: str, token: str) -> None:
     reset_url = f"{settings.app_base_url}/reset-password?token={token}"
     html = f"""

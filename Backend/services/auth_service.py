@@ -243,6 +243,15 @@ def consume_password_reset_token(db: Session, token: str) -> User:
 
 
 # ---------------------------------------------------------------------------
+# Ownership check — raises 404 (not 403) to avoid resource-existence disclosure
+# ---------------------------------------------------------------------------
+
+def require_ownership(resource_user_id: int, current_user_id: int) -> None:
+    if resource_user_id != current_user_id:
+        raise HTTPException(status_code=404, detail="Not found")
+
+
+# ---------------------------------------------------------------------------
 # FastAPI dependency — use in any protected route
 # ---------------------------------------------------------------------------
 
