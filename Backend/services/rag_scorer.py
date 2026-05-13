@@ -6,10 +6,15 @@ Scores how well a CV matches a job description using two signals:
 1. Semantic score  — embed both texts with sentence-transformers (local, free)
 2. Keyword score   — TF-IDF overlap using scikit-learn
 
-Final score = 70% semantic + 30% keyword  →  0–100 range
+Raw cosine similarity for CV/JD pairs (cross-domain text) typically ranges
+0.35 (no match) to 0.85 (excellent match), not 0–1. Multiplying raw cosine
+by 100 therefore caps "perfect" matches at ~75%. We apply a sigmoid
+calibration to map the realistic range into a user-meaningful 0–100 score.
 
-Model is loaded lazily — only on the first scoring request, not at server startup.
+Final score = sigmoid(0.7 * semantic + 0.3 * keyword)  →  0–100 range
 """
+
+import math
 
 from sentence_transformers import SentenceTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -78,11 +83,22 @@ def store_embeddings(session_id: int, cv_text: str, jd_text: str) -> None:
     )
 
 
+def _sigmoid_calibrate(raw: float, center: float = 0.42, steepness: float = 9.0) -> float:
+    """
+    Applies a sigmoid curve so that typical cross-domain cosine similarities
+    (CV vs JD, range ~0.35–0.85) map to user-meaningful percentages.
+    center=0.42 → a weak match becomes ~50%; steepness=9 → sharp spread.
+    """
+    return 1.0 / (1.0 + math.exp(-steepness * (raw - center)))
+
+
 def compute_match_score(cv_text: str, jd_text: str) -> float:
     semantic = _semantic_score(cv_text, jd_text)
     keyword  = _keyword_score(cv_text, jd_text)
-    combined = (0.7 * semantic) + (0.3 * keyword)
-    return round(min(max(combined * 100, 0.0), 100.0), 2)
+    # Weighted combination of raw cosine signals, then calibrate via sigmoid
+    raw_combined = (0.7 * semantic) + (0.3 * keyword)
+    calibrated   = _sigmoid_calibrate(raw_combined)
+    return round(min(max(calibrated * 100, 0.0), 100.0), 2)
 
 
 def delete_embeddings(session_id: int) -> None:

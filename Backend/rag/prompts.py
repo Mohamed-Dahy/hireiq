@@ -145,6 +145,9 @@ Their current skills (with proficiency levels):
 Their job description context (the role/environment they are currently in):
 {jd_text}
 
+Identified skill gaps (from CV analysis):
+{gap_summary}
+
 STEP 1 — ASSESS THE CANDIDATE'S CURRENT LEVEL:
 Read the skills list carefully. If a candidate has "Python (hard, advanced)" and "FastAPI (hard, advanced)",
 they are NOT a beginner — do not treat them as one. Build the roadmap from their ACTUAL current position.
@@ -152,37 +155,29 @@ they are NOT a beginner — do not treat them as one. Build the roadmap from the
 CRITICAL ANTI-PATTERNS — you MUST NEVER include these in the output:
 - Do NOT suggest "Create a GitHub profile" — assume they already have one
 - Do NOT suggest "contribute to open source for the first time" as a basic step for experienced devs
-- Do NOT suggest "write a blog post" as a quick win unless the role specifically requires content/thought leadership
-- Do NOT suggest "join a coding challenge on HackerRank/LeetCode" as a phase action (only acceptable as a quick win for junior candidates)
-- Do NOT start a phase with beginner foundations (e.g. "Learn what an API is") for someone with intermediate/advanced skills
-- Do NOT recommend beginner courses (CS50, Python for Everybody, "Introduction to X") for Mid/Senior candidates
+- Do NOT suggest "write a blog post" as a quick win unless the role specifically requires it
+- Do NOT suggest "join a coding challenge on HackerRank/LeetCode" as a phase action for experienced devs
+- Do NOT start a phase with beginner foundations (e.g. "Learn what an API is") for intermediate/advanced candidates
+- Do NOT recommend beginner-level courses to Mid/Senior candidates
 - Do NOT pad phases with skills the candidate already has at the required level
-- quick_wins must address REAL gaps from the skills list, not generic career advice
+- quick_wins MUST address the actual gap_summary above — not generic career advice
 
 PHASE RULES:
 - Start phases from the candidate's ACTUAL current skill level — skip everything they already know
-- For Senior/Staff candidates: phases should focus on architectural depth, system design mastery, leadership, and specialized advanced topics
-- Each phase must directly build toward {target_role} requirements that are currently missing from the candidate's skill profile
+- For Senior/Staff candidates: phases focus on architectural depth, advanced specialization, leadership topics
+- Each phase must directly build toward {target_role} requirements currently missing from the candidate's profile
 - Project suggestions must be non-trivial for the candidate's level (no "build a To-Do app" for a Senior dev)
 
-RESOURCE RULES — you MUST follow these exactly:
-- Every resource MUST have a real, working URL — never use placeholder URLs
-- Always use specific course/book/video titles with the platform name
-- Match resource difficulty to the candidate's level:
-  * Advanced candidates → prefer: advanced books, architecture talks, specialized Coursera specializations, official docs for advanced topics, academic papers, expert-authored GitHub repos
-  * Examples of good advanced resources:
-    {{"name": "Designing Data-Intensive Applications — Martin Kleppmann", "url": "https://dataintensive.net", "type": "book", "is_free": false, "estimated_hours": 35}}
-    {{"name": "System Design Interview Vol. 2 — Alex Xu", "url": "https://www.amazon.com/dp/1736049119", "type": "book", "is_free": false, "estimated_hours": 20}}
-    {{"name": "AWS Solutions Architect Professional — A Cloud Guru", "url": "https://acloudguru.com/course/aws-certified-solutions-architect-professional", "type": "course", "is_free": false, "estimated_hours": 40}}
-    {{"name": "Fast.ai Practical Deep Learning for Coders", "url": "https://course.fast.ai", "type": "course", "is_free": true, "estimated_hours": 30}}
-    {{"name": "The Pragmatic Programmer — Hunt & Thomas", "url": "https://pragprog.com/titles/tpp20/the-pragmatic-programmer-20th-anniversary-edition", "type": "book", "is_free": false, "estimated_hours": 15}}
-    {{"name": "MLOps Specialization — DeepLearning.AI Coursera", "url": "https://www.coursera.org/specializations/machine-learning-engineering-for-production-mlops", "type": "course", "is_free": false, "estimated_hours": 16}}
-    {{"name": "Kubernetes for Developers — Linux Foundation (edX)", "url": "https://www.edx.org/course/kubernetes-for-developers", "type": "course", "is_free": true, "estimated_hours": 20}}
-    {{"name": "Full Stack Open 2024 — University of Helsinki", "url": "https://fullstackopen.com/en", "type": "course", "is_free": true, "estimated_hours": 60}}
-  * Mid-level → intermediate Udemy/Coursera courses, real project repos, intermediate books
-  * Junior → structured beginner-friendly courses are fine
-- Include a mix of types: books, courses, videos, project repos, interactive platforms
-- Each phase MUST have 3-5 resources (not fewer)
+RESOURCE RULES — CRITICAL — read carefully:
+- You MUST use ONLY resources from the AVAILABLE RESOURCES list below
+- Copy the name, url, type, is_free, and estimated_hours EXACTLY as listed — do not modify them
+- Do NOT invent, guess, or create any resource not in the list below
+- Do NOT use official documentation pages as resources (they are references, not courses)
+- Each phase MUST have 3-5 resources chosen from the AVAILABLE RESOURCES list
+- If the list does not have enough resources for a skill, choose the closest related ones from the list
+
+AVAILABLE RESOURCES (use ONLY these, copy URLs exactly):
+{available_resources}
 
 Required JSON schema:
 {{
@@ -193,8 +188,8 @@ Required JSON schema:
       "skills_covered": ["skill1", "skill2"],
       "resources": [
         {{
-          "name": "string — specific course/book/video title and platform",
-          "url": "string — real working URL",
+          "name": "string — exact name from AVAILABLE RESOURCES",
+          "url": "string — exact URL from AVAILABLE RESOURCES",
           "type": "course|book|video|project|tool",
           "is_free": boolean,
           "estimated_hours": integer
@@ -213,26 +208,26 @@ Required JSON schema:
   }},
   "quick_wins": [
     {{
-      "action": "string — a specific action that directly closes a real gap identified in the skills list",
-      "why": "string — direct connection to the target role requirements",
+      "action": "string — specific action directly addressing one of the identified gaps above",
+      "why": "string — direct connection to the {target_role} requirements",
       "time_required": "string e.g. '3-4 hours' or '1 weekend'"
     }}
   ]
 }}
 
 Rules:
-- Generate 3-5 phases; phases cover ONLY what is missing from the candidate's profile
-- Total estimated_weeks: 8-20 weeks for Senior+ candidates (they have a foundation), 16-30 weeks for Junior/Mid
-- Each phase: 3-5 resources, 1 concrete non-trivial project, 1 clear measurable milestone
-- quick_wins: exactly 3 immediate, gap-specific actions completable within 1-2 weeks; must be things this specific candidate actually needs
-- career_insight: exactly 5 top_companies and 5 hot_skills for this role in current market
-- Salary ranges must be realistic for Egyptian market + international remote work (2025-2026 rates)
+- Generate 3-5 phases covering ONLY what is missing from the candidate's profile
+- Total estimated_weeks: 8-20 weeks for Senior+ candidates, 16-30 weeks for Junior/Mid
+- Each phase: 3-5 resources from the available list, 1 non-trivial project, 1 measurable milestone
+- quick_wins: exactly 3 actions, each tied to a specific gap from gap_summary, completable in 1-2 weeks
+- career_insight: exactly 5 top_companies and 5 hot_skills for this role in 2025-2026 market
+- Salary ranges: realistic for Egyptian market + international remote work
 
 Target role: {target_role}
 
 Return ONLY the JSON object:"""
 
 career_roadmap_prompt = PromptTemplate(
-    input_variables=["target_role", "current_skills", "jd_text"],
+    input_variables=["target_role", "current_skills", "jd_text", "gap_summary", "available_resources"],
     template=CAREER_ROADMAP_TEMPLATE,
 )

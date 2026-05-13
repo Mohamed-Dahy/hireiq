@@ -8,12 +8,13 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from rag.prompts import career_roadmap_prompt
+from rag.resources import select_resources, format_for_prompt
 from models.roadmap import CareerRoadmap
 
 _roadmap_llm = ChatGroq(
     model="llama-3.3-70b-versatile",
     api_key=settings.groq_api_key,
-    temperature=0.3,
+    temperature=0.5,
     streaming=False,
 )
 _roadmap_chain = career_roadmap_prompt | _roadmap_llm | StrOutputParser()
@@ -38,21 +39,52 @@ def _strip_fences(text: str) -> str:
     return text.strip()
 
 
+def _format_gap_summary(gap_report: list | None) -> str:
+    if not gap_report:
+        return "No structured gap report available — infer gaps from the skills list vs. the target role."
+    lines = []
+    for g in gap_report[:5]:
+        skill = g.get("skill", "")
+        importance = g.get("importance", "medium")
+        reason = g.get("reason", "")
+        lines.append(f"- {skill} (importance: {importance}) — {reason}")
+    return "\n".join(lines)
+
+
 def generate_career_roadmap(
     current_skills: list,
     target_role: str,
     jd_text: str = "",
+    gap_report: list | None = None,
 ) -> dict:
     try:
+        # Format skills preserving level info
         skills_str = "\n".join(
             f"- {s.get('skill', '')} ({s.get('category', 'hard')}, {s.get('level', 'intermediate')})"
             if isinstance(s, dict) else f"- {s}"
             for s in current_skills
         ) or "No skills provided"
+
+        # Extract skill names for resource selection
+        skill_names = [
+            s.get("skill", "") if isinstance(s, dict) else str(s)
+            for s in current_skills
+        ]
+        if gap_report:
+            skill_names += [g.get("skill", "") for g in gap_report]
+
+        # Select real, curated resources relevant to this candidate
+        relevant_resources = select_resources(skill_names, target_role)
+        resources_block = format_for_prompt(relevant_resources)
+
+        gap_summary = _format_gap_summary(gap_report)
+
         raw = _roadmap_chain.invoke({
             "target_role": target_role,
             "current_skills": skills_str,
             "jd_text": jd_text or "Not provided",
+            "gap_summary": gap_summary,
+            "available_resources": resources_block,
         })
         data = json.loads(_strip_fences(raw))
         if "phases" not in data or "career_insight" not in data:

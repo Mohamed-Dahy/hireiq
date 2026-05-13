@@ -27,6 +27,7 @@ def generate(
 ):
     current_skills = []
     jd_text = ""
+    gap_report = None
 
     if body.cv_session_id is not None:
         session = db.query(CVSession).filter(CVSession.id == body.cv_session_id).first()
@@ -39,9 +40,14 @@ def generate(
                 current_skills = json.loads(session.skill_inventory)
             except (json.JSONDecodeError, TypeError):
                 current_skills = []
+        if session.gap_report:
+            try:
+                gap_report = json.loads(session.gap_report)
+            except (json.JSONDecodeError, TypeError):
+                gap_report = None
         jd_text = session.jd_text or ""
 
-    roadmap_data = generate_career_roadmap(current_skills, body.target_role, jd_text)
+    roadmap_data = generate_career_roadmap(current_skills, body.target_role, jd_text, gap_report)
     total_weeks = sum(p.get("estimated_weeks", 0) for p in roadmap_data.get("phases", []))
     rm = save_roadmap(db, current_user.id, body.cv_session_id, body.target_role, roadmap_data)
 
