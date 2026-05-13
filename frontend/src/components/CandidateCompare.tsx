@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Trash2 } from 'lucide-react'
 import type { RecruiterCandidate } from '../api'
 
 interface Props {
@@ -34,18 +35,11 @@ export default function CandidateCompare({ candidates, onRemove, onRankUpdate }:
   const arrow = (key: SortKey) =>
     sortKey === key ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''
 
-  const scoreColor = (score: number | null) => {
-    if (score === null) return 'text-gray-400'
-    if (score >= 75) return 'text-green-600'
-    if (score >= 50) return 'text-amber-600'
-    return 'text-red-500'
-  }
-
-  const scoreBg = (score: number | null) => {
-    if (score === null) return 'bg-gray-100'
-    if (score >= 75) return 'bg-green-50'
-    if (score >= 50) return 'bg-amber-50'
-    return 'bg-red-50'
+  const scoreClass = (score: number | null) => {
+    if (score === null) return 'text-zinc-400'
+    if (score >= 75) return 'text-emerald-600 dark:text-emerald-400'
+    if (score >= 50) return 'text-amber-600 dark:text-amber-400'
+    return 'text-red-500 dark:text-red-400'
   }
 
   const extractSkills = (inv: unknown): string[] => {
@@ -61,9 +55,9 @@ export default function CandidateCompare({ candidates, onRemove, onRankUpdate }:
 
   if (candidates.length === 0) {
     return (
-      <div className="text-center py-16 text-gray-500">
-        <p className="text-lg font-medium">No candidates yet</p>
-        <p className="text-sm mt-1">Add CV sessions to this list to compare candidates.</p>
+      <div className="text-center py-16 text-zinc-500">
+        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">No candidates yet</p>
+        <p className="text-sm mt-1 text-zinc-500">Add CV sessions to this list to compare candidates.</p>
       </div>
     )
   }
@@ -72,29 +66,29 @@ export default function CandidateCompare({ candidates, onRemove, onRankUpdate }:
     <div className="overflow-x-auto">
       <table className="w-full text-sm border-collapse">
         <thead>
-          <tr className="bg-violet-50 text-violet-800">
+          <tr className="bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
             <th
-              className="px-4 py-3 text-left font-semibold cursor-pointer select-none border-b border-violet-200 w-16"
+              className="px-4 py-3 text-left text-xs font-medium uppercase tracking-widest cursor-pointer select-none border-b border-zinc-200 dark:border-zinc-700 w-16"
               onClick={() => toggle('rank')}
             >
               Rank{arrow('rank')}
             </th>
             <th
-              className="px-4 py-3 text-left font-semibold cursor-pointer select-none border-b border-violet-200"
+              className="px-4 py-3 text-left text-xs font-medium uppercase tracking-widest cursor-pointer select-none border-b border-zinc-200 dark:border-zinc-700"
               onClick={() => toggle('cv_filename')}
             >
               CV File{arrow('cv_filename')}
             </th>
             <th
-              className="px-4 py-3 text-center font-semibold cursor-pointer select-none border-b border-violet-200 w-24"
+              className="px-4 py-3 text-center text-xs font-medium uppercase tracking-widest cursor-pointer select-none border-b border-zinc-200 dark:border-zinc-700 w-24"
               onClick={() => toggle('match_score')}
             >
               Score{arrow('match_score')}
             </th>
-            <th className="px-4 py-3 text-left font-semibold border-b border-violet-200">
+            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-widest border-b border-zinc-200 dark:border-zinc-700">
               Top Skills
             </th>
-            <th className="px-4 py-3 text-center font-semibold border-b border-violet-200 w-20">
+            <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-widest border-b border-zinc-200 dark:border-zinc-700 w-20">
               Actions
             </th>
           </tr>
@@ -103,8 +97,7 @@ export default function CandidateCompare({ candidates, onRemove, onRankUpdate }:
           {sorted.map((c, idx) => {
             const skills = extractSkills(c.skill_inventory)
             return (
-              <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                {/* Rank cell — click to edit */}
+              <tr key={c.id} className="border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
                 <td className="px-4 py-3 text-center">
                   {editingRank === c.id ? (
                     <form
@@ -122,12 +115,12 @@ export default function CandidateCompare({ candidates, onRemove, onRankUpdate }:
                         value={rankInput}
                         onChange={e => setRankInput(e.target.value)}
                         onBlur={() => setEditingRank(null)}
-                        className="w-12 border border-violet-400 rounded px-1 py-0.5 text-center text-sm"
+                        className="w-12 border border-violet-400 dark:border-violet-600 rounded px-1 py-0.5 text-center text-sm bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
                       />
                     </form>
                   ) : (
                     <span
-                      className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-violet-100 text-violet-700 font-bold cursor-pointer hover:bg-violet-200"
+                      className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-950 text-violet-600 dark:text-violet-400 text-xs font-medium cursor-pointer hover:bg-violet-200 dark:hover:bg-violet-900 transition-colors"
                       title="Click to set manual rank"
                       onClick={() => { setEditingRank(c.id); setRankInput(String(c.rank ?? idx + 1)) }}
                     >
@@ -136,44 +129,40 @@ export default function CandidateCompare({ candidates, onRemove, onRankUpdate }:
                   )}
                 </td>
 
-                {/* CV filename */}
-                <td className="px-4 py-3 font-medium text-gray-800 max-w-[200px] truncate" title={c.cv_filename}>
+                <td className="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100 max-w-[200px] truncate" title={c.cv_filename}>
                   {c.cv_filename}
                 </td>
 
-                {/* Match score */}
-                <td className={`px-4 py-3 text-center ${scoreBg(c.match_score)}`}>
-                  <span className={`font-bold text-base ${scoreColor(c.match_score)}`}>
+                <td className="px-4 py-3 text-center">
+                  <span className={`font-semibold text-sm ${scoreClass(c.match_score)}`}>
                     {c.match_score !== null ? `${c.match_score.toFixed(1)}%` : '—'}
                   </span>
                 </td>
 
-                {/* Skills chips */}
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
                     {skills.length > 0 ? (
                       skills.map((skill, i) => (
                         <span
                           key={i}
-                          className="px-2 py-0.5 rounded-full text-xs bg-violet-100 text-violet-700 font-medium"
+                          className="px-2 py-0.5 rounded-full text-xs bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 font-medium"
                         >
                           {skill}
                         </span>
                       ))
                     ) : (
-                      <span className="text-gray-400 text-xs italic">No analysis</span>
+                      <span className="text-zinc-400 text-xs italic">No analysis</span>
                     )}
                   </div>
                 </td>
 
-                {/* Remove */}
                 <td className="px-4 py-3 text-center">
                   <button
                     onClick={() => onRemove(c.id)}
-                    className="text-red-400 hover:text-red-600 transition-colors text-lg font-bold"
+                    className="text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer"
                     title="Remove candidate"
                   >
-                    ×
+                    <Trash2 size={14} strokeWidth={1.5} />
                   </button>
                 </td>
               </tr>

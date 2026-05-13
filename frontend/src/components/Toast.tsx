@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { CheckCircle, XCircle, Info, X } from 'lucide-react'
 
 type ToastKind = 'success' | 'error' | 'info'
 
@@ -24,42 +25,18 @@ export function useToast(): ToastCtx {
   return ctx
 }
 
-const kindConfig: Record<ToastKind, { bg: string; border: string; text: string; icon: React.ReactNode }> = {
+const kindConfig: Record<ToastKind, { border: string; icon: React.ReactNode }> = {
   success: {
-    bg: 'bg-white',
-    border: 'border-green-200',
-    text: 'text-gray-800',
-    icon: (
-      <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" className="w-3.5 h-3.5">
-          <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </div>
-    ),
+    border: 'border-emerald-200 dark:border-emerald-800',
+    icon: <CheckCircle size={15} strokeWidth={1.5} className="text-emerald-500 dark:text-emerald-400 shrink-0" />,
   },
   error: {
-    bg: 'bg-white',
-    border: 'border-red-200',
-    text: 'text-gray-800',
-    icon: (
-      <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5" className="w-3.5 h-3.5">
-          <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </div>
-    ),
+    border: 'border-red-200 dark:border-red-800',
+    icon: <XCircle size={15} strokeWidth={1.5} className="text-red-500 dark:text-red-400 shrink-0" />,
   },
   info: {
-    bg: 'bg-white',
-    border: 'border-purple-200',
-    text: 'text-gray-800',
-    icon: (
-      <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2.5" className="w-3.5 h-3.5">
-          <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </div>
-    ),
+    border: 'border-violet-200 dark:border-violet-800',
+    icon: <Info size={15} strokeWidth={1.5} className="text-violet-500 dark:text-violet-400 shrink-0" />,
   },
 }
 
@@ -96,18 +73,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, x: 40, scale: 0.96 }}
                 transition={{ duration: 0.22, ease: [0, 0, 0.2, 1] }}
-                className={`pointer-events-auto flex items-start gap-3 ${cfg.bg} border ${cfg.border} shadow-lg shadow-black/5 rounded-xl px-4 py-3 min-w-[280px] max-w-[360px]`}
+                className={`pointer-events-auto flex items-center gap-3 bg-white dark:bg-zinc-900 border ${cfg.border} rounded-xl px-4 py-3 min-w-[280px] max-w-[360px]`}
               >
                 {cfg.icon}
-                <p className={`text-sm ${cfg.text} leading-snug flex-1`}>{t.message}</p>
+                <p className="text-sm text-zinc-900 dark:text-zinc-100 leading-snug flex-1">{t.message}</p>
                 <button
                   onClick={() => setToasts((list) => list.filter((x) => x.id !== t.id))}
-                  className="text-gray-300 hover:text-gray-500 cursor-pointer shrink-0"
+                  className="text-zinc-300 dark:text-zinc-600 hover:text-zinc-500 dark:hover:text-zinc-400 cursor-pointer shrink-0 transition-colors"
                   aria-label="Dismiss"
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
-                    <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
+                  <X size={13} strokeWidth={1.5} />
                 </button>
               </motion.div>
             )

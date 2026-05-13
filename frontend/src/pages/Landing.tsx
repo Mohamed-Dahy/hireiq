@@ -1,371 +1,413 @@
-import { motion, useReducedMotion } from 'framer-motion'
-import type { Variants } from 'framer-motion'
+import { motion } from 'framer-motion'
+import {
+  Layers, FileText, Sparkles, Mic, Eye, Briefcase, Users,
+  Check, ArrowRight, Moon, Sun,
+} from 'lucide-react'
+import { PLANS, TESTIMONIALS } from '../lib/constants'
 
 interface Props {
   onGetStarted: () => void
   onLogin: () => void
+  dark: boolean
+  onToggleDark: () => void
 }
 
 const features = [
-  {
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-6 h-6">
-        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    ),
-    title: 'CV & JD Matching',
-    desc: 'Upload your PDF CV and any job description. Our RAG pipeline scores compatibility from 0–100 in seconds.',
-  },
-  {
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-6 h-6">
-        <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-      </svg>
-    ),
-    title: 'AI Skill Gap Analysis',
-    desc: 'Groq-powered LLaMA 3 identifies your missing skills and suggests learning paths — streamed live to your screen.',
-  },
-  {
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-6 h-6">
-        <path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-      </svg>
-    ),
-    title: 'Mock Interview Engine',
-    desc: 'Answer tailored questions by voice. Whisper transcribes your answer and LLaMA scores clarity, relevance, and depth.',
-  },
-  {
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-6 h-6">
-        <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-      </svg>
-    ),
-    title: 'Eye Contact Feedback',
-    desc: 'OpenCV analyzes your webcam feed in real time and reports your eye contact ratio — just like a real interviewer would.',
-  },
+  { icon: FileText,  title: 'CV & JD Matching',       desc: 'Semantic + keyword scoring returns a 0–100 match score in seconds against any job description.' },
+  { icon: Sparkles,  title: 'AI Skill Gap Analysis',   desc: 'LLaMA 3 via Groq identifies missing skills and builds a prioritised learning roadmap, streamed live.' },
+  { icon: Mic,       title: 'Mock Interview Engine',   desc: 'Answer questions by voice. Whisper transcribes, LLaMA scores clarity, relevance, and depth.' },
+  { icon: Eye,       title: 'Eye Contact Feedback',    desc: 'OpenCV tracks your webcam in real time and reports eye contact ratio — just like a real interviewer.' },
+  { icon: Briefcase, title: 'ATS Job Tracker',         desc: 'Kanban board for applications. Track every stage from saved to offer with AI prep questions per role.' },
+  { icon: Users,     title: 'Recruiter Dashboard',     desc: 'Compare and rank candidates side-by-side. Export shortlists to PDF. Built for hiring teams.' },
 ]
 
 const steps = [
-  { num: '01', title: 'Upload your CV', desc: 'Drop your PDF and paste the job description.' },
-  { num: '02', title: 'Get your score', desc: 'Semantic + keyword matching returns a 0–100 match score instantly.' },
-  { num: '03', title: 'Read the analysis', desc: 'Skill gaps and interview questions stream live from LLaMA 3.' },
-  { num: '04', title: 'Practice & improve', desc: 'Record answers, get scored, and track your progress over time.' },
+  { num: '01', title: 'Upload your CV',     desc: 'Drop your PDF and paste a job description.' },
+  { num: '02', title: 'Get your score',     desc: 'Semantic + keyword matching returns a 0–100 match score instantly.' },
+  { num: '03', title: 'Read the analysis',  desc: 'Skill gaps and tailored questions stream live from LLaMA 3.' },
+  { num: '04', title: 'Practice & improve', desc: 'Record answers, get scored on 3 dimensions, track progress over time.' },
 ]
 
 const stats = [
-  { value: '100k', label: 'Tokens / day — free' },
-  { value: '<2s', label: 'Match score latency' },
-  { value: '4', label: 'AI signals combined' },
-  { value: '100%', label: 'Free-tier powered' },
+  { value: '< 2s',  label: 'Match score latency' },
+  { value: '6+',    label: 'AI signals combined' },
+  { value: '100%',  label: 'Free tier available' },
+  { value: '4.8★',  label: 'Avg user rating' },
 ]
 
-// Reusable animation variants following the skill's 150–300ms ease-out rule
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 24 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0, 0, 0.2, 1] } },
-}
+const fade = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { duration: 0.4 } } }
 
-const staggerContainer = (staggerChildren = 0.1): Variants => ({
-  hidden: {},
-  show:   { transition: { staggerChildren } },
-})
-
-export default function Landing({ onGetStarted, onLogin }: Props) {
-  const reduced = useReducedMotion()
-
+export default function Landing({ onGetStarted, onLogin, dark, onToggleDark }: Props) {
   return (
-    <div className="min-h-screen bg-white font-sans text-gray-900 overflow-x-hidden">
+    <div className="min-h-screen bg-white dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-50 overflow-x-hidden">
 
-      {/* ── NAV ─────────────────────────────────────────────────────────────── */}
-      <motion.nav
-        initial={{ y: -60, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur border-b border-purple-100"
-      >
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      {/* ── NAV ──────────────────────────────────────────────────────────────── */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800">
+        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center">
-              <svg viewBox="0 0 24 24" fill="white" className="w-4 h-4">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <span className="font-bold text-purple-700 text-lg tracking-tight">HireIQ</span>
+            <Layers size={18} strokeWidth={1.5} className="text-violet-500" />
+            <span className="font-semibold text-zinc-900 dark:text-zinc-50 text-sm tracking-tight">HireIQ</span>
           </div>
-          <div className="flex items-center gap-4">
-            <motion.button
+          <div className="hidden sm:flex items-center gap-6">
+            <a href="#features"    className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">Features</a>
+            <a href="#how-it-works" className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">How it works</a>
+            <a href="#pricing"     className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">Pricing</a>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onToggleDark}
+              aria-label="Toggle theme"
+              className="w-8 h-8 flex items-center justify-center rounded-md text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            >
+              {dark ? <Sun size={15} strokeWidth={1.5} /> : <Moon size={15} strokeWidth={1.5} />}
+            </button>
+            <button
               onClick={onLogin}
-              whileHover={{ scale: reduced ? 1 : 1.03 }}
-              whileTap={{ scale: reduced ? 1 : 0.97 }}
-              transition={{ duration: 0.15 }}
-              className="text-sm text-gray-600 hover:text-purple-700 font-medium transition-colors cursor-pointer"
+              className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 font-medium transition-colors cursor-pointer px-2 py-1"
             >
-              Log in
-            </motion.button>
-            <motion.button
+              Sign in
+            </button>
+            <button
               onClick={onGetStarted}
-              whileHover={{ scale: reduced ? 1 : 1.04 }}
-              whileTap={{ scale: reduced ? 1 : 0.96 }}
-              transition={{ duration: 0.15 }}
-              className="text-sm bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors shadow-sm cursor-pointer"
+              className="text-sm bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-md font-medium transition-colors cursor-pointer"
             >
-              Get started free
-            </motion.button>
+              Get started
+            </button>
           </div>
         </div>
-      </motion.nav>
+      </nav>
 
-      {/* ── HERO ────────────────────────────────────────────────────────────── */}
-      <section className="pt-32 pb-24 px-6 text-center relative overflow-hidden">
-        <div className="absolute inset-0 -z-10">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-purple-100 rounded-full blur-3xl opacity-50" />
-        </div>
-
+      {/* ── HERO ─────────────────────────────────────────────────────────────── */}
+      <section className="pt-36 pb-24 px-6">
         <motion.div
-          variants={staggerContainer(0.12)}
-          initial="hidden"
-          animate="show"
-          className="flex flex-col items-center"
+          initial="hidden" animate="show"
+          variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }}
+          className="max-w-4xl mx-auto text-center"
         >
-          <motion.div variants={fadeUp} className="inline-flex items-center gap-2 bg-purple-50 border border-purple-200 text-purple-700 text-xs font-medium px-4 py-1.5 rounded-full mb-6">
-            <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
-            Powered by Groq · LLaMA 3 · 100% free tier
+          <motion.div variants={fade} className="inline-flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 text-xs font-medium px-3 py-1.5 rounded-full mb-8 cursor-default">
+            <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+            Now with voice-based interview scoring
+            <ArrowRight size={11} />
           </motion.div>
 
-          <motion.h1 variants={fadeUp} className="text-5xl sm:text-6xl font-extrabold text-gray-900 leading-tight max-w-3xl mx-auto mb-6">
-            Land your dream job with{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-violet-500">
-              AI-powered
-            </span>{' '}
-            interview coaching
+          <motion.h1 variants={fade} className="text-5xl sm:text-6xl lg:text-[68px] font-semibold text-zinc-900 dark:text-zinc-50 leading-[1.08] tracking-tight mb-6">
+            The AI career<br className="hidden sm:block" /> intelligence platform
           </motion.h1>
 
-          <motion.p variants={fadeUp} className="text-lg text-gray-500 max-w-xl mx-auto mb-10 leading-relaxed">
-            Upload your CV, match it to any job description, discover skill gaps, and practice
-            answering tailored interview questions — all in one place.
+          <motion.p variants={fade} className="text-lg text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto mb-10 leading-relaxed">
+            Match your CV to any job description, discover skill gaps, and practice interviews — powered by LLaMA 3 and Whisper AI.
           </motion.p>
 
-          <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-3 justify-center">
-            <motion.button
+          <motion.div variants={fade} className="flex flex-col sm:flex-row items-center gap-3 justify-center">
+            <button
               onClick={onGetStarted}
-              whileHover={{ scale: reduced ? 1 : 1.04, boxShadow: '0 20px 40px rgba(124,58,237,0.3)' }}
-              whileTap={{ scale: reduced ? 1 : 0.97 }}
-              transition={{ duration: 0.15 }}
-              className="bg-purple-600 text-white px-8 py-3.5 rounded-xl font-semibold text-sm hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200 cursor-pointer"
+              className="bg-violet-600 hover:bg-violet-500 text-white px-6 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer flex items-center gap-2"
             >
               Analyze my CV — it's free
-            </motion.button>
-            <motion.button
+              <ArrowRight size={14} strokeWidth={2} />
+            </button>
+            <button
               onClick={onLogin}
-              whileHover={{ scale: reduced ? 1 : 1.03 }}
-              whileTap={{ scale: reduced ? 1 : 0.97 }}
-              transition={{ duration: 0.15 }}
-              className="border border-gray-200 text-gray-700 px-8 py-3.5 rounded-xl font-semibold text-sm hover:border-purple-300 hover:text-purple-700 transition-all cursor-pointer"
+              className="border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400 dark:hover:border-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 px-6 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer"
             >
-              I have an account
-            </motion.button>
+              Sign in to existing account
+            </button>
           </motion.div>
 
-          {/* Mock UI preview card */}
+          <motion.div variants={fade} className="flex flex-wrap items-center justify-center gap-5 mt-7 text-xs text-zinc-400">
+            {['Free tier · no credit card', 'GDPR compliant', 'Open-source backend'].map(t => (
+              <span key={t} className="flex items-center gap-1.5">
+                <Check size={11} strokeWidth={2.5} className="text-zinc-400" />
+                {t}
+              </span>
+            ))}
+          </motion.div>
+
+          {/* Product preview card */}
           <motion.div
-            variants={fadeUp}
-            className="mt-16 max-w-2xl w-full mx-auto bg-white rounded-2xl shadow-2xl shadow-purple-100 border border-purple-100 p-6 text-left"
+            variants={fade}
+            className="mt-16 max-w-2xl w-full mx-auto bg-zinc-50 dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm text-left"
           >
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-3 h-3 rounded-full bg-red-400" />
-              <div className="w-3 h-3 rounded-full bg-yellow-400" />
-              <div className="w-3 h-3 rounded-full bg-green-400" />
-              <span className="ml-2 text-xs text-gray-400">hireiq.app</span>
-            </div>
-            <div className="flex items-center gap-6 mb-4">
-              <div className="flex flex-col items-center">
-                <motion.div
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.7, duration: 0.5, ease: 'easeOut' }}
-                  className="w-20 h-20 rounded-full border-4 border-purple-500 flex items-center justify-center"
-                >
-                  <span className="text-xl font-extrabold text-purple-600">87%</span>
-                </motion.div>
-                <span className="text-xs text-gray-400 mt-1">Match Score</span>
-              </div>
-              <div className="flex-1 flex flex-wrap gap-2">
-                {['Python', 'FastAPI', 'Docker', 'Machine Learning'].map((s, i) => (
-                  <motion.span
-                    key={s}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.8 + i * 0.08, duration: 0.2, ease: 'easeOut' }}
-                    className="bg-purple-50 text-purple-700 text-xs px-3 py-1 rounded-full"
-                  >
-                    {s}
-                  </motion.span>
-                ))}
+            {/* Browser chrome */}
+            <div className="flex items-center gap-1.5 px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+              <div className="w-2.5 h-2.5 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+              <div className="w-2.5 h-2.5 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+              <div className="w-2.5 h-2.5 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+              <div className="flex-1 mx-3 h-5 bg-zinc-100 dark:bg-zinc-800 rounded flex items-center px-2.5">
+                <span className="text-[11px] text-zinc-400 font-mono">hireiq.app · Analysis</span>
               </div>
             </div>
-            <div className="space-y-2">
-              {[1, 0.8, 0.6].map((w, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ scaleX: 0, originX: 0 }}
-                  animate={{ scaleX: 1 }}
-                  transition={{ delay: 1 + i * 0.1, duration: 0.4, ease: 'easeOut' }}
-                  className={`h-2.5 ${i === 2 ? 'bg-purple-50' : 'bg-purple-100'} rounded-full`}
-                  style={{ width: `${w * 100}%` }}
-                />
-              ))}
+            {/* Content */}
+            <div className="p-6">
+              <div className="flex items-start justify-between mb-5">
+                <div>
+                  <p className="text-xs text-zinc-500 mb-1">Match Score</p>
+                  <p className="text-4xl font-semibold text-zinc-900 dark:text-zinc-50 tabular-nums leading-none">
+                    87<span className="text-2xl text-zinc-400 font-normal">%</span>
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-zinc-500 mb-1">Analyzed</p>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-300 font-medium font-mono">senior-eng-cv.pdf</p>
+                </div>
+              </div>
+              <div className="mb-5">
+                <p className="text-[11px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-2">Matched Skills</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {['Python', 'FastAPI', 'Docker', 'PostgreSQL', 'Redis'].map((s) => (
+                    <span key={s} className="bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-xs px-2.5 py-1 rounded border border-zinc-200 dark:border-zinc-700 font-mono">{s}</span>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-[11px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-3">Skill Gaps</p>
+                <div className="space-y-2.5">
+                  {[{ label: 'Kubernetes', w: 85 }, { label: 'Terraform', w: 62 }, { label: 'OpenTelemetry', w: 44 }].map((item) => (
+                    <div key={item.label} className="flex items-center gap-3">
+                      <span className="text-xs text-zinc-500 w-28 font-mono shrink-0">{item.label}</span>
+                      <div className="flex-1 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-violet-500 rounded-full" style={{ width: `${item.w}%` }} />
+                      </div>
+                      <span className="text-xs text-zinc-400 w-8 text-right font-mono">{item.w}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </motion.div>
         </motion.div>
       </section>
 
-      {/* ── STATS ───────────────────────────────────────────────────────────── */}
-      <motion.section
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, amount: 0.4 }}
-        variants={staggerContainer(0.1)}
-        className="py-12 bg-purple-600"
-      >
-        <div className="max-w-4xl mx-auto px-6 grid grid-cols-2 sm:grid-cols-4 gap-8 text-center">
+      {/* ── STATS ────────────────────────────────────────────────────────────── */}
+      <section className="border-y border-zinc-200 dark:border-zinc-800 py-10 bg-zinc-50 dark:bg-zinc-900">
+        <div className="max-w-4xl mx-auto px-6 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
           {stats.map((s) => (
-            <motion.div key={s.label} variants={fadeUp}>
-              <p className="text-3xl font-extrabold text-white">{s.value}</p>
-              <p className="text-sm text-purple-200 mt-1">{s.label}</p>
-            </motion.div>
+            <div key={s.label}>
+              <p className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight">{s.value}</p>
+              <p className="text-xs text-zinc-500 mt-1">{s.label}</p>
+            </div>
           ))}
         </div>
-      </motion.section>
+      </section>
 
-      {/* ── FEATURES ────────────────────────────────────────────────────────── */}
-      <section className="py-24 px-6 bg-white">
-        <div className="max-w-5xl mx-auto">
+      {/* ── FEATURES ─────────────────────────────────────────────────────────── */}
+      <section id="features" className="py-24 px-6">
+        <div className="max-w-6xl mx-auto">
           <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.3 }}
-            variants={staggerContainer(0.08)}
-            className="text-center mb-14"
+            initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.3 }}
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06 } } }}
+            className="mb-14"
           >
-            <motion.p variants={fadeUp} className="text-sm font-semibold text-purple-600 uppercase tracking-widest mb-2">Features</motion.p>
-            <motion.h2 variants={fadeUp} className="text-3xl font-bold text-gray-900">Everything you need to get hired</motion.h2>
-            <motion.p variants={fadeUp} className="text-gray-500 mt-3 max-w-lg mx-auto">
+            <motion.p variants={fade} className="text-xs font-medium text-zinc-400 uppercase tracking-widest mb-3">Features</motion.p>
+            <motion.h2 variants={fade} className="text-3xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight max-w-md">
+              Everything you need to get hired
+            </motion.h2>
+            <motion.p variants={fade} className="text-zinc-500 dark:text-zinc-400 mt-3 max-w-lg">
               One platform combining CV analysis, LLM coaching, and voice mock interviews.
             </motion.p>
           </motion.div>
 
           <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.2 }}
-            variants={staggerContainer(0.1)}
-            className="grid sm:grid-cols-2 gap-6"
+            initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.1 }}
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07 } } }}
+            className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-zinc-200 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden"
           >
             {features.map((f) => (
               <motion.div
                 key={f.title}
-                variants={fadeUp}
-                whileHover={reduced ? {} : { y: -4, boxShadow: '0 12px 32px rgba(124,58,237,0.1)' }}
-                transition={{ duration: 0.2 }}
-                className="group border border-gray-100 rounded-2xl p-6 hover:border-purple-200 transition-colors duration-200 cursor-default"
+                variants={fade}
+                className="bg-white dark:bg-zinc-950 p-6 group"
               >
-                <motion.div
-                  whileHover={reduced ? {} : { scale: 1.1, rotate: 4 }}
-                  transition={{ duration: 0.2 }}
-                  className="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-4 group-hover:bg-purple-600 group-hover:text-white transition-colors duration-200"
-                >
-                  {f.icon}
-                </motion.div>
-                <h3 className="font-semibold text-gray-900 mb-2">{f.title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
+                <div className="w-8 h-8 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4 text-violet-500">
+                  <f.icon size={16} strokeWidth={1.5} />
+                </div>
+                <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-2">{f.title}</h3>
+                <p className="text-xs text-zinc-500 leading-relaxed">{f.desc}</p>
               </motion.div>
             ))}
           </motion.div>
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ────────────────────────────────────────────────────── */}
-      <section className="py-24 px-6 bg-purple-50">
-        <div className="max-w-4xl mx-auto">
+      {/* ── TESTIMONIALS ─────────────────────────────────────────────────────── */}
+      <section className="py-20 px-6 bg-zinc-50 dark:bg-zinc-900 border-y border-zinc-200 dark:border-zinc-800">
+        <div className="max-w-5xl mx-auto">
           <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.3 }}
-            variants={staggerContainer(0.08)}
-            className="text-center mb-14"
+            initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.3 }}
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06 } } }}
+            className="mb-10"
           >
-            <motion.p variants={fadeUp} className="text-sm font-semibold text-purple-600 uppercase tracking-widest mb-2">How it works</motion.p>
-            <motion.h2 variants={fadeUp} className="text-3xl font-bold text-gray-900">From CV to interview-ready in minutes</motion.h2>
+            <motion.p variants={fade} className="text-xs font-medium text-zinc-400 uppercase tracking-widest mb-3">Testimonials</motion.p>
+            <motion.h2 variants={fade} className="text-3xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight">Real results from real job seekers</motion.h2>
           </motion.div>
-
           <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.2 }}
-            variants={staggerContainer(0.12)}
-            className="grid sm:grid-cols-2 gap-6"
+            initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.1 }}
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.1 } } }}
+            className="grid sm:grid-cols-3 gap-4"
           >
-            {steps.map((s, i) => (
+            {TESTIMONIALS.map((t) => (
+              <motion.div
+                key={t.name}
+                variants={fade}
+                className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5"
+              >
+                <div className="flex gap-0.5 mb-4">
+                  {[1,2,3,4,5].map(i => (
+                    <svg key={i} viewBox="0 0 20 20" fill="#8b5cf6" className="w-3.5 h-3.5">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                    </svg>
+                  ))}
+                </div>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">"{t.text}"</p>
+                <div>
+                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{t.name}</p>
+                  <p className="text-xs text-zinc-500 mt-0.5">{t.role}</p>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── HOW IT WORKS ─────────────────────────────────────────────────────── */}
+      <section id="how-it-works" className="py-24 px-6">
+        <div className="max-w-5xl mx-auto">
+          <motion.div
+            initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.3 }}
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06 } } }}
+            className="mb-14"
+          >
+            <motion.p variants={fade} className="text-xs font-medium text-zinc-400 uppercase tracking-widest mb-3">How it works</motion.p>
+            <motion.h2 variants={fade} className="text-3xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight max-w-sm">
+              From CV to interview-ready in minutes
+            </motion.h2>
+          </motion.div>
+          <motion.div
+            initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.1 }}
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }}
+            className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4"
+          >
+            {steps.map((s) => (
               <motion.div
                 key={s.num}
-                variants={fadeUp}
-                whileHover={reduced ? {} : { y: -3 }}
-                transition={{ duration: 0.2 }}
-                className="bg-white rounded-2xl p-6 border border-purple-100 relative overflow-hidden"
+                variants={fade}
+                className="border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 bg-white dark:bg-zinc-900"
               >
-                <span className="absolute top-4 right-4 text-5xl font-black text-purple-50 select-none">{s.num}</span>
-                <div className="w-8 h-8 rounded-lg bg-purple-600 text-white flex items-center justify-center text-sm font-bold mb-3">
-                  {i + 1}
-                </div>
-                <h3 className="font-semibold text-gray-900 mb-1">{s.title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{s.desc}</p>
+                <p className="text-3xl font-semibold text-zinc-200 dark:text-zinc-700 tabular-nums font-mono mb-4 select-none">{s.num}</p>
+                <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-2">{s.title}</h3>
+                <p className="text-xs text-zinc-500 leading-relaxed">{s.desc}</p>
               </motion.div>
             ))}
           </motion.div>
         </div>
       </section>
 
-      {/* ── CTA ─────────────────────────────────────────────────────────────── */}
-      <section className="py-24 px-6 bg-white text-center">
+      {/* ── PRICING ──────────────────────────────────────────────────────────── */}
+      <section id="pricing" className="py-24 px-6 bg-zinc-50 dark:bg-zinc-900 border-y border-zinc-200 dark:border-zinc-800">
+        <div className="max-w-5xl mx-auto">
+          <motion.div
+            initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.3 }}
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06 } } }}
+            className="mb-12"
+          >
+            <motion.p variants={fade} className="text-xs font-medium text-zinc-400 uppercase tracking-widest mb-3">Pricing</motion.p>
+            <motion.h2 variants={fade} className="text-3xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight">Simple, transparent pricing</motion.h2>
+            <motion.p variants={fade} className="text-zinc-500 dark:text-zinc-400 mt-2">Start free. Upgrade when you need more.</motion.p>
+          </motion.div>
+
+          <motion.div
+            initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.1 }}
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }}
+            className="grid sm:grid-cols-3 gap-4"
+          >
+            {PLANS.map((plan) => {
+              const isPro = plan.key === 'pro'
+              return (
+                <motion.div
+                  key={plan.key}
+                  variants={fade}
+                  className={`relative bg-white dark:bg-zinc-950 rounded-xl p-6 border flex flex-col ${
+                    isPro
+                      ? 'border-violet-500 shadow-sm shadow-violet-500/10'
+                      : 'border-zinc-200 dark:border-zinc-800'
+                  }`}
+                >
+                  {isPro && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                      <span className="bg-violet-600 text-white text-[11px] font-medium px-3 py-0.5 rounded-full">Most popular</span>
+                    </div>
+                  )}
+                  <div className="mb-5">
+                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{plan.name}</p>
+                    <div className="mt-3 flex items-end gap-1">
+                      <span className="text-3xl font-semibold text-zinc-900 dark:text-zinc-50">{plan.price}</span>
+                      <span className="text-sm text-zinc-400 mb-0.5">/{plan.period}</span>
+                    </div>
+                  </div>
+                  <ul className="space-y-2.5 flex-1 mb-6">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+                        <Check size={14} strokeWidth={2} className="text-violet-500 shrink-0 mt-0.5" />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    onClick={onGetStarted}
+                    className={`w-full py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                      isPro
+                        ? 'bg-violet-600 hover:bg-violet-500 text-white'
+                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                    }`}
+                  >
+                    {plan.cta}
+                  </button>
+                </motion.div>
+              )
+            })}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── CTA ──────────────────────────────────────────────────────────────── */}
+      <section className="py-24 px-6">
         <motion.div
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.4 }}
-          variants={staggerContainer(0.1)}
+          initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.4 }}
+          variants={fade}
           className="max-w-2xl mx-auto"
         >
-          <motion.div
-            variants={fadeUp}
-            className="bg-gradient-to-br from-purple-600 to-violet-600 rounded-3xl p-12 text-white shadow-2xl shadow-purple-200"
-          >
-            <h2 className="text-3xl font-extrabold mb-3">Ready to ace your next interview?</h2>
-            <p className="text-purple-200 mb-8 text-sm leading-relaxed">
-              No credit card. No subscriptions. Runs entirely on free-tier AI infrastructure.
+          <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-12 text-center">
+            <p className="text-xs font-medium text-zinc-400 uppercase tracking-widest mb-4">Get started</p>
+            <h2 className="text-3xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight mb-3">
+              Ready to ace your next interview?
+            </h2>
+            <p className="text-zinc-500 dark:text-zinc-400 mb-8 text-sm leading-relaxed">
+              No credit card required. Free tier includes 3 CV analyses and 5 mock interview questions every month.
             </p>
-            <motion.button
+            <button
               onClick={onGetStarted}
-              whileHover={{ scale: reduced ? 1 : 1.05, boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}
-              whileTap={{ scale: reduced ? 1 : 0.97 }}
-              transition={{ duration: 0.15 }}
-              className="bg-white text-purple-700 font-semibold px-8 py-3.5 rounded-xl text-sm hover:bg-purple-50 transition-colors shadow-lg cursor-pointer"
+              className="bg-violet-600 hover:bg-violet-500 text-white font-medium px-8 py-2.5 rounded-md text-sm transition-colors cursor-pointer inline-flex items-center gap-2"
             >
-              Start for free →
-            </motion.button>
-          </motion.div>
+              Start for free
+              <ArrowRight size={14} strokeWidth={2} />
+            </button>
+          </div>
         </motion.div>
       </section>
 
-      {/* ── FOOTER ──────────────────────────────────────────────────────────── */}
-      <footer className="border-t border-gray-100 py-8 px-6 text-center text-sm text-gray-400">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <div className="w-5 h-5 rounded bg-purple-600 flex items-center justify-center">
-            <svg viewBox="0 0 24 24" className="w-3 h-3" fill="none" stroke="white" strokeWidth="2.5">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+      {/* ── FOOTER ───────────────────────────────────────────────────────────── */}
+      <footer className="border-t border-zinc-200 dark:border-zinc-800 py-8 px-6">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Layers size={16} strokeWidth={1.5} className="text-violet-500" />
+            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">HireIQ</span>
           </div>
-          <span className="font-semibold text-gray-600">HireIQ</span>
+          <p className="text-xs text-zinc-400">Built with FastAPI · LangChain · Groq · React · Tailwind CSS</p>
+          <div className="flex items-center gap-4 text-xs text-zinc-400">
+            <a href="#" className="hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors">Privacy</a>
+            <a href="#" className="hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors">Terms</a>
+          </div>
         </div>
-        <p>Built with FastAPI · LangChain · Groq · React · Tailwind</p>
       </footer>
 
     </div>

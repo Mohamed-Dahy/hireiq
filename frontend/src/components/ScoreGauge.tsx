@@ -34,7 +34,7 @@ export default function ScoreGauge({ score }: Props) {
     <div className="flex flex-col items-center gap-2">
       <svg width="140" height="140" viewBox="0 0 140 140">
         {/* Track */}
-        <circle cx="70" cy="70" r={radius} fill="none" stroke="#f3f4f6" strokeWidth="12" />
+        <circle cx="70" cy="70" r={radius} fill="none" stroke="currentColor" strokeWidth="12" className="text-zinc-100 dark:text-zinc-800" />
         {/* Fill — CSS transition handles smooth draw */}
         <circle
           cx="70" cy="70" r={radius}
@@ -49,7 +49,7 @@ export default function ScoreGauge({ score }: Props) {
           {displayed}%
         </text>
       </svg>
-      <p className="text-sm text-gray-500 font-medium">Match Score</p>
+      <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">Match Score</p>
     </div>
   )
 }

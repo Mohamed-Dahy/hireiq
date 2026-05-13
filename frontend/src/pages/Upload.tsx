@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
+import { CloudUpload, FileText, X, Sparkles, Loader2 } from 'lucide-react'
 import { uploadCV } from '../api'
 import type { CVUploadResponse } from '../api'
 
@@ -96,7 +97,7 @@ Nice to have: service mesh (Istio / Linkerd), Vault secrets management, FinOps`,
   },
   {
     id: 'fe',
-    label: 'Frontend Developer',
+    label: 'Frontend Dev',
     jd: `We are looking for a Frontend Developer who cares deeply about user experience.
 
 Requirements:
@@ -116,8 +117,13 @@ Nice to have: Next.js / SSR, animation libraries (Framer Motion), GraphQL, PWA`,
   },
 ]
 
+const STEPS = [
+  { label: 'Upload CV',        desc: 'PDF format' },
+  { label: 'Job Description',  desc: 'Paste or choose template' },
+  { label: 'Analyze',          desc: 'Get your score' },
+]
+
 export default function Upload({ onDone }: Props) {
-  const reduced = useReducedMotion()
   const [file, setFile] = useState<File | null>(null)
   const [jd, setJd] = useState('')
   const [activeTemplate, setActiveTemplate] = useState<string | null>(null)
@@ -125,10 +131,7 @@ export default function Upload({ onDone }: Props) {
   const [error, setError] = useState('')
   const [dragging, setDragging] = useState(false)
 
-  const applyTemplate = (t: Template) => {
-    setJd(t.jd)
-    setActiveTemplate(t.id)
-  }
+  const applyTemplate = (t: Template) => { setJd(t.jd); setActiveTemplate(t.id) }
 
   const handleJdChange = (value: string) => {
     setJd(value)
@@ -148,11 +151,8 @@ export default function Upload({ onDone }: Props) {
       onDone(res.data)
     } catch (err: any) {
       const detail = err.response?.data?.detail
-      if (Array.isArray(detail)) {
-        setError(detail.map((d: any) => d.msg).join(', '))
-      } else {
-        setError(detail || 'Upload failed')
-      }
+      if (Array.isArray(detail)) setError(detail.map((d: any) => d.msg).join(', '))
+      else setError(detail || 'Upload failed')
     } finally {
       setLoading(false)
     }
@@ -165,185 +165,192 @@ export default function Upload({ onDone }: Props) {
     if (dropped?.type === 'application/pdf') setFile(dropped)
   }
 
+  const currentStep = !file ? 0 : !jd.trim() ? 1 : 2
+
   return (
     <motion.div
-      initial={reduced ? {} : { opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: 'easeOut' }}
-      className="max-w-2xl mx-auto py-12 px-4"
+      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="max-w-2xl mx-auto py-8 px-4 sm:px-6"
     >
-      <h2 className="text-2xl font-bold text-gray-900 mb-1">Analyze Your CV</h2>
-      <p className="text-sm text-gray-500 mb-8">
-        Paste the job description and upload your PDF to get a match score + AI skill gap analysis.
-      </p>
+      {/* Header */}
+      <div className="mb-7">
+        <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight mb-1">Analyze Your CV</h2>
+        <p className="text-sm text-zinc-500">
+          Upload your PDF and a job description to get your match score and AI skill gap analysis.
+        </p>
+      </div>
+
+      {/* Step indicator */}
+      <div className="flex items-center gap-0 mb-7">
+        {STEPS.map((step, i) => (
+          <div key={step.label} className="flex items-center flex-1 last:flex-none">
+            <div className="flex flex-col items-center">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium transition-all ${
+                i < currentStep
+                  ? 'bg-violet-600 text-white'
+                  : i === currentStep
+                  ? 'bg-violet-100 dark:bg-violet-900/50 text-violet-600 dark:text-violet-400 ring-2 ring-violet-500 ring-offset-2 dark:ring-offset-zinc-950'
+                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400'
+              }`}>
+                {i < currentStep ? (
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                  </svg>
+                ) : i + 1}
+              </div>
+              <p className={`text-xs mt-1.5 ${i <= currentStep ? 'text-zinc-600 dark:text-zinc-400' : 'text-zinc-400'}`}>{step.label}</p>
+            </div>
+            {i < STEPS.length - 1 && (
+              <div className={`flex-1 h-px mx-2 mb-5 transition-colors ${i < currentStep ? 'bg-violet-500' : 'bg-zinc-200 dark:bg-zinc-700'}`} />
+            )}
+          </div>
+        ))}
+      </div>
 
       <form onSubmit={submit} className="space-y-5">
         {/* Drop zone */}
-        <motion.div
-          animate={dragging
-            ? { borderColor: '#7c3aed', backgroundColor: '#f5f3ff', scale: reduced ? 1 : 1.01 }
-            : { borderColor: file ? '#7c3aed' : '#e5e7eb', backgroundColor: '#fff', scale: 1 }
-          }
-          transition={{ duration: 0.2 }}
-          onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={onDrop}
-          onClick={() => document.getElementById('cv-file')?.click()}
-          className="border-2 border-dashed rounded-xl p-10 text-center cursor-pointer"
-        >
-          <input
-            id="cv-file" type="file" accept=".pdf" className="hidden"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          />
-          <motion.div
-            animate={file ? { scale: reduced ? 1 : 1.02 } : { scale: 1 }}
-            transition={{ duration: 0.25 }}
-            className="flex flex-col items-center gap-2"
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+            <span className="w-4 h-4 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-[10px] flex items-center justify-center font-bold">1</span>
+            Upload your CV
+          </label>
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={onDrop}
+            onClick={() => document.getElementById('cv-file')?.click()}
+            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
+              dragging
+                ? 'border-violet-500 bg-violet-500/5'
+                : file
+                ? 'border-violet-500/50 bg-zinc-50 dark:bg-zinc-900/50'
+                : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500 bg-white dark:bg-zinc-900'
+            }`}
           >
-            <motion.div
-              animate={dragging ? { y: reduced ? 0 : -4 } : { y: 0 }}
-              transition={{ duration: 0.2, repeat: dragging && !reduced ? Infinity : 0, repeatType: 'reverse' }}
-              className={`w-12 h-12 rounded-xl flex items-center justify-center mb-1 ${file ? 'bg-purple-100' : 'bg-gray-100'}`}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke={file ? '#7c3aed' : '#9ca3af'} strokeWidth="1.8" className="w-6 h-6">
-                <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </motion.div>
-            {file ? (
-              <div className="flex items-center gap-2 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 max-w-full">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="1.8" className="w-4 h-4 shrink-0">
-                  <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <div className="min-w-0 text-left">
-                  <p className="text-sm font-semibold text-purple-800 truncate max-w-[260px]">{file.name}</p>
-                  <p className="text-xs text-purple-500">{(file.size / 1024).toFixed(1)} KB</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setFile(null) }}
-                  aria-label="Remove file"
-                  className="ml-1 text-purple-400 hover:text-red-500 cursor-pointer p-1"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                    <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </button>
+            <input id="cv-file" type="file" accept=".pdf" className="hidden"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            <div className="flex flex-col items-center gap-3">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
+                file ? 'bg-violet-100 dark:bg-violet-900/40' : 'bg-zinc-100 dark:bg-zinc-800'
+              }`}>
+                {file
+                  ? <FileText size={20} strokeWidth={1.5} className="text-violet-500" />
+                  : <CloudUpload size={20} strokeWidth={1.5} className="text-zinc-400" />
+                }
               </div>
-            ) : (
-              <>
-                <p className="text-sm font-medium text-gray-600">
-                  {dragging ? 'Drop to upload' : 'Drop your PDF here or click to browse'}
-                </p>
-                <p className="text-xs text-gray-400">PDF files only</p>
-              </>
-            )}
-          </motion.div>
-        </motion.div>
+              {file ? (
+                <div className="flex items-center gap-3 bg-zinc-100 dark:bg-zinc-800 rounded-lg px-3 py-2">
+                  <div className="min-w-0 text-left">
+                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate max-w-[200px]">{file.name}</p>
+                    <p className="text-xs text-zinc-500">{(file.size / 1024).toFixed(1)} KB</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setFile(null) }}
+                    aria-label="Remove file"
+                    className="text-zinc-400 hover:text-red-500 cursor-pointer p-1 rounded transition-colors"
+                  >
+                    <X size={14} strokeWidth={2} />
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    {dragging ? 'Drop to upload' : 'Drop your PDF here'}
+                  </p>
+                  <p className="text-xs text-zinc-400 mt-1">or <span className="text-violet-500">browse files</span> · PDF only</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
-        {/* JD section */}
+        {/* Job description */}
         <div className="space-y-3">
-          {/* Template chips */}
+          <label className="text-xs font-medium text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+            <span className="w-4 h-4 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-[10px] flex items-center justify-center font-bold">2</span>
+            Job description
+          </label>
           <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-              Start with a template
-            </p>
-            <div className="flex flex-wrap gap-2">
+            <p className="text-xs text-zinc-400 mb-2">Start with a template or paste your own</p>
+            <div className="flex flex-wrap gap-1.5">
               {TEMPLATES.map((t) => {
                 const isActive = activeTemplate === t.id
                 return (
-                  <motion.button
+                  <button
                     key={t.id}
                     type="button"
                     onClick={() => applyTemplate(t)}
-                    whileHover={reduced ? {} : { scale: 1.04 }}
-                    whileTap={reduced ? {} : { scale: 0.95 }}
-                    transition={{ duration: 0.13 }}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${
+                    className={`px-3 py-1 rounded-md text-xs font-medium border transition-all cursor-pointer ${
                       isActive
-                        ? 'bg-purple-600 text-white border-purple-600 shadow-sm shadow-purple-200'
-                        : 'bg-white text-gray-600 border-gray-200 hover:border-purple-400 hover:text-purple-700'
+                        ? 'bg-violet-600 text-white border-violet-600'
+                        : 'bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500'
                     }`}
                   >
                     {t.label}
-                    {isActive && (
-                      <span className="ml-1.5 opacity-80">✓</span>
-                    )}
-                  </motion.button>
+                  </button>
                 )
               })}
             </div>
           </div>
 
-          {/* Divider */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-gray-100" />
-            <span className="text-xs text-gray-300 font-medium">or paste your own</span>
-            <div className="flex-1 h-px bg-gray-100" />
-          </div>
-
-          {/* Textarea */}
           <div className="relative">
             <textarea
-              placeholder="Paste the job description here…"
+              placeholder="Paste the full job description here…"
               value={jd}
               onChange={(e) => handleJdChange(e.target.value)}
-              rows={10}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none transition-all"
+              rows={11}
+              className="w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none transition-colors"
             />
             <AnimatePresence>
               {jd.length > 0 && (
                 <motion.button
                   type="button"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.15 }}
+                  initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.13 }}
                   onClick={() => { setJd(''); setActiveTemplate(null) }}
                   aria-label="Clear job description"
-                  className="absolute top-3 right-3 w-6 h-6 rounded-full bg-gray-100 hover:bg-red-100 hover:text-red-500 text-gray-400 flex items-center justify-center transition-colors cursor-pointer"
+                  className="absolute top-3 right-3 w-5 h-5 rounded-full bg-zinc-100 dark:bg-zinc-700 hover:bg-red-100 dark:hover:bg-red-900/50 hover:text-red-500 text-zinc-400 flex items-center justify-center transition-colors cursor-pointer"
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3">
-                    <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
+                  <X size={11} strokeWidth={2.5} />
                 </motion.button>
               )}
             </AnimatePresence>
+            {jd.length > 0 && (
+              <p className="text-xs text-zinc-400 text-right mt-1.5">{jd.length.toLocaleString()} chars</p>
+            )}
           </div>
-
-          {jd.length > 0 && (
-            <p className="text-xs text-gray-400 text-right">{jd.length} characters</p>
-          )}
         </div>
 
         {error && (
-          <motion.p
-            initial={reduced ? {} : { opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-red-500 text-xs bg-red-50 px-3 py-2 rounded-lg"
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            className="text-red-600 dark:text-red-400 text-xs bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 px-3 py-2.5 rounded-md"
           >
             {error}
-          </motion.p>
+          </motion.div>
         )}
 
-        <motion.button
-          type="submit"
-          disabled={loading || !file || !jd.trim()}
-          whileHover={reduced ? {} : { scale: 1.02 }}
-          whileTap={reduced ? {} : { scale: 0.97 }}
-          transition={{ duration: 0.15 }}
-          className="w-full bg-purple-600 text-white py-3 rounded-xl text-sm font-semibold hover:bg-purple-700 disabled:opacity-40 transition-colors shadow-sm shadow-purple-100 cursor-pointer"
-        >
-          {loading
-            ? <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                </svg>
-                Analyzing your CV…
-              </span>
-            : 'Analyze CV'
-          }
-        </motion.button>
+        {/* Submit */}
+        <div className="pt-1">
+          <button
+            type="submit"
+            disabled={loading || !file || !jd.trim()}
+            className="w-full bg-violet-600 hover:bg-violet-500 text-white py-3 rounded-xl text-sm font-medium disabled:opacity-40 transition-colors cursor-pointer flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <><Loader2 size={15} strokeWidth={2} className="animate-spin" /> Analyzing your CV…</>
+            ) : (
+              <><Sparkles size={15} strokeWidth={1.5} /> Analyze CV</>
+            )}
+          </button>
+          {(!file || !jd.trim()) && (
+            <p className="text-center text-xs text-zinc-400 mt-2">
+              {!file ? 'Upload a PDF CV to continue' : 'Add a job description to continue'}
+            </p>
+          )}
+        </div>
       </form>
     </motion.div>
   )

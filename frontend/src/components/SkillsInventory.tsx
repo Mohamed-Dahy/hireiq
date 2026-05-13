@@ -9,9 +9,9 @@ interface Props {
 }
 
 const LEVEL_COLORS: Record<string, string> = {
-  beginner:     'bg-blue-50 text-blue-700 border-blue-200',
-  intermediate: 'bg-amber-50 text-amber-700 border-amber-200',
-  advanced:     'bg-green-50 text-green-700 border-green-200',
+  beginner:     'bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+  intermediate: 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+  advanced:     'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
 }
 
 const CATEGORY_DOT: Record<string, string> = {
@@ -27,11 +27,11 @@ export default function SkillsInventory({ skills }: Props) {
 
   const renderGroup = (items: SkillItem[], label: string) => (
     <div>
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{label}</p>
+      <p className="text-xs font-medium text-zinc-400 uppercase tracking-widest mb-2">{label}</p>
       <div className="flex flex-wrap gap-2">
         {items.map((s) => {
-          const levelClass = LEVEL_COLORS[s.level] ?? 'bg-gray-50 text-gray-600 border-gray-200'
-          const dotClass = CATEGORY_DOT[s.category] ?? 'bg-gray-400'
+          const levelClass = LEVEL_COLORS[s.level] ?? 'bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700'
+          const dotClass = CATEGORY_DOT[s.category] ?? 'bg-zinc-400'
           return (
             <span
               key={s.skill}
@@ -49,7 +49,7 @@ export default function SkillsInventory({ skills }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3 text-xs text-gray-400">
+      <div className="flex items-center gap-3 text-xs text-zinc-400">
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-violet-500 inline-block"/>Technical</span>
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-pink-400 inline-block"/>Soft skill</span>
       </div>

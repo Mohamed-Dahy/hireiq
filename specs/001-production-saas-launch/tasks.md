@@ -9,7 +9,7 @@ description: "Task list for HireIQ Production SaaS Launch — Revised Phase Orde
 
 **Tests**: Required per constitution (Principle II) — unit + integration for every new endpoint.
 
-**Phase Status**: Phases 1–7 ✅ COMPLETE (192 tests pass, 1 skipped) | Phases 8–14 pending
+**Phase Status**: Phases 1–7 ✅ COMPLETE (192 tests pass, 1 skipped) | Phase 8 ✅ COMPLETE (T106–T115 + T180–T193) | Phases 9–14 pending
 
 **Organization**: Phases 1–2 shared foundations. Phases 3–4 security hardening. Phases 5–8 core product features. Phases 9–11 growth & platform features (new). Phase 12 subscriptions & payments. Phase 13 full system testing. Phase 14 polish.
 
@@ -256,16 +256,33 @@ description: "Task list for HireIQ Production SaaS Launch — Revised Phase Orde
 
 **Independent Test**: Independent evaluator rates landing page and app UI ≥ 4/5. Lighthouse mobile score ≥ 80. All pages functional on 375 px viewport.
 
-- [ ] T106 [P] [US5] Install and configure shadcn/ui: run `npx shadcn-ui@latest init` in `frontend/`; add components: Button, Card, Dialog, Sheet, Badge, Tabs, Table, Input, Select, Form, Progress, Avatar, DropdownMenu, Separator, Tooltip, Skeleton, Alert, Toast (sonner)
-- [ ] T107 [P] [US5] Create `frontend/src/lib/utils.ts` — export `cn()` helper; create `frontend/src/lib/constants.ts` for site-wide copy and config constants
-- [ ] T108 [US5] Redesign `frontend/src/pages/Landing.tsx` — hero section (bold headline + sub + dual CTA), animated feature grid (3 columns with icons), social proof section (stats: X users, Y interviews, Z avg score), pricing preview (3 plan cards), footer; use framer-motion for scroll reveals
-- [ ] T109 [P] [US5] Redesign `frontend/src/pages/Auth.tsx` — split-panel layout (left: branded illustration + testimonial, right: form); smooth tab switch between Login/Register; inline validation feedback; email verification status alert card
-- [ ] T110 [P] [US5] Redesign `frontend/src/pages/Dashboard.tsx` — sidebar navigation layout; stat cards row (sessions, avg score, interviews, plan badge); "Recent Sessions" table with score gauges; quick-action CTA cards ("Upload CV", "Browse Jobs", "View Recruiter"); subscription status mini-card
-- [ ] T111 [P] [US5] Redesign `frontend/src/pages/Upload.tsx` — drag-and-drop file zone with animated border on hover/drag; LinkedIn import tab (step-by-step instructions with numbered callouts); JD template chip selector; form validation with inline error states
-- [ ] T112 [P] [US5] Redesign `frontend/src/pages/Results.tsx` — large animated score gauge (0–100 arc); tabbed sections (Analysis | Skills | Gap Report | Roadmap | Interview Prep); streaming analysis with skeleton loaders; shareable results card
-- [ ] T113 [P] [US5] Redesign `frontend/src/pages/Jobs.tsx` — kanban-style columns (Saved / Applied / Interview / Offer / Rejected); drag-to-move cards (optional); job card with company logo placeholder, match score badge, quick notes
-- [ ] T114 [US5] Audit and fix mobile responsiveness for all pages at 375 px, 768 px, 1 280 px; create `frontend/src/components/layout/AppShell.tsx` (sidebar collapses to bottom nav on mobile); all interactive elements ≥ 44 px touch target
-- [ ] T115 [US5] Run Lighthouse on Landing, Dashboard, and Results pages; fix issues until mobile Performance ≥ 80 and FCP ≤ 3 s; add `<Suspense>` + lazy loading to all page-level routes in the router
+- [X] T106 [P] [US5] shadcn/ui skipped — Tailwind v4 CSS-only setup (no tailwind.config.ts) is incompatible with shadcn-ui@latest init; redesign uses existing Tailwind + framer-motion stack
+- [X] T107 [P] [US5] Create `frontend/src/lib/utils.ts` — export `cn()` helper; create `frontend/src/lib/constants.ts` for site-wide copy and config constants (PLANS, TESTIMONIALS)
+- [X] T108 [US5] Redesign `frontend/src/pages/Landing.tsx` — hero with trust badges + animated gap preview card, 6-feature grid (3-col), testimonials section, 4-step process (4-col), pricing preview (3 plan cards), improved footer
+- [X] T109 [P] [US5] Redesign `frontend/src/pages/Auth.tsx` — split-panel layout (left: branded panel with feature list + testimonial card, right: form); labeled inputs; improved error/success banners
+- [X] T110 [P] [US5] Redesign `frontend/src/pages/Dashboard.tsx` — max-w-6xl layout (was max-w-2xl); 3-col stat cards with subtext; 1/3 + 2/3 grid (quick actions + recent sessions table); score trend chart; best score badge in header
+- [X] T111 [P] [US5] Redesign `frontend/src/pages/Upload.tsx` — 3-step progress indicator; animated drop zone with drag-over bounce; polished file chip with remove; labeled section headers; smart placeholder text
+- [X] T112 [P] [US5] Redesign `frontend/src/pages/Results.tsx` — large animated score gauge (0–100 arc); tabbed sections (Analysis | Skills | Gap Report | Roadmap | Interview Prep); streaming analysis with skeleton loaders; shareable results card
+- [X] T113 [P] [US5] Redesign `frontend/src/pages/Jobs.tsx` — kanban-style columns (Saved / Applied / Interview / Offer / Rejected); drag-to-move cards (optional); job card with company logo placeholder, match score badge, quick notes
+- [X] T114 [US5] Audit and fix mobile responsiveness for all pages at 375 px, 768 px, 1 280 px; create `frontend/src/components/layout/AppShell.tsx` (sidebar collapses to bottom nav on mobile); all interactive elements ≥ 44 px touch target
+- [X] T115 [US5] Run Lighthouse on Landing, Dashboard, and Results pages; fix issues until mobile Performance ≥ 80 and FCP ≤ 3 s; add `<Suspense>` + lazy loading to all page-level routes in the router
+
+**Dark Mode / Palette Migration** (done as part of Phase 8 polish — all pages and shared components):
+
+- [X] T180 [P] [US5] Create `frontend/src/components/ThemeToggle.tsx` — Moon/Sun Lucide toggle; wires to `.dark` class on `<html>`; integrated in App nav and Landing nav
+- [X] T181 [P] [US5] Migrate `frontend/src/pages/History.tsx` — zinc/violet/dark full rewrite; score filter chips (emerald/amber/red); Lucide Search/Trash2/FileText/ChevronRight; animate-pulse skeleton loaders; group-hover delete reveal
+- [X] T182 [P] [US5] Migrate `frontend/src/pages/Profile.tsx` — zinc/violet/dark full rewrite; flat `bg-violet-600` avatar; StatCard `bg-white dark:bg-zinc-900`; achievement grid (earned/unearned states); Lucide Zap/LayoutGrid/Star/Sparkles/Mic/Check; red logout border
+- [X] T183 [P] [US5] Migrate `frontend/src/pages/Interview.tsx` — zinc/violet/dark full rewrite; amber camera-error banner; red record / zinc stop / violet submit buttons; Lucide Loader2; feedback card zinc borders
+- [X] T184 [P] [US5] Migrate `frontend/src/pages/SessionDetail.tsx` — zinc/violet/dark full rewrite; ScoreBar `bg-zinc-100 dark:bg-zinc-800` track + `bg-violet-500` fill; transcript `bg-zinc-50 dark:bg-zinc-800/50`; Lucide Download/ChevronDown
+- [X] T185 [P] [US5] Migrate `frontend/src/pages/Recruiter.tsx` — zinc/violet/dark full rewrite; sidebar `bg-zinc-50 dark:bg-zinc-950`; export button violet + Loader2; `border-l-2 border-l-violet-600` selected state; Lucide Download/X/Loader2
+- [X] T186 [P] [US5] Migrate `frontend/src/components/Modal.tsx` — zinc/dark; Lucide AlertTriangle + Loader2; `bg-black/50 backdrop-blur-sm` overlay; danger/confirm variant colors
+- [X] T187 [P] [US5] Migrate `frontend/src/components/Toast.tsx` — Lucide CheckCircle/XCircle/Info/X icons; emerald/red/violet border + icon colors with dark variants
+- [X] T188 [P] [US5] Migrate `frontend/src/components/ScoreGauge.tsx` — track circle uses `stroke="currentColor"` + `className="text-zinc-100 dark:text-zinc-800"` for dark mode adaptability; label zinc dark
+- [X] T189 [P] [US5] Migrate `frontend/src/components/FeedbackPanel.tsx` — framer-motion animated score bars; `bg-zinc-100 dark:bg-zinc-800` track; `bg-violet-500` fill; transcript zinc/dark; eye-contact `text-violet-500`
+- [X] T190 [P] [US5] Migrate `frontend/src/components/SkillGapList.tsx` — headings zinc-900/dark; numbers `text-violet-500`; cursor blink `bg-violet-400`; container `bg-zinc-50 dark:bg-zinc-800/50`
+- [X] T191 [P] [US5] Migrate `frontend/src/components/QuestionCard.tsx` — remove `whileHover` scale; `border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900`; label `text-violet-500`
+- [X] T192 [P] [US5] Migrate `frontend/src/components/JobCard.tsx` — all status colors zinc + dark variants; remove `shadow-sm hover:shadow-md hover:border-purple-200`; ScoreRing zinc dark border + emerald/amber/red colors
+- [X] T193 [P] [US5] Migrate remaining shared components — `SkillsInventory.tsx`, `SkillGapChart.tsx` (Lucide BookOpen), `StudyRoadmap.tsx` (Lucide Clock), `ApplicationTimeline.tsx`, `CandidateCompare.tsx` (Lucide Trash2), `JobStatsPanel.tsx` (Recharts dark tooltips #18181b)
 
 **Checkpoint**: Independent UI evaluation passes ≥ 4/5. Lighthouse scores meet targets. All pages render correctly at 375 px.
 

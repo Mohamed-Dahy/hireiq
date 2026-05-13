@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { X, Loader2 } from 'lucide-react'
 import type { JobApplication, CreateJobPayload } from '../api'
 import { createJob, updateJob } from '../api'
 
@@ -11,6 +12,8 @@ interface Props {
 const SOURCE_OPTIONS = ['linkedin', 'indeed', 'glassdoor', 'company', 'referral', 'cold_email', 'other']
 const PRIORITY_OPTIONS = ['high', 'medium', 'low']
 const REMOTE_OPTIONS = ['onsite', 'hybrid', 'remote']
+
+const inputCls = 'w-full border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-colors'
 
 export default function AddEditJobModal({ job, onClose, onSaved }: Props) {
   const [form, setForm] = useState<CreateJobPayload>({
@@ -58,170 +61,114 @@ export default function AddEditJobModal({ job, onClose, onSaved }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-5 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-zinc-800">
+          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
             {job ? 'Edit Application' : 'Add Job Application'}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 cursor-pointer">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer transition-colors">
+            <X size={18} strokeWidth={1.5} />
           </button>
         </div>
 
         <form onSubmit={submit} className="p-5 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Company *</label>
-              <input
-                value={form.company}
-                onChange={e => set('company', e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-                placeholder="Acme Corp"
-              />
+              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">Company *</label>
+              <input value={form.company} onChange={e => set('company', e.target.value)} className={inputCls} placeholder="Acme Corp" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Job Title *</label>
-              <input
-                value={form.title}
-                onChange={e => set('title', e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-                placeholder="Backend Engineer"
-              />
+              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">Job Title *</label>
+              <input value={form.title} onChange={e => set('title', e.target.value)} className={inputCls} placeholder="Backend Engineer" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Location</label>
-              <input
-                value={form.location ?? ''}
-                onChange={e => set('location', e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-                placeholder="Cairo, Egypt"
-              />
+              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">Location</label>
+              <input value={form.location ?? ''} onChange={e => set('location', e.target.value)} className={inputCls} placeholder="Cairo, Egypt" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Work Type</label>
-              <select
-                value={form.remote_type ?? ''}
-                onChange={e => set('remote_type', e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-              >
+              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">Work Type</label>
+              <select value={form.remote_type ?? ''} onChange={e => set('remote_type', e.target.value)} className={inputCls}>
                 <option value="">— select —</option>
                 {REMOTE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Source</label>
-              <select
-                value={form.source ?? ''}
-                onChange={e => set('source', e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-              >
+              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">Source</label>
+              <select value={form.source ?? ''} onChange={e => set('source', e.target.value)} className={inputCls}>
                 <option value="">— select —</option>
                 {SOURCE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Priority</label>
-              <select
-                value={form.priority ?? ''}
-                onChange={e => set('priority', e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-              >
+              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">Priority</label>
+              <select value={form.priority ?? ''} onChange={e => set('priority', e.target.value)} className={inputCls}>
                 {PRIORITY_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Salary Min</label>
-              <input
-                type="number"
-                value={form.salary_min ?? ''}
-                onChange={e => set('salary_min', e.target.value ? Number(e.target.value) : undefined)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-                placeholder="50000"
-              />
+              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">Salary Min</label>
+              <input type="number" value={form.salary_min ?? ''} onChange={e => set('salary_min', e.target.value ? Number(e.target.value) : undefined)} className={inputCls} placeholder="50000" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Salary Max</label>
-              <input
-                type="number"
-                value={form.salary_max ?? ''}
-                onChange={e => set('salary_max', e.target.value ? Number(e.target.value) : undefined)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-                placeholder="80000"
-              />
+              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">Salary Max</label>
+              <input type="number" value={form.salary_max ?? ''} onChange={e => set('salary_max', e.target.value ? Number(e.target.value) : undefined)} className={inputCls} placeholder="80000" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Deadline Date</label>
-              <input
-                type="date"
-                value={form.deadline_date ?? ''}
-                onChange={e => set('deadline_date', e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-              />
+              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">Deadline Date</label>
+              <input type="date" value={form.deadline_date ?? ''} onChange={e => set('deadline_date', e.target.value)} className={inputCls} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Follow-up Date</label>
-              <input
-                type="date"
-                value={form.followup_date ?? ''}
-                onChange={e => set('followup_date', e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-              />
+              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">Follow-up Date</label>
+              <input type="date" value={form.followup_date ?? ''} onChange={e => set('followup_date', e.target.value)} className={inputCls} />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Job URL</label>
-            <input
-              value={form.job_url ?? ''}
-              onChange={e => set('job_url', e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-              placeholder="https://..."
-            />
+            <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">Job URL</label>
+            <input value={form.job_url ?? ''} onChange={e => set('job_url', e.target.value)} className={inputCls} placeholder="https://..." />
           </div>
 
           {!job && (
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Job Description</label>
+              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">Job Description</label>
               <textarea
                 value={form.jd_text ?? ''}
                 onChange={e => set('jd_text', e.target.value)}
                 rows={4}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none"
+                className={inputCls + ' resize-none'}
                 placeholder="Paste the job description to get AI match score and prep questions…"
               />
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
+            <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">Notes</label>
             <textarea
               value={form.notes ?? ''}
               onChange={e => set('notes', e.target.value)}
               rows={2}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none"
+              className={inputCls + ' resize-none'}
               placeholder="Applied via referral…"
             />
           </div>
 
-          {error && <p className="text-xs text-red-500">{error}</p>}
+          {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
 
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 cursor-pointer"
+              className="px-4 py-2 text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="px-5 py-2 rounded-xl bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 disabled:opacity-50 cursor-pointer transition-colors"
+              className="px-5 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium disabled:opacity-50 cursor-pointer transition-colors flex items-center gap-2"
             >
-              {saving ? 'Saving…' : job ? 'Update' : 'Add Application'}
+              {saving ? <><Loader2 size={14} strokeWidth={2} className="animate-spin" /> Saving…</> : job ? 'Update' : 'Add Application'}
             </button>
           </div>
         </form>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
+import { motion } from 'framer-motion'
+import { FileText, TrendingUp, Mic, Upload, Clock, ChevronRight, Sparkles } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts'
@@ -7,64 +8,28 @@ import { getMe, getSessions } from '../api'
 import type { UserProfile, CVSession } from '../api'
 
 interface Props {
-  onAnalyze:  () => void
-  onHistory:  () => void
+  onAnalyze:   () => void
+  onHistory:   () => void
   onInterview: () => void
-  onSession:  (id: number) => void
+  onSession:   (id: number) => void
 }
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0, 0, 0.2, 1] as const } },
+const fade = {
+  hidden: { opacity: 0, y: 10 },
+  show:   { opacity: 1, y: 0, transition: { duration: 0.3 } },
 }
 
-function StatCard({
-  icon, label, value, color,
-}: { icon: React.ReactNode; label: string; value: string; color: string }) {
+function ScoreBadge({ score }: { score: number | null }) {
+  if (score == null) return <span className="text-xs text-zinc-400 font-medium">—</span>
+  const cls = score >= 70
+    ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800'
+    : score >= 40
+    ? 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-800'
+    : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/50 border-red-200 dark:border-red-800'
   return (
-    <motion.div
-      variants={fadeUp}
-      className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm flex flex-col gap-3"
-    >
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${color}`}>
-        {icon}
-      </div>
-      <div>
-        <p className="text-2xl font-extrabold text-gray-900">{value}</p>
-        <p className="text-xs text-gray-400 mt-0.5">{label}</p>
-      </div>
-    </motion.div>
-  )
-}
-
-function ScoreChip({ score }: { score: number | null }) {
-  if (score == null) return <span className="text-xs text-gray-300">—</span>
-  const color = score >= 70 ? 'text-green-600 bg-green-50' : score >= 40 ? 'text-yellow-600 bg-yellow-50' : 'text-red-500 bg-red-50'
-  return <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${color}`}>{score}%</span>
-}
-
-function QuickAction({
-  icon, label, desc, onClick, primary,
-}: { icon: React.ReactNode; label: string; desc: string; onClick: () => void; primary?: boolean }) {
-  const reduced = useReducedMotion()
-  return (
-    <motion.button
-      onClick={onClick}
-      whileHover={reduced ? {} : { y: -3, boxShadow: '0 10px 30px rgba(124,58,237,0.12)' }}
-      whileTap={reduced ? {} : { scale: 0.98 }}
-      transition={{ duration: 0.18 }}
-      className={`w-full text-left rounded-2xl p-5 border transition-colors cursor-pointer ${
-        primary
-          ? 'bg-purple-600 border-purple-600 hover:bg-purple-700'
-          : 'bg-white border-gray-100 hover:border-purple-200'
-      }`}
-    >
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${primary ? 'bg-purple-500' : 'bg-purple-50'}`}>
-        {icon}
-      </div>
-      <p className={`text-sm font-semibold ${primary ? 'text-white' : 'text-gray-800'}`}>{label}</p>
-      <p className={`text-xs mt-0.5 ${primary ? 'text-purple-200' : 'text-gray-400'}`}>{desc}</p>
-    </motion.button>
+    <span className={`text-xs font-medium px-2 py-0.5 rounded border ${cls}`}>
+      {score}%
+    </span>
   )
 }
 
@@ -75,24 +40,19 @@ function getGreeting(username: string) {
 }
 
 export default function Dashboard({ onAnalyze, onHistory, onInterview, onSession }: Props) {
-  const reduced = useReducedMotion()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [sessions, setSessions] = useState<CVSession[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     Promise.all([getMe(), getSessions()])
-      .then(([meRes, sessRes]) => {
-        setProfile(meRes.data)
-        setSessions(sessRes.data)
-      })
+      .then(([meRes, sessRes]) => { setProfile(meRes.data); setSessions(sessRes.data) })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 
-  const recent = sessions.slice(0, 4)
+  const recent = sessions.slice(0, 5)
 
-  // Chart data: last 10 scored sessions, oldest → newest for left-to-right reading
   const chartData = [...sessions]
     .filter((s) => s.match_score != null)
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
@@ -106,279 +66,232 @@ export default function Dashboard({ onAnalyze, onHistory, onInterview, onSession
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto py-20 px-4 space-y-4">
+      <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6 space-y-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-white border border-gray-100 rounded-2xl h-20 animate-pulse" />
+          <div key={i} className="bg-zinc-100 dark:bg-zinc-800/60 rounded-xl h-16 animate-pulse" />
         ))}
       </div>
     )
   }
 
-  const today = new Date().toLocaleDateString('en-GB', {
-    weekday: 'long', day: 'numeric', month: 'long',
-  })
+  const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+
+  const stats = [
+    {
+      icon: FileText,
+      label: 'CVs Analyzed',
+      value: String(profile?.total_sessions ?? 0),
+      sub: sessions.length > 0 ? 'sessions total' : undefined,
+    },
+    {
+      icon: TrendingUp,
+      label: 'Avg Match Score',
+      value: profile?.avg_match_score != null ? `${profile.avg_match_score}%` : '—',
+      sub: profile?.avg_match_score != null ? (profile.avg_match_score >= 70 ? 'Strong' : 'Improving') : undefined,
+    },
+    {
+      icon: Mic,
+      label: 'Interviews Done',
+      value: String(profile?.total_interviews ?? 0),
+      sub: profile?.total_interviews ? 'practice sessions' : undefined,
+    },
+  ]
 
   return (
     <motion.div
-      initial={reduced ? {} : { opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: [0, 0, 0.2, 1] }}
-      className="max-w-2xl mx-auto py-12 px-4 space-y-8"
+      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="max-w-6xl mx-auto py-8 px-4 sm:px-6 space-y-6"
     >
       {/* Header */}
-      <div>
-        <p className="text-xs text-gray-400 mb-1">{today}</p>
-        <h1 className="text-2xl font-extrabold text-gray-900">
-          {profile ? getGreeting(profile.username) : 'Welcome back'} 👋
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">Here's what's happening with your applications.</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs text-zinc-400 mb-1">{today}</p>
+          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
+            {profile ? getGreeting(profile.username) : 'Welcome back'}
+          </h1>
+          <p className="text-sm text-zinc-500 mt-1">Here's your career intelligence overview.</p>
+        </div>
+        {profile?.best_score != null && (
+          <div className="hidden sm:flex items-center gap-3 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 bg-white dark:bg-zinc-900">
+            <div>
+              <p className="text-xs text-zinc-400 font-medium">Best score</p>
+              <p className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 leading-none tabular-nums">{profile.best_score}%</p>
+            </div>
+            <div className="w-8 h-8 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+              <Sparkles size={14} strokeWidth={1.5} className="text-violet-500" />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Stats */}
       <motion.div
-        className="grid grid-cols-3 gap-3"
-        initial="hidden"
-        animate="show"
+        className="grid grid-cols-1 sm:grid-cols-3 gap-3"
+        initial="hidden" animate="show"
         variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07 } } }}
       >
-        <StatCard
-          icon={
-            <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="1.8" className="w-4.5 h-4.5 w-5 h-5">
-              <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          }
-          label="CVs Analyzed"
-          value={String(profile?.total_sessions ?? 0)}
-          color="bg-purple-50"
-        />
-        <StatCard
-          icon={
-            <svg viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="1.8" className="w-5 h-5">
-              <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          }
-          label="Avg Match Score"
-          value={profile?.avg_match_score != null ? `${profile.avg_match_score}%` : '—'}
-          color="bg-green-50"
-        />
-        <StatCard
-          icon={
-            <svg viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="1.8" className="w-5 h-5">
-              <path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          }
-          label="Interviews Done"
-          value={String(profile?.total_interviews ?? 0)}
-          color="bg-amber-50"
-        />
+        {stats.map((s) => (
+          <motion.div
+            key={s.label}
+            variants={fade}
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 flex items-start gap-3"
+          >
+            <div className="w-8 h-8 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
+              <s.icon size={15} strokeWidth={1.5} className="text-zinc-500 dark:text-zinc-400" />
+            </div>
+            <div>
+              <p className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 leading-none tabular-nums">{s.value}</p>
+              <p className="text-xs text-zinc-400 mt-1">{s.label}</p>
+              {s.sub && <p className="text-xs text-violet-500 mt-0.5">{s.sub}</p>}
+            </div>
+          </motion.div>
+        ))}
       </motion.div>
 
-      {/* Quick actions */}
-      <div>
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">Quick Actions</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <QuickAction
-            primary
+      {/* Main grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Quick actions */}
+        <div className="space-y-3">
+          <h2 className="text-xs font-medium text-zinc-400 uppercase tracking-widest">Quick Actions</h2>
+          <button
             onClick={onAnalyze}
-            icon={
-              <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-5 h-5">
-                <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            }
-            label="Analyze CV"
-            desc="Upload a new CV"
-          />
-          <QuickAction
+            className="w-full text-left bg-violet-600 hover:bg-violet-500 transition-colors rounded-xl p-4 cursor-pointer"
+          >
+            <div className="w-7 h-7 rounded-md bg-violet-500 flex items-center justify-center mb-3">
+              <Upload size={13} strokeWidth={2} className="text-white" />
+            </div>
+            <p className="text-sm font-medium text-white">Analyze New CV</p>
+            <p className="text-xs text-violet-200 mt-0.5">Upload a PDF and get instant feedback</p>
+          </button>
+          <button
             onClick={onInterview}
-            icon={
-              <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="1.8" className="w-5 h-5">
-                <path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            }
-            label="Practice"
-            desc="Mock interview"
-          />
-          <QuickAction
+            className="w-full text-left bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors rounded-xl p-4 cursor-pointer"
+          >
+            <div className="w-7 h-7 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-3">
+              <Mic size={13} strokeWidth={1.5} className="text-zinc-500 dark:text-zinc-400" />
+            </div>
+            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Practice Interview</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Voice-based mock interview</p>
+          </button>
+          <button
             onClick={onHistory}
-            icon={
-              <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="1.8" className="w-5 h-5">
-                <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            }
-            label="History"
-            desc="All sessions"
-          />
+            className="w-full text-left bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors rounded-xl p-4 cursor-pointer"
+          >
+            <div className="w-7 h-7 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-3">
+              <Clock size={13} strokeWidth={1.5} className="text-zinc-500 dark:text-zinc-400" />
+            </div>
+            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">View History</p>
+            <p className="text-xs text-zinc-500 mt-0.5">All past sessions</p>
+          </button>
+        </div>
+
+        {/* Recent sessions */}
+        <div className="lg:col-span-2 space-y-3">
+          {recent.length > 0 ? (
+            <>
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-medium text-zinc-400 uppercase tracking-widest">Recent Sessions</h2>
+                <button onClick={onHistory} className="text-xs text-violet-500 hover:text-violet-400 cursor-pointer transition-colors">
+                  View all →
+                </button>
+              </div>
+              <motion.div
+                className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden"
+                initial="hidden" animate="show"
+                variants={{ hidden: {}, show: { transition: { staggerChildren: 0.05 } } }}
+              >
+                {recent.map((s, i) => (
+                  <motion.button
+                    key={s.id}
+                    variants={fade}
+                    onClick={() => onSession(s.id)}
+                    className={`w-full flex items-center justify-between px-5 py-3.5 cursor-pointer text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50 ${
+                      i < recent.length - 1 ? 'border-b border-zinc-100 dark:border-zinc-800' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
+                        <FileText size={13} strokeWidth={1.5} className="text-zinc-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{s.cv_filename}</p>
+                        <p className="text-xs text-zinc-400 mt-0.5">
+                          {new Date(s.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-3">
+                      <ScoreBadge score={s.match_score} />
+                      <ChevronRight size={14} strokeWidth={1.5} className="text-zinc-300 dark:text-zinc-600" />
+                    </div>
+                  </motion.button>
+                ))}
+              </motion.div>
+            </>
+          ) : (
+            <motion.div
+              variants={fade} initial="hidden" animate="show"
+              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-10 text-center flex flex-col items-center justify-center h-full"
+            >
+              <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4">
+                <Upload size={20} strokeWidth={1.5} className="text-zinc-400" />
+              </div>
+              <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-1">No sessions yet</h3>
+              <p className="text-xs text-zinc-500 mb-5 max-w-xs">Upload your first CV to get a match score and personalized interview questions.</p>
+              <button
+                onClick={onAnalyze}
+                className="bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-5 py-2 rounded-md transition-colors cursor-pointer"
+              >
+                Get Started →
+              </button>
+            </motion.div>
+          )}
         </div>
       </div>
 
       {/* Score trend chart */}
       {chartData.length >= 2 && (
         <motion.div
-          variants={fadeUp}
-          initial="hidden"
-          animate="show"
-          className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm"
+          variants={fade} initial="hidden" animate="show"
+          className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6"
         >
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-5">
             <div>
-              <h2 className="text-sm font-semibold text-gray-700">Score Trend</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Last {chartData.length} sessions</p>
+              <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Score Trend</h2>
+              <p className="text-xs text-zinc-400 mt-0.5">Last {chartData.length} scored sessions</p>
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-gray-400">
-              <span className="w-2 h-2 rounded-full bg-purple-500" />
+            <div className="flex items-center gap-1.5 text-xs text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1.5 rounded-md">
+              <span className="w-2 h-2 rounded-full bg-violet-500" />
               Match score
             </div>
           </div>
-
           <div className="h-48 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <defs>
                   <linearGradient id="scoreFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#7c3aed" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#7c3aed" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.2} />
+                    <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 10, fill: '#9ca3af' }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  domain={[0, 100]}
-                  tick={{ fontSize: 10, fill: '#9ca3af' }}
-                  axisLine={false}
-                  tickLine={false}
-                />
+                <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" vertical={false} opacity={0.4} />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#71717a' }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#71717a' }} axisLine={false} tickLine={false} />
                 <Tooltip
-                  contentStyle={{
-                    background: '#fff',
-                    border: '1px solid #ede9fe',
-                    borderRadius: 8,
-                    fontSize: 12,
-                    boxShadow: '0 4px 12px rgba(124,58,237,0.1)',
-                  }}
-                  labelStyle={{ color: '#6b7280', fontWeight: 600 }}
+                  contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 12 }}
+                  labelStyle={{ color: '#a1a1aa', fontWeight: 600 }}
+                  itemStyle={{ color: '#e4e4e7' }}
                   formatter={(value) => [`${value}%`, 'Match']}
                 />
                 <Area
-                  type="monotone"
-                  dataKey="score"
-                  stroke="#7c3aed"
-                  strokeWidth={2.5}
+                  type="monotone" dataKey="score" stroke="#8b5cf6" strokeWidth={2}
                   fill="url(#scoreFill)"
-                  dot={{ r: 3.5, fill: '#7c3aed', stroke: '#fff', strokeWidth: 2 }}
-                  activeDot={{ r: 5, fill: '#7c3aed', stroke: '#fff', strokeWidth: 2 }}
-                  animationDuration={reduced ? 0 : 800}
+                  dot={{ r: 3, fill: '#8b5cf6', stroke: '#18181b', strokeWidth: 2 }}
+                  activeDot={{ r: 4.5, fill: '#8b5cf6', stroke: '#18181b', strokeWidth: 2 }}
                 />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Recent sessions */}
-      {recent.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-gray-700">Recent Sessions</h2>
-            <button
-              onClick={onHistory}
-              className="text-xs text-purple-500 hover:underline cursor-pointer"
-            >
-              View all →
-            </button>
-          </div>
-
-          <motion.div
-            className="space-y-2"
-            initial="hidden"
-            animate="show"
-            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07 } } }}
-          >
-            {recent.map((s) => (
-              <motion.button
-                key={s.id}
-                variants={fadeUp}
-                onClick={() => onSession(s.id)}
-                whileHover={reduced ? {} : { y: -2, boxShadow: '0 6px 20px rgba(124,58,237,0.08)' }}
-                whileTap={reduced ? {} : { scale: 0.99 }}
-                transition={{ duration: 0.18 }}
-                className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3.5 flex items-center justify-between hover:border-purple-200 transition-colors cursor-pointer text-left shadow-sm"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="1.8" className="w-4 h-4">
-                      <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-800 truncate max-w-[240px]">{s.cv_filename}</p>
-                    <p className="text-xs text-gray-400">
-                      {new Date(s.created_at).toLocaleDateString('en-GB', {
-                        day: 'numeric', month: 'short', year: 'numeric',
-                      })}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <ScoreChip score={s.match_score} />
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-gray-300">
-                    <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-              </motion.button>
-            ))}
-          </motion.div>
-        </div>
-      )}
-
-      {/* Empty state — first-time user */}
-      {sessions.length === 0 && (
-        <motion.div
-          variants={fadeUp}
-          initial="hidden"
-          animate="show"
-          className="bg-gradient-to-br from-purple-50 to-white border border-purple-100 rounded-2xl p-8 text-center"
-        >
-          <div className="w-14 h-14 rounded-2xl bg-purple-100 flex items-center justify-center mx-auto mb-4">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="1.5" className="w-7 h-7">
-              <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-          <h3 className="text-base font-semibold text-gray-800 mb-1">Upload your first CV</h3>
-          <p className="text-sm text-gray-400 mb-5">Get an instant match score and personalized interview questions.</p>
-          <motion.button
-            onClick={onAnalyze}
-            whileHover={reduced ? {} : { scale: 1.03 }}
-            whileTap={reduced ? {} : { scale: 0.97 }}
-            transition={{ duration: 0.15 }}
-            className="bg-purple-600 text-white text-sm font-medium px-6 py-2.5 rounded-xl hover:bg-purple-700 transition-colors cursor-pointer"
-          >
-            Get Started →
-          </motion.button>
-        </motion.div>
-      )}
-
-      {/* Best score card — show only if there's data */}
-      {profile?.best_score != null && (
-        <motion.div
-          variants={fadeUp}
-          initial="hidden"
-          animate="show"
-          className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-2xl p-6 flex items-center justify-between shadow-lg shadow-purple-200"
-        >
-          <div>
-            <p className="text-purple-200 text-xs font-medium mb-1">Your best performance</p>
-            <p className="text-white text-3xl font-extrabold">{profile.best_score}%</p>
-            <p className="text-purple-300 text-xs mt-0.5">match score</p>
-          </div>
-          <div className="w-16 h-16 rounded-2xl bg-purple-500 bg-opacity-50 flex items-center justify-center">
-            <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" className="w-8 h-8">
-              <path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
           </div>
         </motion.div>
       )}

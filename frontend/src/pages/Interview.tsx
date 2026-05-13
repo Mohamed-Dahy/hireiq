@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
+import { Loader2 } from 'lucide-react'
 import { useRecorder } from '../hooks/useRecorder'
 import { useWebcam } from '../hooks/useWebcam'
 import FeedbackPanel from '../components/FeedbackPanel'
@@ -60,7 +61,6 @@ export default function Interview({ sessionId, questions = [] }: Props) {
       const res = await api.post('/interview/answer', form)
       const answerData = res.data
 
-      // Submit captured frames for eye-contact scoring (best-effort)
       let eyeContactRatio: number | null = null
       const frames = framesRef.current
       if (frames.length > 0 && !camError) {
@@ -90,38 +90,36 @@ export default function Interview({ sessionId, questions = [] }: Props) {
       initial={reduced ? {} : { opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0, 0, 0.2, 1] }}
-      className="max-w-2xl mx-auto py-12 px-4 space-y-6"
+      className="max-w-2xl mx-auto py-8 px-4 sm:px-6 space-y-6"
     >
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-1">Mock Interview</h2>
-        <p className="text-sm text-gray-500">Enable your webcam, pick a question, then record your answer.</p>
+        <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight mb-1">Mock Interview</h2>
+        <p className="text-sm text-zinc-500">Enable your webcam, pick a question, then record your answer.</p>
       </div>
 
       {/* Question selector */}
       <div className="space-y-3">
         {questions.length > 0 && (
           <div className="space-y-2">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Questions from your analysis</p>
+            <p className="text-xs font-medium text-zinc-400 uppercase tracking-widest">Questions from your analysis</p>
             {questions.map((q, i) => (
-              <motion.button
+              <button
                 key={i}
-                whileHover={reduced ? {} : { x: 3 }}
-                transition={{ duration: 0.15 }}
                 onClick={() => { setSelectedQ(q); setCustomQ('') }}
                 className={`w-full text-left px-4 py-3 rounded-xl border text-sm transition-colors cursor-pointer ${
                   selectedQ === q
-                    ? 'border-purple-500 bg-purple-50 text-purple-800 font-medium'
-                    : 'border-gray-200 text-gray-700 hover:border-purple-300'
+                    ? 'border-violet-500 bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-300 font-medium'
+                    : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400 dark:hover:border-zinc-500'
                 }`}
               >
-                <span className="text-purple-400 font-bold mr-2">Q{i + 1}</span>{q}
-              </motion.button>
+                <span className="text-violet-500 font-medium mr-2">Q{i + 1}</span>{q}
+              </button>
             ))}
           </div>
         )}
 
         <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+          <p className="text-xs font-medium text-zinc-400 uppercase tracking-widest mb-2">
             {questions.length > 0 ? 'Or type your own question' : 'Type a question'}
           </p>
           <input
@@ -129,22 +127,19 @@ export default function Interview({ sessionId, questions = [] }: Props) {
             placeholder="e.g. Tell me about a challenging project you worked on…"
             value={customQ}
             onChange={(e) => { setCustomQ(e.target.value); setSelectedQ('') }}
-            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-colors"
           />
         </div>
       </div>
 
       {/* Session start */}
       {!active && (
-        <motion.button
+        <button
           onClick={() => setActive(true)}
-          whileHover={reduced ? {} : { scale: 1.02 }}
-          whileTap={reduced ? {} : { scale: 0.97 }}
-          transition={{ duration: 0.15 }}
-          className="bg-purple-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-purple-700 transition-colors cursor-pointer shadow-sm shadow-purple-100"
+          className="bg-violet-600 hover:bg-violet-500 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer"
         >
-          Enable Webcam & Start
-        </motion.button>
+          Enable Webcam &amp; Start
+        </button>
       )}
 
       {active && (
@@ -159,40 +154,37 @@ export default function Interview({ sessionId, questions = [] }: Props) {
               initial={reduced ? {} : { opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25 }}
-              className="bg-amber-50 border border-amber-200 rounded-2xl p-6"
+              className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-6"
             >
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="1.8" className="w-5 h-5">
+                <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center shrink-0">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-5 h-5 text-amber-600 dark:text-amber-400">
                     <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-amber-900 mb-1">
+                  <h3 className="text-sm font-medium text-amber-900 dark:text-amber-200 mb-1">
                     {camError === 'permission' && 'Camera permission denied'}
                     {camError === 'not-found' && 'No camera detected'}
                     {camError === 'unknown' && 'Could not access camera'}
                   </h3>
-                  <p className="text-xs text-amber-700 mb-3 leading-relaxed">
-                    {camError === 'permission' && 'HireIQ needs camera access to track your eye contact. Click the camera icon in your address bar, select "Allow", then click Try again. (Most browsers cache the denial — you must change it manually first.)'}
+                  <p className="text-xs text-amber-700 dark:text-amber-300 mb-3 leading-relaxed">
+                    {camError === 'permission' && 'HireIQ needs camera access to track your eye contact. Click the camera icon in your address bar, select "Allow", then click Try again.'}
                     {camError === 'not-found' && 'Make sure a webcam is connected to your device, then click Try again.'}
                     {camError === 'unknown' && 'Something went wrong accessing your camera. Try refreshing the page.'}
                   </p>
-                  <motion.button
+                  <button
                     onClick={() => { setActive(false); setTimeout(() => setActive(true), 100) }}
-                    whileHover={reduced ? {} : { scale: 1.03 }}
-                    whileTap={reduced ? {} : { scale: 0.97 }}
-                    transition={{ duration: 0.15 }}
-                    className="text-xs bg-amber-600 text-white font-semibold px-4 py-1.5 rounded-lg hover:bg-amber-700 transition-colors cursor-pointer"
+                    className="text-xs bg-amber-600 hover:bg-amber-700 text-white font-medium px-4 py-1.5 rounded-lg transition-colors cursor-pointer"
                   >
                     Try again
-                  </motion.button>
+                  </button>
                 </div>
               </div>
             </motion.div>
           ) : (
-            <div className="relative rounded-2xl overflow-hidden bg-gray-900">
-              <video ref={videoRef} autoPlay muted className="w-full rounded-2xl" />
+            <div className="relative rounded-xl overflow-hidden bg-zinc-900">
+              <video ref={videoRef} autoPlay muted className="w-full rounded-xl" />
               {recording && (
                 <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-red-500 text-white text-xs font-medium px-2.5 py-1 rounded-full">
                   <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
@@ -204,53 +196,37 @@ export default function Interview({ sessionId, questions = [] }: Props) {
 
           <div className="flex gap-3">
             {!recording ? (
-              <motion.button
+              <button
                 onClick={start}
                 disabled={!activeQuestion}
-                whileHover={reduced ? {} : { scale: 1.03 }}
-                whileTap={reduced ? {} : { scale: 0.97 }}
-                transition={{ duration: 0.15 }}
-                className="bg-red-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-red-600 disabled:opacity-40 transition-colors cursor-pointer"
+                className="bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium disabled:opacity-40 transition-colors cursor-pointer"
               >
                 Record Answer
-              </motion.button>
+              </button>
             ) : (
-              <motion.button
+              <button
                 onClick={stop}
-                whileHover={reduced ? {} : { scale: 1.03 }}
-                whileTap={reduced ? {} : { scale: 0.97 }}
-                transition={{ duration: 0.15 }}
-                className="bg-gray-800 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-900 transition-colors cursor-pointer"
+                className="bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer"
               >
                 Stop Recording
-              </motion.button>
+              </button>
             )}
 
             {audioBlob && !recording && (
-              <motion.button
+              <button
                 onClick={submitAnswer}
                 disabled={loading || !activeQuestion}
-                whileHover={reduced ? {} : { scale: 1.03 }}
-                whileTap={reduced ? {} : { scale: 0.97 }}
-                transition={{ duration: 0.15 }}
-                className="bg-purple-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-purple-700 disabled:opacity-50 transition-colors cursor-pointer"
+                className="bg-violet-600 hover:bg-violet-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium disabled:opacity-50 transition-colors cursor-pointer flex items-center gap-2"
               >
-                {loading
-                  ? <span className="flex items-center gap-2">
-                      <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                      </svg>
-                      Scoring…
-                    </span>
-                  : 'Submit Answer'
-                }
-              </motion.button>
+                {loading ? (
+                  <><Loader2 size={14} strokeWidth={2} className="animate-spin" /> Scoring…</>
+                ) : 'Submit Answer'}
+              </button>
             )}
           </div>
 
           {!activeQuestion && (
-            <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
+            <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 rounded-lg">
               Select or type a question before recording.
             </p>
           )}
@@ -259,7 +235,7 @@ export default function Interview({ sessionId, questions = [] }: Props) {
             <motion.p
               initial={reduced ? {} : { opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-amber-700 text-xs bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg"
+              className="text-amber-700 dark:text-amber-300 text-xs bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2 rounded-lg"
             >
               {micError}
             </motion.p>
@@ -269,7 +245,7 @@ export default function Interview({ sessionId, questions = [] }: Props) {
             <motion.p
               initial={reduced ? {} : { opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-red-500 text-xs bg-red-50 px-3 py-2 rounded-lg"
+              className="text-red-600 dark:text-red-400 text-xs bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 px-3 py-2 rounded-lg"
             >
               {error}
             </motion.p>
@@ -283,9 +259,9 @@ export default function Interview({ sessionId, questions = [] }: Props) {
           initial={reduced ? {} : { opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0, 0, 0.2, 1] }}
-          className="bg-white border border-purple-100 rounded-2xl p-6 shadow-sm"
+          className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6"
         >
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">Your Feedback</h3>
+          <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-4">Your Feedback</h3>
           <FeedbackPanel
             transcript={feedback.transcript}
             clarity={feedback.clarity_score}

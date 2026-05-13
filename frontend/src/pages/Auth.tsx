@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
+import { motion } from 'framer-motion'
+import { Eye, EyeOff, Layers, Loader2, CheckCircle } from 'lucide-react'
 import {
   login,
   register,
@@ -22,12 +23,10 @@ interface Props {
   onAuth: () => void
   onBack?: () => void
   defaultMode?: AuthMode
-  /** Token from URL query string — used for verify-email and reset-password modes */
   urlToken?: string
 }
 
 export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken }: Props) {
-  const reduced = useReducedMotion()
   const [mode, setMode] = useState<AuthMode>(defaultMode)
   const [email, setEmail] = useState('')
   const [username, setUsername] = useState('')
@@ -38,15 +37,11 @@ export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken }
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
-  // Auto-verify when arriving from email link
   useEffect(() => {
     if (mode === 'verify-email' && urlToken) {
       setLoading(true)
       verifyEmail(urlToken)
-        .then(() => {
-          setInfo('Email verified! You can now log in.')
-          setMode('login')
-        })
+        .then(() => { setInfo('Email verified! You can now log in.'); setMode('login') })
         .catch((err: any) => {
           const detail = err.response?.data?.detail
           setError(detail || 'Verification failed. The link may have expired.')
@@ -66,25 +61,20 @@ export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken }
     setError('')
     setInfo('')
     setLoading(true)
-
     const trimEmail    = email.trim()
     const trimUsername = username.trim()
-
     try {
       if (mode === 'login') {
         const res = await login(trimEmail, password)
         localStorage.setItem('access_token', res.data.access_token)
         localStorage.setItem('refresh_token', res.data.refresh_token)
         onAuth()
-
       } else if (mode === 'register') {
         await register(trimEmail, trimUsername, password)
         setMode('verification-pending')
-
       } else if (mode === 'forgot-password') {
         await forgotPassword(trimEmail)
         setMode('forgot-sent')
-
       } else if (mode === 'reset-password' && urlToken) {
         await resetPassword(urlToken, newPassword)
         setInfo('Password reset successfully. You can now log in.')
@@ -92,13 +82,9 @@ export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken }
       }
     } catch (err: any) {
       const status = err.response?.status
-
       if (status === 403 && mode === 'login') {
-        // Email not verified — show resend option
         setError(err.response.data?.detail || 'Your email is not verified. Please check your inbox.')
-
       } else if (status === 423) {
-        // Account locked — parse the ISO timestamp and show human-readable time
         const detail: string = err.response?.data?.detail ?? ''
         const match = detail.match(/until (.+)$/)
         if (match) {
@@ -106,12 +92,10 @@ export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken }
           const mins = Math.ceil((until.getTime() - Date.now()) / 60000)
           setError(`Too many failed attempts. Account locked — try again in ${mins > 0 ? mins : 1} minute${mins !== 1 ? 's' : ''}.`)
         } else {
-          setError('Account temporarily locked due to too many failed attempts. Try again in 15 minutes.')
+          setError('Account temporarily locked. Try again in 15 minutes.')
         }
-
       } else if (status === 429) {
-        setError('Too many attempts. Please wait a few minutes before trying again.')
-
+        setError('Too many attempts. Please wait a few minutes.')
       } else {
         handleErr(err)
       }
@@ -134,39 +118,42 @@ export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken }
     }
   }
 
-  // ── Verification pending ──────────────────────────────────────────────────
-  if (mode === 'verification-pending') {
+  const inputCls = 'w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-colors'
+
+  // ── Confirmation screens ────────────────────────────────────────────────────
+  if (mode === 'verification-pending' || mode === 'forgot-sent') {
+    const isVerify = mode === 'verification-pending'
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-white flex items-center justify-center p-4">
+      <div className="min-h-screen bg-white dark:bg-zinc-950 dark:[background-image:radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(139,92,246,0.12),transparent)] flex items-center justify-center p-4">
         <motion.div
-          initial={reduced ? {} : { opacity: 0, y: 32 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
-          className="bg-white rounded-2xl shadow-xl shadow-purple-100 w-full max-w-md p-8 border border-purple-100 text-center"
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl w-full max-w-md p-8 text-center"
         >
-          <div className="w-14 h-14 rounded-full bg-purple-50 border border-purple-200 flex items-center justify-center mx-auto mb-4">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
-              <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-            </svg>
+          <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-5">
+            <CheckCircle size={22} strokeWidth={1.5} className="text-violet-500" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Check your inbox</h2>
-          <p className="text-sm text-gray-500 mb-6">
-            We sent a verification link to <span className="font-medium text-purple-700">{email}</span>.
-            Click it to activate your account.
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-2">Check your inbox</h2>
+          <p className="text-sm text-zinc-500 mb-6 leading-relaxed">
+            {isVerify
+              ? <>Verification link sent to <span className="font-medium text-zinc-900 dark:text-zinc-100">{email}</span>. Click it to activate your account.</>
+              : <>If <span className="font-medium text-zinc-900 dark:text-zinc-100">{email}</span> is registered, a reset link is on its way (valid 60 min).</>
+            }
           </p>
+          {isVerify && (
+            <button onClick={handleResend} disabled={loading} className="text-sm text-violet-500 hover:text-violet-400 disabled:opacity-50 mb-5 block mx-auto transition-colors cursor-pointer">
+              Didn't receive it? Resend
+            </button>
+          )}
+          {info && <p className="text-xs text-green-600 dark:text-green-400 mb-4">{info}</p>}
           <button
-            onClick={handleResend}
-            disabled={loading}
-            className="text-sm text-purple-600 hover:underline disabled:opacity-50"
+            onClick={() => { setMode('login'); setError(''); setInfo('') }}
+            className="text-sm text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors cursor-pointer"
           >
-            Didn't receive it? Resend
+            ← Back to sign in
           </button>
-          {info && <p className="mt-3 text-xs text-green-600">{info}</p>}
           {onBack && (
-            <button
-              onClick={onBack}
-              className="mt-5 w-full text-center text-sm text-gray-400 hover:text-purple-600 transition-colors cursor-pointer"
-            >
+            <button onClick={onBack} className="mt-3 block w-full text-center text-sm text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors cursor-pointer">
               ← Back to home
             </button>
           )}
@@ -175,290 +162,173 @@ export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken }
     )
   }
 
-  // ── Forgot-sent confirmation ──────────────────────────────────────────────
-  if (mode === 'forgot-sent') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-white flex items-center justify-center p-4">
-        <motion.div
-          initial={reduced ? {} : { opacity: 0, y: 32 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
-          className="bg-white rounded-2xl shadow-xl shadow-purple-100 w-full max-w-md p-8 border border-purple-100 text-center"
-        >
-          <div className="w-14 h-14 rounded-full bg-purple-50 border border-purple-200 flex items-center justify-center mx-auto mb-4">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
-              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6"/>
-              <rect x="2" y="4" width="20" height="16" rx="2"/>
-            </svg>
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Check your inbox</h2>
-          <p className="text-sm text-gray-500 mb-6">
-            If <span className="font-medium text-purple-700">{email}</span> is registered, a password reset link is on its way (valid 60 min).
-          </p>
-          <button
-            onClick={() => { setMode('login'); setError(''); setInfo('') }}
-            className="text-sm text-purple-600 hover:underline"
-          >
-            Back to log in
-          </button>
-        </motion.div>
-      </div>
-    )
-  }
-
-  // ── Main form (login / register / forgot-password / reset-password) ────────
   const title =
-    mode === 'login' ? 'Welcome back' :
-    mode === 'register' ? 'Create your account' :
+    mode === 'login'           ? 'Welcome back' :
+    mode === 'register'        ? 'Create your account' :
     mode === 'forgot-password' ? 'Reset your password' :
     'Set new password'
 
   const subtitle =
-    mode === 'login' ? 'Log in to continue your interview prep.' :
-    mode === 'register' ? 'Start your AI-powered job interview coaching.' :
-    mode === 'forgot-password' ? 'Enter your email and we\'ll send a reset link.' :
+    mode === 'login'           ? 'Sign in to continue your interview prep.' :
+    mode === 'register'        ? 'Start your AI-powered job interview coaching.' :
+    mode === 'forgot-password' ? "Enter your email and we'll send a reset link." :
     'Enter your new password below.'
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-white dark:bg-zinc-950 dark:[background-image:radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(139,92,246,0.12),transparent)] flex flex-col items-center justify-center p-4">
+      {/* Logo */}
+      <div className="flex items-center gap-2 mb-8">
+        <Layers size={20} strokeWidth={1.5} className="text-violet-500" />
+        <span className="font-semibold text-zinc-900 dark:text-zinc-50 text-base tracking-tight">HireIQ</span>
+      </div>
+
       <motion.div
-        initial={reduced ? {} : { opacity: 0, y: 32 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="bg-white rounded-2xl shadow-xl shadow-purple-100 w-full max-w-md p-8 border border-purple-100"
+        initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="w-full max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-8"
       >
-        {/* Logo */}
-        <div className="flex items-center gap-2 mb-6">
-          <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center">
-            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-            </svg>
-          </div>
-          <span className="font-bold text-purple-700 text-lg">HireIQ</span>
+        <div className="mb-6">
+          <motion.h1 key={mode + '-t'} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}
+            className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-1">
+            {title}
+          </motion.h1>
+          <motion.p key={mode + '-s'} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2, delay: 0.05 }}
+            className="text-sm text-zinc-500">
+            {subtitle}
+          </motion.p>
         </div>
 
-        <motion.h2
-          key={mode + '-title'}
-          initial={reduced ? {} : { opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-          className="text-xl font-bold text-gray-900 mb-1"
-        >
-          {title}
-        </motion.h2>
-        <motion.p
-          key={mode + '-sub'}
-          initial={reduced ? {} : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.2, delay: 0.05 }}
-          className="text-sm text-gray-500 mb-6"
-        >
-          {subtitle}
-        </motion.p>
-
-        {/* Login / Register toggle — only show for login/register modes */}
+        {/* Tab toggle */}
         {(mode === 'login' || mode === 'register') && (
-          <div className="flex gap-2 mb-6 bg-gray-50 p-1 rounded-xl">
+          <div className="flex gap-0 mb-6 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-lg">
             {(['login', 'register'] as const).map((m) => (
               <button
                 key={m}
                 onClick={() => { setMode(m); setError(''); setInfo(''); setShowPassword(false) }}
-                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
+                className={`flex-1 py-1.5 rounded-md text-sm font-medium transition-all duration-200 cursor-pointer ${
                   mode === m
-                    ? 'bg-white text-purple-700 shadow-sm border border-purple-100'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 shadow-sm'
+                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
                 }`}
               >
-                {m === 'login' ? 'Log in' : 'Register'}
+                {m === 'login' ? 'Sign in' : 'Create account'}
               </button>
             ))}
           </div>
         )}
 
-        {/* Success info banner */}
         {info && (
-          <motion.p
-            initial={reduced ? {} : { opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-green-700 text-xs bg-green-50 border border-green-200 px-3 py-2 rounded-lg mb-4"
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            className="text-green-700 dark:text-green-400 text-xs bg-green-50 dark:bg-green-950/50 border border-green-200 dark:border-green-800 px-3 py-2.5 rounded-md mb-4 flex items-center gap-2">
+            <CheckCircle size={13} strokeWidth={2} />
             {info}
-          </motion.p>
+          </motion.div>
         )}
 
-        <form onSubmit={submit} className="space-y-4">
-          {/* Email — shown on login, register, forgot-password */}
+        <form onSubmit={submit} className="space-y-3.5">
           {mode !== 'reset-password' && (
-            <motion.input
-              whileFocus={reduced ? {} : { scale: 1.01 }}
-              transition={{ duration: 0.15 }}
-              type="email" placeholder="Email address" required value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-            />
+            <div>
+              <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1.5">Email address</label>
+              <input type="email" placeholder="you@example.com" required value={email}
+                onChange={(e) => setEmail(e.target.value)} className={inputCls} />
+            </div>
           )}
 
-          {/* Username — register only */}
           {mode === 'register' && (
-            <motion.input
-              initial={reduced ? {} : { opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              whileFocus={reduced ? {} : { scale: 1.01 }}
-              type="text" placeholder="Username" required value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-            />
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.2 }}>
+              <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1.5">Username</label>
+              <input type="text" placeholder="johndoe" required value={username}
+                onChange={(e) => setUsername(e.target.value)} className={inputCls} />
+            </motion.div>
           )}
 
-          {/* Password — login and register */}
           {(mode === 'login' || mode === 'register') && (
-            <div className="relative">
-              <motion.input
-                whileFocus={reduced ? {} : { scale: 1.01 }}
-                transition={{ duration: 0.15 }}
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-              />
-              <button
-                type="button"
-                tabIndex={-1}
-                onClick={() => setShowPassword(v => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                    <line x1="1" y1="1" x2="23" y2="23"/>
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                  </svg>
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Password</label>
+                {mode === 'login' && (
+                  <button type="button"
+                    onClick={() => { setMode('forgot-password'); setError(''); setInfo('') }}
+                    className="text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors cursor-pointer">
+                    Forgot password?
+                  </button>
                 )}
-              </button>
+              </div>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder={mode === 'register' ? 'Min 6 characters' : '••••••••'}
+                  required value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={inputCls + ' pr-10'}
+                />
+                <button type="button" tabIndex={-1} onClick={() => setShowPassword(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors cursor-pointer"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                  {showPassword ? <EyeOff size={15} strokeWidth={1.5} /> : <Eye size={15} strokeWidth={1.5} />}
+                </button>
+              </div>
             </div>
           )}
 
-          {/* New password — reset-password mode */}
           {mode === 'reset-password' && (
-            <div className="relative">
-              <motion.input
-                whileFocus={reduced ? {} : { scale: 1.01 }}
-                transition={{ duration: 0.15 }}
-                type={showPassword ? 'text' : 'password'}
-                placeholder="New password (min 6 chars)"
-                required
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-              />
-              <button
-                type="button"
-                tabIndex={-1}
-                onClick={() => setShowPassword(v => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                    <line x1="1" y1="1" x2="23" y2="23"/>
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                  </svg>
-                )}
-              </button>
-            </div>
-          )}
-
-          {/* Forgot password link — login mode only */}
-          {mode === 'login' && (
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => { setMode('forgot-password'); setError(''); setInfo('') }}
-                className="text-xs text-purple-500 hover:text-purple-700 transition-colors cursor-pointer"
-              >
-                Forgot password?
-              </button>
+            <div>
+              <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1.5">New password</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'} placeholder="Min 6 characters"
+                  required value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className={inputCls + ' pr-10'}
+                />
+                <button type="button" tabIndex={-1} onClick={() => setShowPassword(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors cursor-pointer"
+                  aria-label={showPassword ? 'Hide' : 'Show'}>
+                  {showPassword ? <EyeOff size={15} strokeWidth={1.5} /> : <Eye size={15} strokeWidth={1.5} />}
+                </button>
+              </div>
             </div>
           )}
 
           {error && (
-            <motion.div
-              initial={reduced ? {} : { opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
-              className="text-red-500 text-xs bg-red-50 px-3 py-2 rounded-lg"
-            >
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="text-red-600 dark:text-red-400 text-xs bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 px-3 py-2.5 rounded-md">
               <p>{error}</p>
-              {/* Resend link when email is unverified */}
               {mode === 'login' && error.toLowerCase().includes('verif') && (
-                <button
-                  type="button"
-                  onClick={handleResend}
-                  disabled={loading}
-                  className="mt-1 underline text-purple-600 hover:text-purple-800 disabled:opacity-50"
-                >
+                <button type="button" onClick={handleResend} disabled={loading}
+                  className="mt-1.5 underline text-violet-500 hover:text-violet-400 disabled:opacity-50 cursor-pointer">
                   Resend verification email
                 </button>
               )}
             </motion.div>
           )}
 
-          <motion.button
-            type="submit"
-            disabled={loading}
-            whileHover={reduced ? {} : { scale: 1.02 }}
-            whileTap={reduced ? {} : { scale: 0.97 }}
-            transition={{ duration: 0.15 }}
-            className="w-full bg-purple-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-purple-700 disabled:opacity-50 transition-colors shadow-sm shadow-purple-200 cursor-pointer"
+          <button
+            type="submit" disabled={loading}
+            className="w-full bg-violet-600 text-white py-2.5 rounded-md text-sm font-medium hover:bg-violet-500 disabled:opacity-50 transition-colors cursor-pointer mt-1 flex items-center justify-center gap-2"
           >
             {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                </svg>
-                Please wait…
-              </span>
-            ) : mode === 'login' ? 'Log in'
+              <><Loader2 size={14} strokeWidth={2} className="animate-spin" /> Please wait…</>
+            ) : mode === 'login' ? 'Sign in to HireIQ'
               : mode === 'register' ? 'Create account'
               : mode === 'forgot-password' ? 'Send reset link'
               : 'Set new password'}
-          </motion.button>
+          </button>
         </form>
 
-        {/* Back to login link for forgot-password / reset-password */}
         {(mode === 'forgot-password' || mode === 'reset-password') && (
           <button
             onClick={() => { setMode('login'); setError(''); setInfo('') }}
-            className="mt-4 w-full text-center text-sm text-gray-400 hover:text-purple-600 transition-colors cursor-pointer"
-          >
-            ← Back to log in
+            className="mt-5 w-full text-center text-sm text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors cursor-pointer">
+            ← Back to sign in
           </button>
         )}
 
         {onBack && (mode === 'login' || mode === 'register') && (
-          <motion.button
-            onClick={onBack}
-            whileHover={reduced ? {} : { x: -3 }}
-            transition={{ duration: 0.15 }}
-            className="mt-5 w-full text-center text-sm text-gray-400 hover:text-purple-600 transition-colors cursor-pointer"
-          >
+          <button onClick={onBack}
+            className="mt-4 w-full text-center text-sm text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors cursor-pointer">
             ← Back to home
-          </motion.button>
+          </button>
         )}
       </motion.div>
     </div>

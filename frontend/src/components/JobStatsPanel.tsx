@@ -7,10 +7,10 @@ interface Props {
 
 function MetricCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm text-center">
-      <p className="text-2xl font-extrabold text-gray-900">{value}</p>
-      <p className="text-xs text-gray-500 mt-1">{label}</p>
-      {sub && <p className="text-xs text-gray-400">{sub}</p>}
+    <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 text-center">
+      <p className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 tabular-nums">{value}</p>
+      <p className="text-xs text-zinc-500 mt-1">{label}</p>
+      {sub && <p className="text-xs text-zinc-400">{sub}</p>}
     </div>
   )
 }
@@ -29,16 +29,12 @@ export default function JobStatsPanel({ stats }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Alert badges */}
-      <div className="flex gap-3 flex-wrap">
-        {stats.stale_count > 0 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700 font-medium">
-            ⚠ {stats.stale_count} stale application{stats.stale_count !== 1 ? 's' : ''} — no activity in 14+ days
-          </div>
-        )}
-      </div>
+      {stats.stale_count > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 text-xs text-amber-700 dark:text-amber-300 font-medium">
+          ⚠ {stats.stale_count} stale application{stats.stale_count !== 1 ? 's' : ''} — no activity in 14+ days
+        </div>
+      )}
 
-      {/* Metric cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <MetricCard label="Active Applications" value={String(stats.total_active)} />
         <MetricCard label="Response Rate" value={pct(stats.response_rate)} sub="applied → screened" />
@@ -46,31 +42,37 @@ export default function JobStatsPanel({ stats }: Props) {
         <MetricCard label="Offer Rate" value={pct(stats.offer_rate)} sub="applied → offer" />
       </div>
 
-      {/* Funnel */}
       {funnelData.some(d => d.count > 0) && (
-        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-          <p className="text-sm font-semibold text-gray-700 mb-3">Application Funnel</p>
+        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
+          <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mb-4">Application Funnel</p>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={funnelData} margin={{ top: 0, right: 8, left: -20, bottom: 0 }}>
-              <XAxis dataKey="stage" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
-              <Tooltip />
-              <Bar dataKey="count" fill="#9333ea" radius={[4, 4, 0, 0]} />
+              <XAxis dataKey="stage" tick={{ fontSize: 10, fill: '#71717a' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: '#71717a' }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <Tooltip
+                contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 12 }}
+                labelStyle={{ color: '#a1a1aa' }}
+                itemStyle={{ color: '#e4e4e7' }}
+              />
+              <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       )}
 
-      {/* By source */}
       {sourceData.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-          <p className="text-sm font-semibold text-gray-700 mb-3">Applications by Source</p>
+        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4">
+          <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mb-4">By Source</p>
           <ResponsiveContainer width="100%" height={140}>
             <BarChart data={sourceData} layout="vertical" margin={{ top: 0, right: 8, left: 20, bottom: 0 }}>
-              <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
-              <YAxis dataKey="source" type="category" tick={{ fontSize: 10 }} width={70} />
-              <Tooltip />
-              <Bar dataKey="count" fill="#a855f7" radius={[0, 4, 4, 0]} />
+              <XAxis type="number" tick={{ fontSize: 10, fill: '#71717a' }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <YAxis dataKey="source" type="category" tick={{ fontSize: 10, fill: '#71717a' }} axisLine={false} tickLine={false} width={70} />
+              <Tooltip
+                contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 12 }}
+                labelStyle={{ color: '#a1a1aa' }}
+                itemStyle={{ color: '#e4e4e7' }}
+              />
+              <Bar dataKey="count" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
