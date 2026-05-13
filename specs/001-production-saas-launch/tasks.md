@@ -9,7 +9,7 @@ description: "Task list for HireIQ Production SaaS Launch — Revised Phase Orde
 
 **Tests**: Required per constitution (Principle II) — unit + integration for every new endpoint.
 
-**Phase Status**: Phases 1–7 ✅ COMPLETE (192 tests pass, 1 skipped) | Phase 8 ✅ COMPLETE (T106–T115 + T180–T193) | Phases 9–14 pending
+**Phase Status**: Phases 1–7 ✅ COMPLETE (192 tests pass, 1 skipped) | Phase 8 ✅ COMPLETE (T106–T115 + T180–T193) | Phase 9 ✅ COMPLETE (T123–T135) | Phase 11 ✅ COMPLETE (T149–T162, implemented before Phase 10) | Phases 10, 12–14 pending
 
 **Organization**: Phases 1–2 shared foundations. Phases 3–4 security hardening. Phases 5–8 core product features. Phases 9–11 growth & platform features (new). Phase 12 subscriptions & payments. Phase 13 full system testing. Phase 14 polish.
 
@@ -290,32 +290,32 @@ description: "Task list for HireIQ Production SaaS Launch — Revised Phase Orde
 
 ## Phase 9: User Story 9 — Referral & Viral Growth Engine (Priority: P2) [NEW]
 
-**Goal**: Every registered user gets a unique referral link. When a referred user subscribes to any paid plan, the referrer earns 1 month free (credited automatically). This creates a zero-cost acquisition channel and a viral growth loop built directly into the product.
+**Goal**: Every registered user gets a unique referral link. When a referred user subscribes to any paid plan, the referrer earns 10 days free (credited automatically). This creates a zero-cost acquisition channel and a viral growth loop built directly into the product.
 
 **Why now**: Referral drives acquisition, which is the hardest problem for a new SaaS. Adding it before subscriptions means the referral credit is applied at the exact moment of conversion. Building it after subscriptions would require retrofitting the billing logic.
 
-**Independent Test**: User A shares their referral link → User B registers via the link → User B subscribes → User A's next billing cycle is skipped (1 free month applied); both users receive confirmation emails. Referral dashboard shows correct counts and earnings.
+**Independent Test**: User A shares their referral link → User B registers via the link → User B subscribes → User A's next billing cycle is credited (10 days free applied); both users receive confirmation emails. Referral dashboard shows correct counts and earnings.
 
 ### Tests for User Story 9
 
 > **Write these FIRST — confirm they FAIL before implementing**
 
-- [ ] T123 [P] [US9] Unit tests for referral service in `Backend/tests/unit/test_referral_service.py`: code generation is unique, self-referral blocked, duplicate referral blocked, credit applied on conversion, expired referral handled
-- [ ] T124 [P] [US9] Integration tests for referral flow in `Backend/tests/integration/test_referrals.py`: GET own referral code, register via code stores referral, stats endpoint, leaderboard endpoint returns ranked list
+- [X] T123 [P] [US9] Unit tests for referral service in `Backend/tests/unit/test_referral_service.py`: code generation is unique, self-referral blocked, duplicate referral blocked, credit applied on conversion, expired referral handled
+- [X] T124 [P] [US9] Integration tests for referral flow in `Backend/tests/integration/test_referrals.py`: GET own referral code, register via code stores referral, stats endpoint, leaderboard endpoint returns ranked list
 
 ### Implementation for User Story 9
 
-- [ ] T125 [P] [US9] Create `Backend/models/referral.py` — `ReferralCode` model (user_id FK, code unique, created_at) and `ReferralConversion` model (referrer_id, referred_user_id, converted_at, reward_applied)
-- [ ] T126 [US9] Create `Backend/migrations/versions/007_referrals.py` — add `referral_codes` and `referral_conversions` tables
-- [ ] T127 [P] [US9] Add `ReferralStatsResponse`, `LeaderboardEntry`, `ReferralCodeResponse` schemas to `Backend/models/schemas.py`
-- [ ] T128 [US9] Create `Backend/services/referral_service.py` — `get_or_create_referral_code(db, user)`, `register_via_referral(db, code, new_user)` (validates, stores conversion), `apply_referral_reward(db, referred_user_id)` (credits 1 free month on subscription activation), `get_referral_stats(db, user)`, `get_leaderboard(db, limit=10)`
-- [ ] T129 [US9] Create `Backend/routers/referrals.py` — `GET /referrals/my-code` (returns or creates code), `GET /referrals/stats` (conversions count, earnings summary), `GET /referrals/leaderboard` (top 10 referrers — usernames only, no emails)
-- [ ] T130 [US9] Extend `POST /auth/register` in `Backend/routers/auth.py` — accept optional `?ref=<code>` query param; call `register_via_referral()` if present; store pending conversion (not yet credited — only credited on subscription activation)
-- [ ] T131 [US9] Register `referrals` router in `Backend/app/main.py`; add `/referrals` proxy rule to `frontend/nginx.conf`
-- [ ] T132 [P] [US9] Create `frontend/src/components/ReferralCard.tsx` — shows unique link with one-click copy button, conversion count badge, earnings summary ("1 free month earned"), mini progress bar toward next reward
-- [ ] T133 [P] [US9] Create `frontend/src/pages/Referrals.tsx` — full referral hub: link + QR code display, stats (total referred, converted, months earned), leaderboard table, social share buttons (WhatsApp, LinkedIn, Twitter/X)
-- [ ] T134 [US9] Extend `frontend/src/pages/Profile.tsx` — add referral stats mini-card linking to `/referrals`
-- [ ] T135 [US9] Add referral calls to `frontend/src/api.ts`: `getMyReferralCode()`, `getReferralStats()`, `getLeaderboard()`; add `/referrals` route to router
+- [X] T125 [P] [US9] Create `Backend/models/referral.py` — `ReferralCode` model (user_id FK, code unique, created_at) and `ReferralConversion` model (referrer_id, referred_user_id, converted_at, reward_applied)
+- [X] T126 [US9] Create `Backend/migrations/versions/007_referrals.py` — add `referral_codes` and `referral_conversions` tables
+- [X] T127 [P] [US9] Add `ReferralStatsResponse`, `LeaderboardEntry`, `ReferralCodeResponse` schemas to `Backend/models/schemas.py`
+- [X] T128 [US9] Create `Backend/services/referral_service.py` — `get_or_create_referral_code(db, user)`, `register_via_referral(db, code, new_user)` (validates, stores conversion), `apply_referral_reward(db, referred_user_id)` (credits 10 days free on subscription activation), `get_referral_stats(db, user)`, `get_leaderboard(db, limit=10)`
+- [X] T129 [US9] Create `Backend/routers/referrals.py` — `GET /referrals/my-code` (returns or creates code), `GET /referrals/stats` (conversions count, earnings summary), `GET /referrals/leaderboard` (top 10 referrers — usernames only, no emails)
+- [X] T130 [US9] Extend `POST /auth/register` in `Backend/routers/auth.py` — accept optional `?ref=<code>` query param; call `register_via_referral()` if present; store pending conversion (not yet credited — only credited on subscription activation)
+- [X] T131 [US9] Register `referrals` router in `Backend/app/main.py`; add `/referrals` proxy rule to `frontend/nginx.conf`
+- [X] T132 [P] [US9] Create `frontend/src/components/ReferralCard.tsx` — shows unique link with one-click copy button, conversion count badge, earnings summary ("10 days free earned"), mini progress bar toward next reward
+- [X] T133 [P] [US9] Create `frontend/src/pages/Referrals.tsx` — full referral hub: link + QR code display, stats (total referred, converted, months earned), leaderboard table, social share buttons (WhatsApp, LinkedIn, Twitter/X)
+- [X] T134 [US9] Extend `frontend/src/pages/Profile.tsx` — add referral stats mini-card linking to `/referrals`
+- [X] T135 [US9] Add referral calls to `frontend/src/api.ts`: `getMyReferralCode()`, `getReferralStats()`, `getLeaderboard()`; add `/referrals` route to router
 
 **Checkpoint**: Referral flow testable end-to-end. T123–T124 pass. Leaderboard visible without revealing PII.
 
@@ -370,23 +370,23 @@ description: "Task list for HireIQ Production SaaS Launch — Revised Phase Orde
 
 > **Write these FIRST — confirm they FAIL before implementing**
 
-- [ ] T149 [P] [US11] Unit tests for roadmap service in `Backend/tests/unit/test_roadmap_service.py`: structured output schema validation (all required JSON keys present), fallback on LLM error returns graceful message, malformed LLM JSON handled without 500, empty CV text handled
-- [ ] T150 [P] [US11] Integration tests for roadmap endpoints in `Backend/tests/integration/test_roadmap.py`: POST /roadmap/generate returns valid roadmap and saves to DB, GET /roadmap/{id} returns correct data, GET /roadmap lists only user's own roadmaps, 404 on another user's roadmap (IDOR check), 404 on non-existent cv_session_id
+- [X] T149 [P] [US11] Unit tests for roadmap service in `Backend/tests/unit/test_roadmap_service.py`: structured output schema validation (all required JSON keys present), fallback on LLM error returns graceful message, malformed LLM JSON handled without 500, empty CV text handled
+- [X] T150 [P] [US11] Integration tests for roadmap endpoints in `Backend/tests/integration/test_roadmap.py`: POST /roadmap/generate returns valid roadmap and saves to DB, GET /roadmap/{id} returns correct data, GET /roadmap lists only user's own roadmaps, 404 on another user's roadmap (IDOR check), 404 on non-existent cv_session_id
 
 ### Implementation for User Story 11
 
-- [ ] T151 [P] [US11] Create `Backend/models/roadmap.py` — `CareerRoadmap` model with columns: `id`, `user_id` (FK), `cv_session_id` (FK nullable — user may re-generate without a session), `target_role` (String), `roadmap_data` (JSON — full structured roadmap), `created_at`
-- [ ] T152 [US11] Create `Backend/migrations/versions/008_career_roadmap.py` — add `career_roadmaps` table
-- [ ] T153 [P] [US11] Add schemas to `Backend/models/schemas.py`: `RoadmapGenerateRequest` (cv_session_id, target_role), `RoadmapResource` (name, url, type: course/book/video/project, is_free, estimated_hours), `RoadmapPhase` (name, estimated_weeks, skills_covered, resources: list[RoadmapResource], project_to_build, milestone), `CareerInsight` (salary_range_local, salary_range_remote, top_companies: list[str], hot_skills: list[str], market_demand: high/medium/low), `QuickWin` (action, why, time_required), `RoadmapResponse` (id, target_role, total_estimated_weeks, phases, career_insight, quick_wins, created_at)
-- [ ] T154 [US11] Create `Backend/rag/prompts.py` CAREER_ROADMAP_PROMPT — a detailed system prompt instructing the LLM to return a strict JSON object containing: `phases` (array of 3–5 phases, each with name, estimated_weeks, skills_covered array, resources array with name/url/type/is_free/estimated_hours, project_to_build description, milestone), `career_insight` (salary_range_local in EGP, salary_range_remote in USD, top_companies list, hot_skills list, market_demand), `quick_wins` (3 immediate actions with action text, why it matters, time required); prompt must include "respond ONLY with valid JSON, no markdown, no explanation"
-- [ ] T155 [US11] Create `Backend/services/roadmap_service.py` — `generate_career_roadmap(cv_text: str, current_skills: list, target_role: str) -> dict`: builds the prompt by injecting extracted CV skills + target role, calls the LLM (Groq), parses JSON response, validates required keys, handles malformed output by returning a structured error dict rather than raising; also `save_roadmap(db, user_id, cv_session_id, target_role, roadmap_data)`, `get_roadmap(db, roadmap_id, user_id)`, `list_roadmaps(db, user_id)`
-- [ ] T156 [US11] Create `Backend/routers/roadmap.py` — `POST /roadmap/generate` (auth required; loads cv_session, calls require_ownership, extracts cv_text + skills from session, calls generate_career_roadmap, saves, returns RoadmapResponse), `GET /roadmap` (list user's roadmaps, newest first — id, target_role, total_estimated_weeks, created_at only), `GET /roadmap/{roadmap_id}` (full roadmap, require_ownership); add `require_ownership` on all resource endpoints
-- [ ] T157 [US11] Register `roadmap` router in `Backend/app/main.py`; add `/roadmap` proxy rule to `frontend/nginx.conf`
-- [ ] T158 [P] [US11] Create `frontend/src/components/RoadmapPhaseCard.tsx` — expandable accordion card per phase; header shows phase name + estimated weeks + progress indicator; expanded body shows: skill chips, resource list (each row: name, free/paid badge, type icon, hours estimate, external link), project description card, milestone callout box; use shadcn/ui Accordion
-- [ ] T159 [P] [US11] Create `frontend/src/components/CareerInsightCard.tsx` — displays: salary range (local/remote) as a highlighted stat row, market demand badge (High/Medium/Low with colour), top 5 companies as logo-placeholder chips, hot skills as coloured badge list
-- [ ] T160 [P] [US11] Create `frontend/src/components/QuickWinsCard.tsx` — numbered list of 3 immediate actions; each shows action text, a "why" tooltip/tooltip, and time badge (e.g., "30 min"); UI-only checkboxes for personal tracking (stored in localStorage)
-- [ ] T161 [US11] Create `frontend/src/pages/CareerRoadmap.tsx` — target role input + "Generate" button at top; total timeline summary bar (X weeks, Y phases, Z resources); `CareerInsightCard` (salary + market data); `QuickWinsCard`; vertical timeline of `RoadmapPhaseCard` components; left sidebar (or top dropdown) listing all saved roadmaps for this user with a "New Roadmap" button; loading skeleton while generation is in progress
-- [ ] T162 [US11] Add roadmap API calls to `frontend/src/api.ts`: `generateRoadmap(sessionId, targetRole)`, `listRoadmaps()`, `getRoadmap(id)`; add `/roadmap` route to frontend router; add "Career Roadmap" nav item
+- [X] T151 [P] [US11] Create `Backend/models/roadmap.py` — `CareerRoadmap` model with columns: `id`, `user_id` (FK), `cv_session_id` (FK nullable — user may re-generate without a session), `target_role` (String), `roadmap_data` (JSON — full structured roadmap), `created_at`
+- [X] T152 [US11] Create `Backend/migrations/versions/008_career_roadmap.py` — add `career_roadmaps` table
+- [X] T153 [P] [US11] Add schemas to `Backend/models/schemas.py`: `RoadmapGenerateRequest` (cv_session_id, target_role), `RoadmapResource` (name, url, type: course/book/video/project, is_free, estimated_hours), `RoadmapPhase` (name, estimated_weeks, skills_covered, resources: list[RoadmapResource], project_to_build, milestone), `CareerInsight` (salary_range_local, salary_range_remote, top_companies: list[str], hot_skills: list[str], market_demand: high/medium/low), `QuickWin` (action, why, time_required), `RoadmapResponse` (id, target_role, total_estimated_weeks, phases, career_insight, quick_wins, created_at)
+- [X] T154 [US11] Create `Backend/rag/prompts.py` CAREER_ROADMAP_PROMPT — a detailed system prompt instructing the LLM to return a strict JSON object containing: `phases` (array of 3–5 phases, each with name, estimated_weeks, skills_covered array, resources array with name/url/type/is_free/estimated_hours, project_to_build description, milestone), `career_insight` (salary_range_local in EGP, salary_range_remote in USD, top_companies list, hot_skills list, market_demand), `quick_wins` (3 immediate actions with action text, why it matters, time required); prompt must include "respond ONLY with valid JSON, no markdown, no explanation"
+- [X] T155 [US11] Create `Backend/services/roadmap_service.py` — `generate_career_roadmap(cv_text: str, current_skills: list, target_role: str) -> dict`: builds the prompt by injecting extracted CV skills + target role, calls the LLM (Groq), parses JSON response, validates required keys, handles malformed output by returning a structured error dict rather than raising; also `save_roadmap(db, user_id, cv_session_id, target_role, roadmap_data)`, `get_roadmap(db, roadmap_id, user_id)`, `list_roadmaps(db, user_id)`
+- [X] T156 [US11] Create `Backend/routers/roadmap.py` — `POST /roadmap/generate` (auth required; loads cv_session, calls require_ownership, extracts cv_text + skills from session, calls generate_career_roadmap, saves, returns RoadmapResponse), `GET /roadmap` (list user's roadmaps, newest first — id, target_role, total_estimated_weeks, created_at only), `GET /roadmap/{roadmap_id}` (full roadmap, require_ownership); add `require_ownership` on all resource endpoints
+- [X] T157 [US11] Register `roadmap` router in `Backend/app/main.py`; add `/roadmap` proxy rule to `frontend/nginx.conf`
+- [X] T158 [P] [US11] Create `frontend/src/components/RoadmapPhaseCard.tsx` — expandable accordion card per phase; header shows phase name + estimated weeks + progress indicator; expanded body shows: skill chips, resource list (each row: name, free/paid badge, type icon, hours estimate, external link), project description card, milestone callout box; use shadcn/ui Accordion
+- [X] T159 [P] [US11] Create `frontend/src/components/CareerInsightCard.tsx` — displays: salary range (local/remote) as a highlighted stat row, market demand badge (High/Medium/Low with colour), top 5 companies as logo-placeholder chips, hot skills as coloured badge list
+- [X] T160 [P] [US11] Create `frontend/src/components/QuickWinsCard.tsx` — numbered list of 3 immediate actions; each shows action text, a "why" tooltip/tooltip, and time badge (e.g., "30 min"); UI-only checkboxes for personal tracking (stored in localStorage)
+- [X] T161 [US11] Create `frontend/src/pages/CareerRoadmap.tsx` — target role input + "Generate" button at top; total timeline summary bar (X weeks, Y phases, Z resources); `CareerInsightCard` (salary + market data); `QuickWinsCard`; vertical timeline of `RoadmapPhaseCard` components; left sidebar (or top dropdown) listing all saved roadmaps for this user with a "New Roadmap" button; loading skeleton while generation is in progress
+- [X] T162 [US11] Add roadmap API calls to `frontend/src/api.ts`: `generateRoadmap(sessionId, targetRole)`, `listRoadmaps()`, `getRoadmap(id)`; add `/roadmap` route to frontend router; add "Career Roadmap" nav item
 
 **Checkpoint**: Roadmap generates with all required JSON fields. T149–T150 pass. Frontend renders phases, resources, and career insight correctly. IDOR check blocks access to other users' roadmaps.
 
@@ -396,7 +396,7 @@ description: "Task list for HireIQ Production SaaS Launch — Revised Phase Orde
 
 **Goal**: Free / Professional / Recruiter tiers, Paymob checkout, feature-gated endpoints, subscription lifecycle. Referral credits from Phase 9 are applied at activation time.
 
-**Independent Test**: Free user hits gated endpoint → 402 → visits Pricing page → Paymob checkout → webhook fires → account upgraded → gated endpoint now returns 200 → if referred user, referrer gets 1 free month credited.
+**Independent Test**: Free user hits gated endpoint → 402 → visits Pricing page → Paymob checkout → webhook fires → account upgraded → gated endpoint now returns 200 → if referred user, referrer gets 10 days free credited.
 
 ### Tests for User Story 3
 

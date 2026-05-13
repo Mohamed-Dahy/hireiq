@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import type { Variants } from 'framer-motion'
-import { Download, Loader2 } from 'lucide-react'
+import { Download, Loader2, Map as MapIcon } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import ScoreGauge from '../components/ScoreGauge'
 import SkillGapList from '../components/SkillGapList'
 import QuestionCard from '../components/QuestionCard'
 import SkillsInventory from '../components/SkillsInventory'
 import SkillGapChart from '../components/SkillGapChart'
-import StudyRoadmap from '../components/StudyRoadmap'
 import { useToast } from '../components/Toast'
 import type { CVUploadResponse, StructuredAnalysis } from '../api'
 import { parseQuestions } from '../utils/parseQuestions'
@@ -17,6 +16,7 @@ interface Props {
   result: CVUploadResponse
   onBack: () => void
   onPractice: (questions: string[]) => void
+  onRoadmap: (sessionId: number) => void
 }
 
 const fadeUp: Variants = {
@@ -24,7 +24,7 @@ const fadeUp: Variants = {
   show:   { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0, 0, 0.2, 1] } },
 }
 
-export default function Results({ result, onBack, onPractice }: Props) {
+export default function Results({ result, onBack, onPractice, onRoadmap }: Props) {
   const reduced = useReducedMotion()
   const toast = useToast()
   const [analysis, setAnalysis] = useState('')
@@ -173,6 +173,15 @@ export default function Results({ result, onBack, onPractice }: Props) {
           transition={{ duration: 0.4, ease: [0, 0, 0.2, 1] }}
           className="space-y-8"
         >
+          {structured.candidate_level && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">Assessed level:</span>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-violet-100 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800">
+                {structured.candidate_level}
+              </span>
+            </div>
+          )}
+
           {structured.skill_inventory?.length > 0 && (
             <div>
               <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-3">Your Skills</h3>
@@ -187,12 +196,13 @@ export default function Results({ result, onBack, onPractice }: Props) {
             </div>
           )}
 
-          {structured.study_roadmap?.length > 0 && (
-            <div>
-              <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-3">Study Roadmap</h3>
-              <StudyRoadmap roadmap={structured.study_roadmap} />
-            </div>
-          )}
+          <button
+            onClick={() => onRoadmap(result.session_id)}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium rounded-xl transition-colors cursor-pointer"
+          >
+            <MapIcon size={16} strokeWidth={1.5} />
+            Build My Career Roadmap →
+          </button>
         </motion.div>
       )}
 

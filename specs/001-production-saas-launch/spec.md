@@ -260,7 +260,7 @@ and logged without accessing protected data or disrupting other users.
 ### User Story 9 — Referral & Viral Growth Engine (Priority: P2)
 
 Every registered user has a unique, shareable referral link. When a referred user
-subscribes to any paid plan, the referrer automatically earns one month free,
+subscribes to any paid plan, the referrer automatically earns 10 days free,
 credited to their next billing cycle. A public leaderboard (usernames only —
 no PII) shows the top referrers and creates social motivation to share.
 
@@ -271,7 +271,7 @@ into the billing system from day one, not retrofitted later.
 
 **Independent Test**: User A shares their referral link → User B registers via
 the link → User B pays for a plan → User A's account shows 1 conversion and
-1 earned free month → both receive confirmation emails → leaderboard shows
+10 days free earned → both receive confirmation emails → leaderboard shows
 User A's referral count.
 
 **Acceptance Scenarios**:
@@ -283,7 +283,7 @@ User A's referral count.
    **Then** the referral relationship is recorded and will be credited when
    they subscribe.
 3. **Given** a referred user who subscribes to a paid plan, **When** the
-   payment is confirmed, **Then** the referrer automatically earns one month
+   payment is confirmed, **Then** the referrer automatically earns 10 days
    free on their next billing cycle, and both users receive a notification.
 4. **Given** a user who tries to refer themselves (same email or same device),
    **When** they attempt to register via their own link, **Then** the self-

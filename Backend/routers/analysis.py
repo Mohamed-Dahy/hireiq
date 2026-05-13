@@ -69,11 +69,10 @@ def analyze(
         # 2. Compute structured analysis
         structured = analyze_structured(cv_text=cv_text, jd_text=session.jd_text)
 
-        # 3. Persist to DB (skill_inventory, gap_report, study_roadmap)
+        # 3. Persist to DB (skill_inventory, gap_report)
         try:
             session.skill_inventory = json.dumps(structured.get("skill_inventory", []))
             session.gap_report = json.dumps(structured.get("gap_report", []))
-            session.study_roadmap = json.dumps(structured.get("study_roadmap", []))
             db.commit()
         except Exception:
             db.rollback()

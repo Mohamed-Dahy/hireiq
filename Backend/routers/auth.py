@@ -15,8 +15,9 @@ DELETE /auth/account            — permanently delete account and all data
 
 import os
 import time
+from typing import Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -77,7 +78,12 @@ def _client_ip(request: Request) -> str:
 
 @router.post("/register", response_model=RegisterResponse, status_code=201)
 @limiter.limit("3/minute")
-async def register(request: Request, payload: RegisterRequest, db: Session = Depends(get_db)):
+async def register(
+    request: Request,
+    payload: RegisterRequest,
+    ref: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
     if db.query(User).filter(User.email == payload.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
     if db.query(User).filter(User.username == payload.username).first():
@@ -91,6 +97,13 @@ async def register(request: Request, payload: RegisterRequest, db: Session = Dep
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    if ref:
+        from services.referral_service import register_via_referral
+        try:
+            register_via_referral(db, ref, user)
+        except Exception:
+            pass
 
     token = create_verification_token(db, user.id)
     send_verification_email(user.email, user.username, token)

@@ -5,7 +5,7 @@ import { Layers, Menu, X, Loader2 } from 'lucide-react'
 import Landing from './pages/Landing'
 import Auth from './pages/Auth'
 import ThemeToggle from './components/ThemeToggle'
-import { getMe, logout as apiLogout, getJobStats } from './api'
+import { getMe, logout as apiLogout, getJobStats, getReferralStats } from './api'
 import type { CVUploadResponse, UserProfile } from './api'
 import { useToast } from './components/Toast'
 
@@ -19,8 +19,10 @@ const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Profile = lazy(() => import('./pages/Profile'))
 const Jobs = lazy(() => import('./pages/Jobs'))
 const Recruiter = lazy(() => import('./pages/Recruiter'))
+const Referrals = lazy(() => import('./pages/Referrals'))
+const CareerRoadmap = lazy(() => import('./pages/CareerRoadmap'))
 
-type Page = 'home' | 'upload' | 'results' | 'history' | 'detail' | 'interview' | 'profile' | 'jobs' | 'recruiter'
+type Page = 'home' | 'upload' | 'results' | 'history' | 'detail' | 'interview' | 'profile' | 'jobs' | 'recruiter' | 'referrals' | 'roadmap'
 type View = 'landing' | 'auth' | 'app'
 
 const PageLoader = () => (
@@ -35,6 +37,7 @@ function getInitialViewAndMode(): { view: View; authMode: 'register' | 'login' |
   const token = params.get('token') ?? undefined
   if (path === '/verify-email' && token) return { view: 'auth', authMode: 'verify-email', urlToken: token }
   if (path === '/reset-password' && token) return { view: 'auth', authMode: 'reset-password', urlToken: token }
+  if (path === '/referrals' && localStorage.getItem('access_token')) return { view: 'app', authMode: 'login' }
   if (localStorage.getItem('access_token')) return { view: 'app', authMode: 'login' }
   return { view: 'landing', authMode: 'register' }
 }
@@ -72,6 +75,8 @@ export default function App() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [activePipelineCount, setActivePipelineCount] = useState<number | null>(null)
+  const [referralConversionCount, setReferralConversionCount] = useState<number>(0)
+  const [roadmapSessionId, setRoadmapSessionId] = useState<number | null>(null)
   const [offline, setOffline] = useState(false)
 
   const [dark, setDark] = useState(() => localStorage.getItem('theme') !== 'light')
@@ -113,6 +118,8 @@ export default function App() {
     if (view === 'app') {
       getMe().then((res) => { setProfile(res.data); sessionAuthenticated.current = true }).catch(() => {})
       getJobStats().then(res => setActivePipelineCount(res.data.total_active)).catch(() => {})
+      getReferralStats().then(res => setReferralConversionCount(res.data.total_converted)).catch(() => {})
+      if (window.location.pathname === '/referrals') setPage('referrals')
     }
   }, [view])
 
@@ -142,6 +149,8 @@ export default function App() {
     { id: 'upload'    as const, label: 'Analyze' },
     { id: 'jobs'      as const, label: 'Jobs', badge: activePipelineCount ?? undefined },
     { id: 'recruiter' as const, label: 'Recruiter' },
+    { id: 'referrals' as const, label: 'Referrals', badge: referralConversionCount > 0 ? referralConversionCount : undefined },
+    { id: 'roadmap'   as const, label: 'Career Roadmap' },
     { id: 'history'   as const, label: 'History' },
     { id: 'interview' as const, label: 'Interview' },
   ]
@@ -297,7 +306,7 @@ export default function App() {
         {page === 'results' && result && (
           <motion.div key="results" variants={pageVariants} initial="initial" animate="animate" exit="exit">
             <Suspense fallback={<PageLoader />}>
-              <Results result={result} onBack={() => setPage('upload')} onPractice={(qs) => goToPractice(qs, result.session_id)} />
+              <Results result={result} onBack={() => setPage('upload')} onPractice={(qs) => goToPractice(qs, result.session_id)} onRoadmap={(sid) => { setRoadmapSessionId(sid); setPage('roadmap') }} />
             </Suspense>
           </motion.div>
         )}
@@ -339,6 +348,20 @@ export default function App() {
           <motion.div key="recruiter" variants={pageVariants} initial="initial" animate="animate" exit="exit">
             <Suspense fallback={<PageLoader />}>
               <Recruiter />
+            </Suspense>
+          </motion.div>
+        )}
+        {page === 'referrals' && (
+          <motion.div key="referrals" variants={pageVariants} initial="initial" animate="animate" exit="exit">
+            <Suspense fallback={<PageLoader />}>
+              <Referrals />
+            </Suspense>
+          </motion.div>
+        )}
+        {page === 'roadmap' && (
+          <motion.div key="roadmap" variants={pageVariants} initial="initial" animate="animate" exit="exit">
+            <Suspense fallback={<PageLoader />}>
+              <CareerRoadmap initialSessionId={roadmapSessionId} />
             </Suspense>
           </motion.div>
         )}

@@ -170,6 +170,7 @@ export interface QuestionItem {
 }
 
 export interface StructuredAnalysis {
+  candidate_level?: string
   skill_inventory: SkillItem[]
   gap_report: GapItem[]
   study_roadmap: RoadmapItem[]
@@ -452,3 +453,92 @@ export const updateCandidateRank = (listId: number, candidateId: number, rank: n
 
 export const exportRecruiterList = (listId: number) =>
   api.get<ArrayBuffer>(`/recruiter/lists/${listId}/export`, { responseType: 'arraybuffer' })
+
+// ── Phase 9: Referrals ─────────────────────────────────────────────────────
+
+export interface ReferralCodeResponse {
+  code: string
+  referral_url: string
+}
+
+export interface ReferralStats {
+  total_referred: number
+  total_converted: number
+  days_earned: number
+}
+
+export interface LeaderboardEntry {
+  username: string
+  referral_count: number
+}
+
+export const getMyReferralCode = () =>
+  api.get<ReferralCodeResponse>('/referrals/my-code')
+
+export const getReferralStats = () =>
+  api.get<ReferralStats>('/referrals/stats')
+
+export const getLeaderboard = () =>
+  api.get<LeaderboardEntry[]>('/referrals/leaderboard')
+
+// ── Phase 11: Career Roadmap ──────────────────────────────────────────────
+
+export interface RoadmapResource {
+  name: string
+  url: string
+  type: string
+  is_free: boolean
+  estimated_hours: number
+}
+
+export interface RoadmapPhase {
+  name: string
+  estimated_weeks: number
+  skills_covered: string[]
+  resources: RoadmapResource[]
+  project_to_build: string
+  milestone: string
+}
+
+export interface CareerInsight {
+  salary_range_local: string
+  salary_range_remote: string
+  top_companies: string[]
+  hot_skills: string[]
+  market_demand: string
+}
+
+export interface QuickWin {
+  action: string
+  why: string
+  time_required: string
+}
+
+export interface RoadmapListItem {
+  id: number
+  target_role: string
+  total_estimated_weeks: number
+  created_at: string
+}
+
+export interface RoadmapResponse {
+  id: number
+  target_role: string
+  total_estimated_weeks: number
+  phases: RoadmapPhase[]
+  career_insight: CareerInsight
+  quick_wins: QuickWin[]
+  created_at: string
+}
+
+export const generateRoadmap = (cv_session_id: number | null, target_role: string) =>
+  api.post<RoadmapResponse>('/roadmap/generate', { cv_session_id, target_role })
+
+export const listRoadmaps = () =>
+  api.get<RoadmapListItem[]>('/roadmap')
+
+export const getRoadmap = (id: number) =>
+  api.get<RoadmapResponse>(`/roadmap/${id}`)
+
+export const getMySessions = () =>
+  api.get<Array<{ id: number; cv_filename: string; created_at: string; match_score: number | null }>>('/cv/sessions')

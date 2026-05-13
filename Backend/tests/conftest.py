@@ -12,14 +12,30 @@ from sqlalchemy.orm import sessionmaker, Session
 
 import models.security  # noqa: F401 — registers SecurityAuditLog on shared Base
 import models.jobs     # noqa: F401 — registers JobApplication, ApplicationActivity, ApplicationContact, RecruiterList, RecruiterCandidate
+import models.referral # noqa: F401 — registers ReferralCode, ReferralConversion
+import models.roadmap  # noqa: F401 — registers CareerRoadmap
 from models.user import Base, User
 from services.auth_service import create_access_token, hash_password
 from database import get_db
+
+import socket
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
     "postgresql://postgres:postgres@localhost:5432/hireiq_test",
 )
+
+# Auto-detect execution context: if 'postgres' host is unreachable from host,
+# fall back to localhost so tests can run both inside Docker and on bare metal.
+def _resolve_test_db_url(original_url: str) -> str:
+    if "postgres" in original_url and "localhost" not in original_url:
+        try:
+            socket.getaddrinfo("postgres", 5432)
+        except (socket.gaierror, OSError):
+            original_url = original_url.replace("@postgres:", "@localhost:")
+    return original_url
+
+TEST_DATABASE_URL = _resolve_test_db_url(TEST_DATABASE_URL)
 
 _test_engine = create_engine(TEST_DATABASE_URL)
 _TestSession = sessionmaker(autocommit=False, autoflush=False, bind=_test_engine)

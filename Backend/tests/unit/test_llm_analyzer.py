@@ -20,14 +20,6 @@ VALID_STRUCTURED = {
             "resource": "kubernetes.io/docs",
         }
     ],
-    "study_roadmap": [
-        {
-            "topic": "Container Orchestration",
-            "priority": "high",
-            "estimated_hours": 20,
-            "resources": ["Kubernetes docs", "KodeKloud course"],
-        }
-    ],
     "questions": [
         {
             "question": "Describe your experience with distributed systems.",
@@ -48,7 +40,6 @@ class TestAnalyzeStructured:
         assert isinstance(result, dict)
         assert "skill_inventory" in result
         assert "gap_report" in result
-        assert "study_roadmap" in result
         assert "questions" in result
 
     def test_strips_json_markdown_fence(self):
@@ -80,7 +71,6 @@ class TestAnalyzeStructured:
 
         assert result["skill_inventory"] == []
         assert result["gap_report"] == []
-        assert result["study_roadmap"] == []
         assert result["questions"] == []
 
     def test_returns_empty_fallback_on_llm_exception(self):
@@ -117,19 +107,6 @@ class TestAnalyzeStructured:
         assert "importance" in gap
         assert "reason" in gap
         assert "resource" in gap
-
-    def test_roadmap_items_have_expected_fields(self):
-        from services.llm_analyzer import analyze_structured
-
-        with patch("services.llm_analyzer.structured_chain") as mock_chain:
-            mock_chain.invoke.return_value = json.dumps(VALID_STRUCTURED)
-            result = analyze_structured("cv text", "jd text")
-
-        item = result["study_roadmap"][0]
-        assert "topic" in item
-        assert "priority" in item
-        assert "estimated_hours" in item
-        assert "resources" in item
 
     def test_question_items_have_expected_fields(self):
         from services.llm_analyzer import analyze_structured

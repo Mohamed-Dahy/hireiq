@@ -22,9 +22,6 @@ STRUCTURED_DATA = {
     "gap_report": [
         {"skill": "Kubernetes", "importance": "high", "reason": "Required", "resource": "k8s.io"}
     ],
-    "study_roadmap": [
-        {"topic": "Containers", "priority": "high", "estimated_hours": 20, "resources": []}
-    ],
     "questions": [{"question": "Tell me about yourself.", "model_answer": "I am..."}],
 }
 
@@ -64,7 +61,6 @@ class TestGetAnalysis:
             test_user,
             skill_inventory=json.dumps(STRUCTURED_DATA["skill_inventory"]),
             gap_report=json.dumps(STRUCTURED_DATA["gap_report"]),
-            study_roadmap=json.dumps(STRUCTURED_DATA["study_roadmap"]),
         )
         resp = test_client.get(f"/cv/{session.id}/analysis", headers=auth_headers)
         assert resp.status_code == 200
@@ -80,29 +76,12 @@ class TestGetAnalysis:
             test_user,
             skill_inventory=json.dumps(STRUCTURED_DATA["skill_inventory"]),
             gap_report=json.dumps(STRUCTURED_DATA["gap_report"]),
-            study_roadmap=json.dumps(STRUCTURED_DATA["study_roadmap"]),
         )
         resp = test_client.get(f"/cv/{session.id}/analysis", headers=auth_headers)
         assert resp.status_code == 200
         body = resp.json()
         assert body["gap_report"][0]["skill"] == "Kubernetes"
         assert body["gap_report"][0]["importance"] == "high"
-
-    def test_returns_200_with_study_roadmap(
-        self, test_client: TestClient, test_db: Session, test_user: User, auth_headers: dict
-    ):
-        session = _make_session(
-            test_db,
-            test_user,
-            skill_inventory=json.dumps(STRUCTURED_DATA["skill_inventory"]),
-            gap_report=json.dumps(STRUCTURED_DATA["gap_report"]),
-            study_roadmap=json.dumps(STRUCTURED_DATA["study_roadmap"]),
-        )
-        resp = test_client.get(f"/cv/{session.id}/analysis", headers=auth_headers)
-        assert resp.status_code == 200
-        body = resp.json()
-        assert body["study_roadmap"][0]["topic"] == "Containers"
-        assert body["study_roadmap"][0]["estimated_hours"] == 20
 
     def test_returns_404_for_unknown_session(
         self, test_client: TestClient, auth_headers: dict
@@ -263,7 +242,6 @@ class TestAnalyzeStream:
         structured_payload = {
             "skill_inventory": [{"skill": "Python", "category": "hard", "level": "advanced"}],
             "gap_report": [{"skill": "K8s", "importance": "high", "reason": "Required", "resource": "k8s.io"}],
-            "study_roadmap": [{"topic": "Containers", "priority": "high", "estimated_hours": 10, "resources": []}],
             "questions": [{"question": "Tell me about Python.", "model_answer": "..."}],
         }
 
@@ -287,7 +265,6 @@ class TestAnalyzeStream:
         assert updated.skill_inventory is not None
         assert _json.loads(updated.skill_inventory)[0]["skill"] == "Python"
         assert updated.gap_report is not None
-        assert updated.study_roadmap is not None
 
     def test_stream_rejects_other_users_session(
         self, test_client: TestClient, test_db: Session, auth_headers: dict

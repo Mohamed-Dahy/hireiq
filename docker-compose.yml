@@ -1,10 +1,16 @@
-version: "3.9"
+x-logging: &default-logging
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "3"
 
 services:
 
   postgres:
     image: postgres:16-alpine
     restart: always
+    <<: *default-logging
     env_file:
       - ./Backend/.env
     volumes:
@@ -18,6 +24,7 @@ services:
   adminer:
     image: adminer:latest
     restart: always
+    <<: *default-logging
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:
@@ -27,6 +34,7 @@ services:
   redis:
     image: redis:7-alpine
     restart: always
+    <<: *default-logging
     volumes:
       - redis_data:/data
     healthcheck:
@@ -38,6 +46,7 @@ services:
   chromadb:
     image: chromadb/chroma
     restart: always
+    <<: *default-logging
     volumes:
       - chroma_data:/chroma/chroma
 
@@ -46,6 +55,7 @@ services:
       context: ./Backend
       dockerfile: Dockerfile
     restart: always
+    <<: *default-logging
     env_file:
       - ./Backend/.env
       - ./Backend/.env.docker
@@ -56,6 +66,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      chromadb:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
       interval: 10s
@@ -67,6 +79,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     restart: always
+    <<: *default-logging
     ports:
       - "3000:80"
     depends_on:

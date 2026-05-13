@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { Check, Zap, LayoutGrid, Star, Sparkles, Mic } from 'lucide-react'
-import { getMe } from '../api'
-import type { UserProfile } from '../api'
+import { Check, Zap, LayoutGrid, Star, Sparkles, Mic, Gift, ArrowRight, Users } from 'lucide-react'
+import { getMe, getReferralStats } from '../api'
+import type { UserProfile, ReferralStats } from '../api'
 
 interface Props {
   onBack: () => void
@@ -99,12 +99,19 @@ function ScoreBadge({ score }: { score: number | null }) {
 export default function Profile({ onBack, onLogout }: Props) {
   const reduced = useReducedMotion()
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [referralStats, setReferralStats] = useState<ReferralStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    getMe()
-      .then((res) => setProfile(res.data))
+    Promise.all([
+      getMe(),
+      getReferralStats().catch(() => null),
+    ])
+      .then(([profileRes, statsRes]) => {
+        setProfile(profileRes.data)
+        if (statsRes) setReferralStats(statsRes.data)
+      })
       .catch(() => setError('Could not load profile'))
       .finally(() => setLoading(false))
   }, [])
@@ -205,6 +212,38 @@ export default function Profile({ onBack, onLogout }: Props) {
           sub={profile.total_interviews === 1 ? 'answer' : 'answers'}
         />
       </motion.div>
+
+      {/* Referral mini-card */}
+      {referralStats && (
+        <motion.div variants={fadeUp} initial="hidden" animate="show">
+          <a
+            href="/referrals"
+            onClick={(e) => { e.preventDefault(); window.location.pathname = '/referrals' }}
+            className="block bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 hover:border-violet-200 dark:hover:border-violet-800 transition-colors group"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Gift size={16} strokeWidth={1.5} className="text-violet-500" />
+                <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Referrals</span>
+              </div>
+              <ArrowRight size={14} strokeWidth={1.5} className="text-zinc-400 group-hover:text-violet-500 transition-colors" />
+            </div>
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-1.5 text-zinc-500">
+                <Users size={14} strokeWidth={1.5} />
+                <span className="font-medium text-zinc-900 dark:text-zinc-100">{referralStats.total_converted}</span>
+                <span>converted</span>
+              </div>
+              <div className="text-zinc-400">·</div>
+              <div className="text-zinc-500">
+                <span className="font-medium text-zinc-900 dark:text-zinc-100">{referralStats.days_earned}</span>
+                <span> days free earned</span>
+              </div>
+            </div>
+            <div className="mt-2 text-xs text-violet-500 font-medium">View Full Referral Hub →</div>
+          </a>
+        </motion.div>
+      )}
 
       {/* Account info */}
       <motion.div

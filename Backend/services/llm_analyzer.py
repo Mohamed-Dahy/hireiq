@@ -36,7 +36,6 @@ structured_chain = structured_analysis_prompt | _structured_llm | StrOutputParse
 _FALLBACK: dict = {
     "skill_inventory": [],
     "gap_report": [],
-    "study_roadmap": [],
     "questions": [],
 }
 

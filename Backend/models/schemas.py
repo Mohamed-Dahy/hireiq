@@ -415,3 +415,84 @@ class RecruiterCandidateListResponse(BaseModel):
     list_id:    int
     list_name:  str
     candidates: list[RecruiterCandidateResponse]
+
+
+# ---------------------------------------------------------------------------
+# Phase 9: Referrals
+# ---------------------------------------------------------------------------
+
+class ReferralCodeResponse(BaseModel):
+    code: str
+    referral_url: str
+
+
+class ReferralStatsResponse(BaseModel):
+    total_referred: int
+    total_converted: int
+    days_earned: int
+
+
+class LeaderboardEntry(BaseModel):
+    username: str
+    referral_count: int
+
+
+# ---------------------------------------------------------------------------
+# Phase 11: Career Roadmap
+# ---------------------------------------------------------------------------
+
+class RoadmapResource(BaseModel):
+    name: str
+    url: str
+    type: str
+    is_free: bool
+    estimated_hours: int
+
+
+class RoadmapPhase(BaseModel):
+    name: str
+    estimated_weeks: int
+    skills_covered: list[str]
+    resources: list[RoadmapResource]
+    project_to_build: str
+    milestone: str
+
+
+class CareerInsight(BaseModel):
+    salary_range_local: str
+    salary_range_remote: str
+    top_companies: list[str]
+    hot_skills: list[str]
+    market_demand: str
+
+
+class QuickWin(BaseModel):
+    action: str
+    why: str
+    time_required: str
+
+
+class RoadmapGenerateRequest(BaseModel):
+    cv_session_id: Optional[int] = None
+    target_role: str
+
+
+class RoadmapListItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    target_role: str
+    total_estimated_weeks: int
+    created_at: datetime
+
+
+class RoadmapResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    target_role: str
+    total_estimated_weeks: int
+    phases: list[RoadmapPhase]
+    career_insight: CareerInsight
+    quick_wins: list[QuickWin]
+    created_at: datetime

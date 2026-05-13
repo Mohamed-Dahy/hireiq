@@ -344,7 +344,6 @@ class TestAnalyzeJob:
             mock_analyze.return_value = {
                 "skill_inventory": [{"skill": "Python", "category": "hard", "level": "advanced"}],
                 "gap_report": [{"skill": "K8s", "importance": "high", "reason": "Required", "resource": "k8s.io"}],
-                "study_roadmap": [],
                 "questions": [{"question": "Tell me about Python.", "model_answer": "..."}],
             }
             resp = test_client.post(f"/jobs/{job_id}/analyze", headers=auth_headers)
@@ -372,7 +371,6 @@ class TestAnalyzeJob:
             mock_analyze.return_value = {
                 "skill_inventory": [],
                 "gap_report": [{"skill": "Docker", "importance": "high", "reason": "Required", "resource": "docker.com"}],
-                "study_roadmap": [],
                 "questions": [],
             }
             resp = test_client.post(
@@ -415,7 +413,7 @@ class TestAnalyzeJob:
 
         def capture_analyze(cv_text, jd_text):
             captured_args.extend([cv_text, jd_text])
-            return {"skill_inventory": [], "gap_report": [], "study_roadmap": [], "questions": []}
+            return {"skill_inventory": [], "gap_report": [], "questions": []}
 
         with patch("routers.jobs.analyze_structured", side_effect=capture_analyze), \
              patch("routers.jobs.compute_match_score", return_value=0.0), \
