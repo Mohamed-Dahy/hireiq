@@ -83,3 +83,30 @@ class ApplicationContact(Base):
     created_at         = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     job = relationship("JobApplication", back_populates="contacts")
+
+
+class RecruiterList(Base):
+    __tablename__ = "recruiter_lists"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    user_id    = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    name       = Column(String(100), nullable=False)
+    job_title  = Column(String(200), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    candidates = relationship(
+        "RecruiterCandidate", back_populates="recruiter_list", cascade="all, delete-orphan"
+    )
+
+
+class RecruiterCandidate(Base):
+    __tablename__ = "recruiter_candidates"
+
+    id                = Column(Integer, primary_key=True, index=True)
+    recruiter_list_id = Column(Integer, ForeignKey("recruiter_lists.id"), nullable=False, index=True)
+    session_id        = Column(Integer, ForeignKey("cv_sessions.id"), nullable=False)
+    rank              = Column(Integer, nullable=True)
+    created_at        = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    recruiter_list = relationship("RecruiterList", back_populates="candidates")
+    session        = relationship("CVSession")

@@ -382,3 +382,86 @@ def generate_report(
                 pdf.ln(4)
 
     return bytes(pdf.output())
+
+
+def generate_recruiter_report(recruiter_list, candidates: list) -> bytes:
+    """Produce a PDF ranking table for a recruiter candidate list."""
+    pdf = _HireIQReport()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+
+    # Meta
+    pdf.set_font("Helvetica", size=9)
+    pdf.set_text_color(140, 140, 140)
+    pdf.cell(
+        0, 6,
+        _safe(f"List: {recruiter_list.name}    |    Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC"),
+        ln=True,
+    )
+    if recruiter_list.job_title:
+        pdf.cell(0, 6, _safe(f"Position: {recruiter_list.job_title}"), ln=True)
+    pdf.ln(4)
+
+    if not candidates:
+        pdf.section_title("No Candidates")
+        pdf.set_font("Helvetica", size=10)
+        pdf.set_text_color(100, 100, 100)
+        pdf.cell(0, 8, "This list has no candidates yet.", ln=True)
+        return bytes(pdf.output())
+
+    pdf.section_title(f"Candidate Rankings  ({len(candidates)} total)")
+
+    # Table header
+    col_rank = 15
+    col_cv   = 75
+    col_score = 25
+    col_skills = 75
+
+    pdf.set_font("Helvetica", "B", 9)
+    pdf.set_fill_color(237, 233, 254)
+    pdf.set_text_color(88, 28, 135)
+    pdf.cell(col_rank,  7, "Rank",    border=1, fill=True)
+    pdf.cell(col_cv,    7, "CV File", border=1, fill=True)
+    pdf.cell(col_score, 7, "Score %", border=1, fill=True)
+    pdf.cell(col_skills, 7, "Top Skills", border=1, fill=True, ln=True)
+
+    # Table rows
+    for i, candidate in enumerate(candidates, 1):
+        rank_label = str(candidate.rank) if candidate.rank is not None else str(i)
+        cv_name    = _safe(candidate.session.cv_filename or "-")[:35]
+        score      = candidate.session.match_score
+        score_str  = f"{score:.1f}" if score is not None else "-"
+
+        # Extract top 3 hard skills from skill_inventory JSON
+        skills_str = "-"
+        inv = candidate.session.skill_inventory
+        if inv and isinstance(inv, dict):
+            hard = inv.get("hard", [])
+            if hard:
+                skills_str = _safe(", ".join(str(s) for s in hard[:3]))
+        elif inv and isinstance(inv, list):
+            skills_str = _safe(", ".join(str(s) for s in inv[:3]))
+
+        # Row background alternates
+        if i % 2 == 0:
+            pdf.set_fill_color(248, 246, 255)
+        else:
+            pdf.set_fill_color(255, 255, 255)
+
+        score_val = score or 0
+        if score_val >= 70:
+            pdf.set_text_color(22, 163, 74)
+        elif score_val >= 40:
+            pdf.set_text_color(161, 96, 10)
+        else:
+            pdf.set_text_color(185, 28, 28)
+
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.cell(col_rank, 6, rank_label, border=1, fill=True, align="C")
+        pdf.set_text_color(40, 40, 40)
+        pdf.set_font("Helvetica", size=9)
+        pdf.cell(col_cv,    6, cv_name,    border=1, fill=True)
+        pdf.cell(col_score, 6, score_str,  border=1, fill=True, align="C")
+        pdf.cell(col_skills, 6, skills_str, border=1, fill=True, ln=True)
+
+    return bytes(pdf.output())

@@ -11,7 +11,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
 import models.security  # noqa: F401 — registers SecurityAuditLog on shared Base
-import models.jobs     # noqa: F401 — registers JobApplication, ApplicationActivity, ApplicationContact
+import models.jobs     # noqa: F401 — registers JobApplication, ApplicationActivity, ApplicationContact, RecruiterList, RecruiterCandidate
 from models.user import Base, User
 from services.auth_service import create_access_token, hash_password
 from database import get_db

@@ -402,3 +402,53 @@ export const getUpcomingJobs = () =>
 
 export const getStaleJobs = () =>
   api.get<JobApplication[]>('/jobs/stale')
+
+// ── Phase 7: Recruiter Dashboard ─────────────────────────────────────────────
+
+export interface RecruiterList {
+  id: number
+  name: string
+  job_title: string | null
+  candidate_count: number
+  created_at: string
+}
+
+export interface RecruiterCandidate {
+  id: number
+  session_id: number
+  rank: number | null
+  cv_filename: string
+  match_score: number | null
+  skill_inventory: unknown
+  created_at: string
+}
+
+export interface RecruiterCandidateListResponse {
+  list_id: number
+  list_name: string
+  candidates: RecruiterCandidate[]
+}
+
+export const getRecruiterLists = () =>
+  api.get<RecruiterList[]>('/recruiter/lists')
+
+export const createRecruiterList = (name: string, job_title?: string) =>
+  api.post<RecruiterList>('/recruiter/lists', { name, job_title })
+
+export const deleteRecruiterList = (listId: number) =>
+  api.delete(`/recruiter/lists/${listId}`)
+
+export const getRecruiterCandidates = (listId: number) =>
+  api.get<RecruiterCandidateListResponse>(`/recruiter/lists/${listId}/candidates`)
+
+export const addRecruiterCandidate = (listId: number, sessionId: number) =>
+  api.post<RecruiterCandidate>(`/recruiter/lists/${listId}/candidates`, { session_id: sessionId })
+
+export const removeRecruiterCandidate = (listId: number, candidateId: number) =>
+  api.delete(`/recruiter/lists/${listId}/candidates/${candidateId}`)
+
+export const updateCandidateRank = (listId: number, candidateId: number, rank: number) =>
+  api.patch<RecruiterCandidate>(`/recruiter/lists/${listId}/candidates/${candidateId}`, { rank })
+
+export const exportRecruiterList = (listId: number) =>
+  api.get<ArrayBuffer>(`/recruiter/lists/${listId}/export`, { responseType: 'arraybuffer' })

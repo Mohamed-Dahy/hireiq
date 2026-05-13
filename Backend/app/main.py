@@ -6,7 +6,7 @@ from fastapi.security import HTTPBearer
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from routers import cv, auth, analysis, interview, jobs
+from routers import cv, auth, analysis, interview, jobs, recruiter
 from limiter import limiter
 from app.config import settings, configure_logging
 from middleware.security_headers import SecurityHeadersMiddleware
@@ -61,3 +61,4 @@ app.include_router(cv.router,        prefix="/cv",        tags=["cv"])
 app.include_router(analysis.router,  prefix="/analyze",   tags=["analysis"])
 app.include_router(interview.router, prefix="/interview",  tags=["interview"])
 app.include_router(jobs.router)
+app.include_router(recruiter.router)

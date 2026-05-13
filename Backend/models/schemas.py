@@ -5,9 +5,11 @@ Pydantic models that define what the API accepts (requests)
 and what it returns (responses). No raw dicts ever leave the API.
 """
 
-from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, field_validator, model_validator
 from typing import Any, Optional
 from datetime import date, datetime
+
+_PG_INT_MAX = 2_147_483_647
 
 
 # ---------------------------------------------------------------------------
@@ -203,6 +205,12 @@ class UserProfileResponse(BaseModel):
 # Phase 6: ATS Job Tracker
 # ---------------------------------------------------------------------------
 
+def _validate_salary(v: Optional[int], field_name: str) -> Optional[int]:
+    if v is not None and (v < 0 or v > _PG_INT_MAX):
+        raise ValueError(f"{field_name} must be between 0 and {_PG_INT_MAX:,}")
+    return v
+
+
 class JobCreateRequest(BaseModel):
     company:          str
     title:            str
@@ -221,6 +229,16 @@ class JobCreateRequest(BaseModel):
     notes:            Optional[str] = None
     cover_letter:     Optional[str] = None
     rejection_reason: Optional[str] = None
+
+    @field_validator("salary_min")
+    @classmethod
+    def check_salary_min(cls, v: Optional[int]) -> Optional[int]:
+        return _validate_salary(v, "salary_min")
+
+    @field_validator("salary_max")
+    @classmethod
+    def check_salary_max(cls, v: Optional[int]) -> Optional[int]:
+        return _validate_salary(v, "salary_max")
 
 
 class JobUpdateRequest(BaseModel):
@@ -241,6 +259,16 @@ class JobUpdateRequest(BaseModel):
     notes:            Optional[str] = None
     cover_letter:     Optional[str] = None
     rejection_reason: Optional[str] = None
+
+    @field_validator("salary_min")
+    @classmethod
+    def check_salary_min(cls, v: Optional[int]) -> Optional[int]:
+        return _validate_salary(v, "salary_min")
+
+    @field_validator("salary_max")
+    @classmethod
+    def check_salary_max(cls, v: Optional[int]) -> Optional[int]:
+        return _validate_salary(v, "salary_max")
 
 
 class JobResponse(BaseModel):
@@ -342,3 +370,48 @@ class JobStatsResponse(BaseModel):
     stale_count:    int
     upcoming_count: int
     weekly_trend:   list[Any]
+
+
+# ---------------------------------------------------------------------------
+# Phase 7: Recruiter Dashboard
+# ---------------------------------------------------------------------------
+
+class RecruiterListCreate(BaseModel):
+    name:      str
+    job_title: Optional[str] = None
+
+
+class RecruiterListResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id:              int
+    name:            str
+    job_title:       Optional[str]
+    candidate_count: int = 0
+    created_at:      datetime
+
+
+class AddCandidateRequest(BaseModel):
+    session_id: int
+
+
+class RecruiterCandidateResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id:               int
+    session_id:       int
+    rank:             Optional[int]
+    cv_filename:      str
+    match_score:      Optional[float]
+    skill_inventory:  Optional[Any]
+    created_at:       datetime
+
+
+class RecruiterCandidateUpdate(BaseModel):
+    rank: Optional[int] = None
+
+
+class RecruiterCandidateListResponse(BaseModel):
+    list_id:    int
+    list_name:  str
+    candidates: list[RecruiterCandidateResponse]

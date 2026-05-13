@@ -9,7 +9,7 @@ description: "Task list for HireIQ Production SaaS Launch — Revised Phase Orde
 
 **Tests**: Required per constitution (Principle II) — unit + integration for every new endpoint.
 
-**Phase Status**: Phases 1–6 ✅ COMPLETE (168 tests pass, 1 skipped) | Phases 7–14 pending
+**Phase Status**: Phases 1–7 ✅ COMPLETE (192 tests pass, 1 skipped) | Phases 8–14 pending
 
 **Organization**: Phases 1–2 shared foundations. Phases 3–4 security hardening. Phases 5–8 core product features. Phases 9–11 growth & platform features (new). Phase 12 subscriptions & payments. Phase 13 full system testing. Phase 14 polish.
 
@@ -223,20 +223,20 @@ description: "Task list for HireIQ Production SaaS Launch — Revised Phase Orde
 >
 > **Execution order within this phase**: T095 (write tests, confirm FAIL) → T096 (models) → T097 (migration — required before tests can pass) → T098 (schemas) → T099 (router) → T100 (PDF service) → T101 (register + nginx) → T102–T105 (frontend, all parallel). T096 + T097 must both be done before re-running T095 tests.
 
-- [ ] T095 [P] [US8] Integration test for recruiter dashboard in `Backend/tests/integration/test_recruiter.py`: list CRUD, add candidate, 20-candidate limit enforcement, rank update, PDF export returns PDF
+- [X] T095 [P] [US8] Integration test for recruiter dashboard in `Backend/tests/integration/test_recruiter.py`: list CRUD, add candidate, 20-candidate limit enforcement, rank update, PDF export returns PDF
 
 ### Implementation for User Story 8
 
-- [ ] T096 [P] [US8] Add `RecruiterList` and `RecruiterCandidate` models to `Backend/models/jobs.py` per data-model.md
-- [ ] T097 [US8] Create `Backend/migrations/versions/006_recruiter_tables.py` (`down_revision="005"`) — add `recruiter_lists` and `recruiter_candidates` tables. NOTE: do NOT edit 004_jobs_recruiter.py — it is already applied to the DB; 005 is `005_user_sessions_revoked_at.py`
-- [ ] T098 [P] [US8] Add `RecruiterListCreate`, `RecruiterListResponse`, `RecruiterCandidateResponse`, `RecruiterCandidateUpdate` schemas to `Backend/models/schemas.py`
-- [ ] T099 [US8] Create `Backend/routers/recruiter.py` — full CRUD for lists and candidates; `GET /recruiter/lists/{id}/export`; all require ownership check
-- [ ] T100 [US8] Extend `Backend/services/report_generator.py` — `generate_recruiter_report(recruiter_list, candidates)` produces PDF with ranked candidate table
-- [ ] T101 [US8] Register `recruiter` router in `Backend/app/main.py`; add `/recruiter` proxy rule to `frontend/nginx.conf`
-- [ ] T102 [P] [US8] Create `frontend/src/components/CandidateCompare.tsx` — sortable table with score, skills chips, rank badge, remove button
-- [ ] T103 [US8] Create `frontend/src/pages/Recruiter.tsx` — list manager, candidate compare view, export PDF button
-- [ ] T104 [US8] Add recruiter calls to `frontend/src/api.ts`
-- [ ] T105 [US8] Add `/recruiter` route to frontend router
+- [X] T096 [P] [US8] Add `RecruiterList` and `RecruiterCandidate` models to `Backend/models/jobs.py` per data-model.md
+- [X] T097 [US8] Create `Backend/migrations/versions/006_recruiter_tables.py` (`down_revision="005b"`) — add `recruiter_lists` and `recruiter_candidates` tables
+- [X] T098 [P] [US8] Add `RecruiterListCreate`, `RecruiterListResponse`, `RecruiterCandidateResponse`, `RecruiterCandidateUpdate` schemas to `Backend/models/schemas.py`
+- [X] T099 [US8] Create `Backend/routers/recruiter.py` — full CRUD for lists and candidates; `GET /recruiter/lists/{id}/export`; all require ownership check
+- [X] T100 [US8] Extend `Backend/services/report_generator.py` — `generate_recruiter_report(recruiter_list, candidates)` produces PDF with ranked candidate table
+- [X] T101 [US8] Register `recruiter` router in `Backend/app/main.py`; add `/recruiter` proxy rule to `frontend/nginx.conf`
+- [X] T102 [P] [US8] Create `frontend/src/components/CandidateCompare.tsx` — sortable table with score, skills chips, rank badge, remove button
+- [X] T103 [US8] Create `frontend/src/pages/Recruiter.tsx` — list manager, candidate compare view, export PDF button
+- [X] T104 [US8] Add recruiter calls to `frontend/src/api.ts`
+- [X] T105 [US8] Add `/recruiter` route to frontend router
 
 **Checkpoint**: Recruiter dashboard independently testable. T095 passes.
 

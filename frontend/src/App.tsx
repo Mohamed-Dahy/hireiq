@@ -11,11 +11,12 @@ import Interview from './pages/Interview'
 import Dashboard from './pages/Dashboard'
 import Profile from './pages/Profile'
 import Jobs from './pages/Jobs'
+import Recruiter from './pages/Recruiter'
 import { getMe, logout as apiLogout, getJobStats } from './api'
 import type { CVUploadResponse, UserProfile } from './api'
 import { useToast } from './components/Toast'
 
-type Page = 'home' | 'upload' | 'results' | 'history' | 'detail' | 'interview' | 'profile' | 'jobs'
+type Page = 'home' | 'upload' | 'results' | 'history' | 'detail' | 'interview' | 'profile' | 'jobs' | 'recruiter'
 type View = 'landing' | 'auth' | 'app'
 
 function getInitialViewAndMode(): { view: View; authMode: 'register' | 'login' | 'verify-email' | 'reset-password'; urlToken?: string } {
@@ -151,6 +152,7 @@ export default function App() {
     { id: 'home'      as const, label: 'Home' },
     { id: 'upload'    as const, label: 'Analyze' },
     { id: 'jobs'      as const, label: 'Jobs', badge: activePipelineCount ?? undefined },
+    { id: 'recruiter' as const, label: 'Recruiter' },
     { id: 'history'   as const, label: 'History' },
     { id: 'interview' as const, label: 'Interview' },
   ]
@@ -367,6 +369,12 @@ export default function App() {
         {page === 'jobs' && (
           <motion.div key="jobs" variants={pageVariants} initial="initial" animate="animate" exit="exit">
             <Jobs />
+          </motion.div>
+        )}
+
+        {page === 'recruiter' && (
+          <motion.div key="recruiter" variants={pageVariants} initial="initial" animate="animate" exit="exit">
+            <Recruiter />
           </motion.div>
         )}
 
