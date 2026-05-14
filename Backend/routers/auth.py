@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from limiter import limiter
-from models.user import User, CVSession, InterviewResult, EmailVerificationToken, PasswordResetToken
+from models.user import User, CVSession, InterviewResult
 from models.schemas import (
     RegisterRequest,
     LoginRequest,
@@ -48,18 +48,9 @@ from services.auth_service import (
     check_account_locked,
     record_failed_login,
     reset_failed_login,
-    create_verification_token,
-    consume_verification_token,
-    create_password_reset_token,
-    consume_password_reset_token,
     check_forgot_password_rate,
-    RESET_MINUTES,
 )
-from services.email_service import (
-    send_verification_email,
-    send_password_reset_email,
-    send_account_deletion_email,
-)
+from services.email_service import send_account_deletion_email
 from services.security_service import write_audit_log
 from services.rag_scorer import delete_embeddings
 from app.config import settings
@@ -105,11 +96,8 @@ async def register(
         except Exception:
             pass
 
-    token = create_verification_token(db, user.id)
-    send_verification_email(user.email, user.username, token)
-
     return RegisterResponse(
-        message="Account created. Please check your email to verify your account.",
+        message="Account created. An OTP will be sent to your email to verify your account.",
         email=user.email,
     )
 
@@ -243,15 +231,12 @@ def get_me(
     )
 
 
-@router.post("/verify-email", response_model=MessageResponse)
-def verify_email(
-    request: Request,
-    token: str = Body(..., embed=True),
-    db: Session = Depends(get_db),
-):
-    user = consume_verification_token(db, token)
-    write_audit_log(db, "auth.email_verified", _client_ip(request), "allowed", user_id=user.id)
-    return MessageResponse(message="Email verified. You can now log in.")
+@router.post("/verify-email", status_code=status.HTTP_410_GONE)
+def verify_email():
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="Magic-link verification is no longer supported. Use OTP-based verification.",
+    )
 
 
 @router.post("/resend-verification", response_model=MessageResponse)
@@ -261,12 +246,8 @@ async def resend_verification(
     payload: EmailRequest,
     db: Session = Depends(get_db),
 ):
-    user = db.query(User).filter(User.email == payload.email).first()
-    # Always return 200 — don't reveal whether the email exists
-    if user and not user.email_verified:
-        token = create_verification_token(db, user.id)
-        send_verification_email(user.email, user.username, token)
-    return MessageResponse(message="If that email exists and is unverified, a new link has been sent.")
+    # OTP-based resend is implemented in Phase 3 (POST /auth/otp/send)
+    return MessageResponse(message="If that email exists and is unverified, a new verification code has been sent.")
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
@@ -277,28 +258,16 @@ async def forgot_password(
     db: Session = Depends(get_db),
 ):
     check_forgot_password_rate(payload.email)  # per-email: 3 per 15 min
-    user = db.query(User).filter(User.email == payload.email).first()
-    # Always return 200 — don't reveal whether the email exists
-    if user and user.email_verified:
-        token = create_password_reset_token(db, user.id)
-        send_password_reset_email(user.email, user.username, token)
-    return MessageResponse(message=f"If that email is registered, a reset link has been sent (valid {RESET_MINUTES} min).")
+    # OTP-based reset is implemented in Phase 3 (POST /auth/otp/send with purpose=reset)
+    return MessageResponse(message="If that email is registered, a reset code has been sent.")
 
 
-@router.post("/reset-password", response_model=MessageResponse)
-def reset_password(
-    request: Request,
-    payload: ResetPasswordRequest,
-    db: Session = Depends(get_db),
-):
-    from datetime import datetime as _dt
-    user = consume_password_reset_token(db, payload.token)
-    user.hashed_password = hash_password(payload.new_password)
-    user.sessions_revoked_at = _dt.utcnow()  # invalidate all tokens issued before now
-    reset_failed_login(db, user)
-    db.commit()
-    write_audit_log(db, "auth.password_change", _client_ip(request), "allowed", user_id=user.id)
-    return MessageResponse(message="Password reset successfully. You can now log in.")
+@router.post("/reset-password", status_code=status.HTTP_410_GONE)
+def reset_password():
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="Token-based password reset is no longer supported. Use OTP-based reset.",
+    )
 
 
 @router.delete("/account", response_model=MessageResponse)
@@ -348,9 +317,6 @@ def delete_account(
     if session_ids:
         db.query(InterviewResult).filter(InterviewResult.session_id.in_(session_ids)).delete(synchronize_session=False)
     db.query(CVSession).filter(CVSession.user_id == user.id).delete(synchronize_session=False)
-    db.query(EmailVerificationToken).filter(EmailVerificationToken.user_id == user.id).delete(synchronize_session=False)
-    db.query(PasswordResetToken).filter(PasswordResetToken.user_id == user.id).delete(synchronize_session=False)
-
     email = user.email
     username = user.username
     db.delete(user)

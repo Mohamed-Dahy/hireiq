@@ -45,10 +45,15 @@ PENDING (used_at IS NULL, attempt_count < 5, expires_at > NOW())
 
 ### MODIFY: `users` table
 
-Add column:
+Add columns:
 ```
-is_admin  BOOLEAN  NOT NULL  DEFAULT FALSE
+is_admin  BOOLEAN     NOT NULL  DEFAULT FALSE
+tier      VARCHAR(10) NOT NULL  DEFAULT 'free'
 ```
+
+- `tier` valid values: `free`, `paid`. Enforced at application layer (not DB constraint).
+- `tier` defaults to `free` for all new registrations and for all existing users at migration time.
+- Admin changes tier via `PUT /admin/tokens/users/{user_id}/tier`.
 
 (Existing `email_verification_tokens` and `password_reset_tokens` relationships removed from ORM.)
 
@@ -172,10 +177,10 @@ readiness_pct = COUNT(progress rows for user in role+level+category)
 ## Summary: Entity Relationships
 
 ```
-users (existing)
+users (modified: + is_admin, + tier)
 ├── user_profiles         1:1 (created on register)
 ├── otp_codes             1:many (by email or user_id)
-├── cv_sessions           1:many (existing)
+├── cv_sessions           1:many (existing — also used for free-tier quota count)
 │   └── interview_results  1:many (existing)
 ├── career_roadmaps       1:many (existing)
 ├── token_usage_log       1:many (new)
@@ -187,6 +192,8 @@ interview_questions (new, admin/import only)
 
 salary_benchmarks (new, admin/import only, no user FK)
 ```
+
+**Free-tier quota note**: There is no `AnalysisUsageWindow` table. The free-tier limit (2 analyses per 10-day rolling window) is enforced by a COUNT query: `SELECT COUNT(*) FROM cv_sessions WHERE user_id = ? AND created_at >= NOW() - INTERVAL '10 days'`. The "window reset date" shown to the user is computed as `MIN(created_at) + 10 days` from the same query.
 
 ---
 

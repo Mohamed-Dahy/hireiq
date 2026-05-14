@@ -259,7 +259,8 @@ Platform administrators can view real-time token consumption across all LLM oper
 - **FR-036**: Resources suggested in roadmap phases MUST be level-appropriate (no beginner content for Senior/Staff candidates).
 
 **AI Token Management**
-- **FR-037**: System MUST track CV analysis usage per user in persistent storage, counting each full analysis run as one operation.
+- **FR-036a**: Each user MUST have a `tier` field (`free` or `paid`) stored on their account record, defaulting to `free` for all new and existing users. Admins MUST be able to change a user's tier via the admin API.
+- **FR-037**: System MUST enforce the free-tier limit by counting the user's `cv_sessions` rows created within the last 10 days — no separate tracking table required. The count query runs before each analysis and blocks if the result is ≥ `FREE_TIER_ANALYSIS_LIMIT`.
 - **FR-037a**: Free-tier users MUST be limited to 2 CV analyses per 10-day rolling window. Attempting a 3rd analysis within the window MUST be blocked with a user-friendly message showing when the window resets.
 - **FR-037b**: Paid-tier users MUST be limited to 10,000 LLM tokens per day (default; configurable per user by admin).
 - **FR-038**: When a user's quota is reached (either tier), LLM endpoints MUST return a user-friendly quota message (e.g., "You've used your 2 free analyses — your next window opens on [date]") instead of propagating a 429 error.
@@ -268,13 +269,13 @@ Platform administrators can view real-time token consumption across all LLM oper
 
 ### Key Entities
 
+- **User** (modified): add `tier VARCHAR(10) DEFAULT 'free'` and `is_admin BOOLEAN DEFAULT FALSE` columns
 - **OtpCode**: email, code (hashed), purpose (registration | password_change | password_reset), expires_at, attempt_count, created_at
 - **UserProfile**: user_id (FK), stored_cv_path, linkedin_url, github_url, portfolio_url, avatar_url, bio
 - **SalaryBenchmark**: role, level, country, currency, min_salary, median_salary, max_salary, usd_min, usd_max, confidence, source, last_updated_at
 - **InterviewQuestion**: id, role, level, category, question_text, model_answer, source (kaggle | ai_curated | manual), created_at
 - **UserQuestionProgress**: user_id (FK), question_id (FK), practiced_at
 - **TokenUsageLog**: user_id (FK), date, tokens_used, operation_type, tier (free | paid)
-- **AnalysisUsageWindow**: user_id (FK), window_start (timestamp of first analysis in the current 10-day window), analyses_used (integer, resets when window_start + 10 days has passed)
 
 ---
 
@@ -303,6 +304,8 @@ Platform administrators can view real-time token consumption across all LLM oper
 - Q: What is the default per-user AI usage limit for each tier? → A: Free tier = 2 CV analyses per 10-day rolling window (operation-count based). Paid tier = 10,000 tokens/day (to be revised in a later iteration).
 - Q: Should the new Profile page replace or extend the existing Profile.tsx? → A: Replace completely. The new page absorbs all existing sections (achievements/badges, stats, referral card, account info) plus all new sections (stored CV, social links, username/password edit with OTP). No existing profile feature is removed.
 - Q: How should role selection work in the Salary Benchmark and Interview Question Bank? → A: Predefined dropdown of roles matching the seeded dataset exactly — no free text. Dataset should cover as many roles as possible at launch (target: maximize breadth of roles from Kaggle + manual seed).
+- Q: Where is a user's tier (free/paid) stored? → A: `tier VARCHAR(10) DEFAULT 'free'` column added to the `users` table in migration 009. Admin sets it via `PUT /admin/tokens/users/{user_id}/tier`. Defaults to `free` for all new and existing users.
+- Q: Should `AnalysisUsageWindow` be a separate DB table or derived from `cv_sessions`? → A: No separate table. Free-tier limit enforced by counting `cv_sessions` rows for the user in the last 10 days — simpler, no sync risk, uses existing indexed columns.
 
 ---
 

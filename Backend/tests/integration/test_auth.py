@@ -10,10 +10,8 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from models.user import User, EmailVerificationToken
+from models.user import User
 from services.auth_service import (
-    create_verification_token,
-    create_password_reset_token,
     hash_password,
     blacklist_jti,
     decode_token,
@@ -127,34 +125,6 @@ class TestLogin:
 
 
 # ---------------------------------------------------------------------------
-# POST /auth/verify-email
-# ---------------------------------------------------------------------------
-
-class TestVerifyEmail:
-    def test_verify_email_marks_user_verified(
-        self, test_client: TestClient, test_db: Session, unverified_user: User
-    ):
-        token = create_verification_token(test_db, unverified_user.id)
-        resp = test_client.post("/auth/verify-email", json={"token": token})
-        assert resp.status_code == 200
-
-        test_db.refresh(unverified_user)
-        assert unverified_user.email_verified is True
-
-    def test_verify_email_invalid_token_returns_400(self, test_client: TestClient):
-        resp = test_client.post("/auth/verify-email", json={"token": "fake-token"})
-        assert resp.status_code == 400
-
-    def test_verify_email_token_used_twice_returns_400(
-        self, test_client: TestClient, test_db: Session, unverified_user: User
-    ):
-        token = create_verification_token(test_db, unverified_user.id)
-        test_client.post("/auth/verify-email", json={"token": token})
-        resp = test_client.post("/auth/verify-email", json={"token": token})
-        assert resp.status_code == 400
-
-
-# ---------------------------------------------------------------------------
 # POST /auth/resend-verification
 # ---------------------------------------------------------------------------
 
@@ -185,63 +155,6 @@ class TestForgotPassword:
     ):
         resp = test_client.post("/auth/forgot-password", json={"email": test_user.email})
         assert resp.status_code == 200
-
-
-# ---------------------------------------------------------------------------
-# POST /auth/reset-password
-# ---------------------------------------------------------------------------
-
-class TestResetPassword:
-    def test_reset_password_changes_password(
-        self, test_client: TestClient, test_db: Session, test_user: User
-    ):
-        reset_token = create_password_reset_token(test_db, test_user.id)
-        resp = test_client.post("/auth/reset-password", json={
-            "token": reset_token,
-            "new_password": "NewSecurePass1!",
-        })
-        assert resp.status_code == 200
-
-        # Can now log in with new password
-        login_resp = test_client.post("/auth/login", json={
-            "email": test_user.email,
-            "password": "NewSecurePass1!",
-        })
-        assert login_resp.status_code == 200
-
-    def test_reset_password_invalid_token_returns_400(self, test_client: TestClient):
-        resp = test_client.post("/auth/reset-password", json={
-            "token": "fake-reset-token",
-            "new_password": "NewPass123!",
-        })
-        assert resp.status_code == 400
-
-    def test_reset_password_invalidates_existing_sessions(
-        self, test_client: TestClient, test_db: Session, test_user: User
-    ):
-        """FR-004: tokens issued before password reset must be rejected (sessions_revoked_at)."""
-        # Obtain a valid access token first
-        login_resp = test_client.post("/auth/login", json={
-            "email": test_user.email,
-            "password": "TestPass123!",
-        })
-        old_access_token = login_resp.json()["access_token"]
-        old_headers = {"Authorization": f"Bearer {old_access_token}"}
-
-        # Verify the old token works now
-        me_resp = test_client.get("/auth/me", headers=old_headers)
-        assert me_resp.status_code == 200
-
-        # Reset the password
-        reset_token = create_password_reset_token(test_db, test_user.id)
-        test_client.post("/auth/reset-password", json={
-            "token": reset_token,
-            "new_password": "BrandNewPass1!",
-        })
-
-        # The old token must now be rejected (sessions_revoked_at set by reset)
-        me_resp = test_client.get("/auth/me", headers=old_headers)
-        assert me_resp.status_code == 401
 
 
 # ---------------------------------------------------------------------------

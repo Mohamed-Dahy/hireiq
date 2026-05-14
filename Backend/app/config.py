@@ -45,6 +45,20 @@ class Settings(BaseSettings):
     postgres_password: str = ""
     postgres_db: str = "hireiq"
 
+    # --- OTP ---
+    otp_hmac_secret: str = ""
+    otp_expiry_minutes: int = 10
+    otp_max_attempts: int = 5
+    otp_rate_limit_per_30min: int = 3
+
+    # --- AI Token / Quota ---
+    free_tier_analysis_limit: int = 2
+    free_tier_window_days: int = 10
+    paid_tier_daily_token_limit: int = 10000
+    llm_provider: str = "groq"
+    llm_model: str = "llama-3.3-70b-versatile"
+    groq_price_per_1k_tokens: float = 0.0006
+
     # --- Logging ---
     log_format: str = "text"
 

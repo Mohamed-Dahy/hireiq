@@ -42,3 +42,5 @@
 2. Token quotas → Free tier: 2 CV analyses / 10-day rolling window; Paid: 10,000 tokens/day
 3. Profile page strategy → Replace Profile.tsx completely, carry over badges + referral card
 4. Role selection UI → Predefined dropdown for Salary Benchmark and Interview Bank
+5. User tier storage → `tier` column on `users` table, default `free`, set by admin
+6. AnalysisUsageWindow entity → Removed; free-tier enforcement uses direct COUNT on `cv_sessions`

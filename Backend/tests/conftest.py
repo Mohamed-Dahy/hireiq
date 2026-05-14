@@ -10,10 +10,12 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
-import models.security  # noqa: F401 — registers SecurityAuditLog on shared Base
-import models.jobs     # noqa: F401 — registers JobApplication, ApplicationActivity, ApplicationContact, RecruiterList, RecruiterCandidate
-import models.referral # noqa: F401 — registers ReferralCode, ReferralConversion
-import models.roadmap  # noqa: F401 — registers CareerRoadmap
+import models.security       # noqa: F401 — registers SecurityAuditLog on shared Base
+import models.jobs            # noqa: F401 — registers JobApplication, ApplicationActivity, ApplicationContact, RecruiterList, RecruiterCandidate
+import models.referral        # noqa: F401 — registers ReferralCode, ReferralConversion
+import models.roadmap         # noqa: F401 — registers CareerRoadmap
+import models.content         # noqa: F401 — registers SalaryBenchmark, InterviewQuestion, UserQuestionProgress
+import models.token_tracking  # noqa: F401 — registers TokenUsageLog
 from models.user import Base, User
 from services.auth_service import create_access_token, hash_password
 from database import get_db

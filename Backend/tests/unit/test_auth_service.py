@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 import pytest
 from fastapi import HTTPException
 
-from models.user import User, EmailVerificationToken, PasswordResetToken
+from models.user import User
 from services.auth_service import (
     hash_password,
     verify_password,
@@ -22,10 +22,6 @@ from services.auth_service import (
     check_account_locked,
     record_failed_login,
     reset_failed_login,
-    create_verification_token,
-    consume_verification_token,
-    create_password_reset_token,
-    consume_password_reset_token,
     MAX_FAILED_LOGINS,
     LOCKOUT_MINUTES,
 )
@@ -187,131 +183,3 @@ def test_reset_failed_login_clears_state(test_db):
     assert user.locked_until is None
 
 
-# ---------------------------------------------------------------------------
-# Email verification tokens
-# ---------------------------------------------------------------------------
-
-def test_create_verification_token_returns_string(test_db):
-    user = User(
-        email="verif@example.com",
-        username="verifuser",
-        hashed_password=hash_password("x"),
-    )
-    test_db.add(user)
-    test_db.commit()
-
-    token = create_verification_token(test_db, user.id)
-    assert isinstance(token, str)
-    assert len(token) == 36  # UUID format
-
-
-def test_create_verification_token_invalidates_previous(test_db):
-    user = User(
-        email="invprev@example.com",
-        username="invprev",
-        hashed_password=hash_password("x"),
-    )
-    test_db.add(user)
-    test_db.commit()
-
-    old_token = create_verification_token(test_db, user.id)
-    _new_token = create_verification_token(test_db, user.id)
-
-    old_record = test_db.query(EmailVerificationToken).filter(
-        EmailVerificationToken.token == old_token
-    ).first()
-    assert old_record.used_at is not None  # invalidated
-
-
-def test_consume_verification_token_verifies_user(test_db):
-    user = User(
-        email="consume@example.com",
-        username="consumeuser",
-        hashed_password=hash_password("x"),
-        email_verified=False,
-    )
-    test_db.add(user)
-    test_db.commit()
-
-    token = create_verification_token(test_db, user.id)
-    returned_user = consume_verification_token(test_db, token)
-
-    assert returned_user.email_verified is True
-
-
-def test_consume_verification_token_twice_raises(test_db):
-    user = User(
-        email="twice@example.com",
-        username="twiceuser",
-        hashed_password=hash_password("x"),
-    )
-    test_db.add(user)
-    test_db.commit()
-
-    token = create_verification_token(test_db, user.id)
-    consume_verification_token(test_db, token)
-
-    with pytest.raises(HTTPException) as exc_info:
-        consume_verification_token(test_db, token)
-    assert exc_info.value.status_code == 400
-
-
-def test_consume_expired_verification_token_raises(test_db):
-    user = User(
-        email="expired@example.com",
-        username="expireduser",
-        hashed_password=hash_password("x"),
-    )
-    test_db.add(user)
-    test_db.commit()
-
-    record = EmailVerificationToken(
-        user_id=user.id,
-        token="expired-uuid-token",
-        expires_at=datetime.utcnow() - timedelta(hours=1),
-    )
-    test_db.add(record)
-    test_db.commit()
-
-    with pytest.raises(HTTPException) as exc_info:
-        consume_verification_token(test_db, "expired-uuid-token")
-    assert exc_info.value.status_code == 400
-    assert "expired" in exc_info.value.detail.lower()
-
-
-# ---------------------------------------------------------------------------
-# Password reset tokens
-# ---------------------------------------------------------------------------
-
-def test_create_and_consume_password_reset_token(test_db):
-    user = User(
-        email="resetme@example.com",
-        username="resetme",
-        hashed_password=hash_password("OldPass123!"),
-        email_verified=True,
-    )
-    test_db.add(user)
-    test_db.commit()
-
-    token = create_password_reset_token(test_db, user.id)
-    returned_user = consume_password_reset_token(test_db, token)
-    assert returned_user.id == user.id
-
-
-def test_password_reset_token_invalidates_previous(test_db):
-    user = User(
-        email="resetprev@example.com",
-        username="resetprev",
-        hashed_password=hash_password("x"),
-        email_verified=True,
-    )
-    test_db.add(user)
-    test_db.commit()
-
-    old_token = create_password_reset_token(test_db, user.id)
-    _new_token = create_password_reset_token(test_db, user.id)
-
-    old_record = test_db.query(PasswordResetToken).filter(
-        PasswordResetToken.token == old_token
-    ).first()
-    assert old_record.used_at is not None

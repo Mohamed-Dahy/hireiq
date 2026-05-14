@@ -17,14 +17,13 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from database import get_db
-from models.user import User, EmailVerificationToken, PasswordResetToken
+from models.user import User
 from services.cache import redis_client
 
 bearer_scheme = HTTPBearer()
 
 MAX_FAILED_LOGINS = 5
 LOCKOUT_MINUTES = 15
-VERIFICATION_HOURS = 24
 RESET_MINUTES = 60
 
 
@@ -159,87 +158,6 @@ def check_forgot_password_rate(email: str) -> None:
         raise
     except Exception:
         logger.warning("Redis unavailable — forgot-password email rate limit skipped for {}", email)
-
-
-# ---------------------------------------------------------------------------
-# Email verification tokens
-# ---------------------------------------------------------------------------
-
-def create_verification_token(db: Session, user_id: int) -> str:
-    # Invalidate any previous unused tokens
-    db.query(EmailVerificationToken).filter(
-        EmailVerificationToken.user_id == user_id,
-        EmailVerificationToken.used_at.is_(None),
-    ).update({"used_at": datetime.utcnow()})
-
-    raw_token = str(uuid.uuid4())
-    record = EmailVerificationToken(
-        user_id=user_id,
-        token=raw_token,
-        expires_at=datetime.utcnow() + timedelta(hours=VERIFICATION_HOURS),
-    )
-    db.add(record)
-    db.commit()
-    return raw_token
-
-
-def consume_verification_token(db: Session, token: str) -> User:
-    record = db.query(EmailVerificationToken).filter(
-        EmailVerificationToken.token == token
-    ).first()
-
-    if not record:
-        raise HTTPException(status_code=400, detail="Invalid verification token")
-    if record.used_at is not None:
-        raise HTTPException(status_code=400, detail="Token already used")
-    if record.expires_at < datetime.utcnow():
-        raise HTTPException(status_code=400, detail="Token expired")
-
-    record.used_at = datetime.utcnow()
-    user = db.query(User).filter(User.id == record.user_id).first()
-    user.email_verified = True
-    db.commit()
-    return user
-
-
-# ---------------------------------------------------------------------------
-# Password reset tokens
-# ---------------------------------------------------------------------------
-
-def create_password_reset_token(db: Session, user_id: int) -> str:
-    # Invalidate any previous unused tokens
-    db.query(PasswordResetToken).filter(
-        PasswordResetToken.user_id == user_id,
-        PasswordResetToken.used_at.is_(None),
-    ).update({"used_at": datetime.utcnow()})
-
-    raw_token = str(uuid.uuid4())
-    record = PasswordResetToken(
-        user_id=user_id,
-        token=raw_token,
-        expires_at=datetime.utcnow() + timedelta(minutes=RESET_MINUTES),
-    )
-    db.add(record)
-    db.commit()
-    return raw_token
-
-
-def consume_password_reset_token(db: Session, token: str) -> User:
-    record = db.query(PasswordResetToken).filter(
-        PasswordResetToken.token == token
-    ).first()
-
-    if not record:
-        raise HTTPException(status_code=400, detail="Invalid reset token")
-    if record.used_at is not None:
-        raise HTTPException(status_code=400, detail="Token already used")
-    if record.expires_at < datetime.utcnow():
-        raise HTTPException(status_code=400, detail="Token expired")
-
-    record.used_at = datetime.utcnow()
-    db.commit()
-    user = db.query(User).filter(User.id == record.user_id).first()
-    return user
 
 
 # ---------------------------------------------------------------------------
