@@ -376,7 +376,7 @@ export default function App() {
         {page === 'roadmap' && (
           <motion.div key="roadmap" variants={pageVariants} initial="initial" animate="animate" exit="exit">
             <Suspense fallback={<PageLoader />}>
-              <CareerRoadmap initialSessionId={roadmapSessionId} />
+              <CareerRoadmap initialSessionId={roadmapSessionId} onNavigateToUpload={() => setPage('upload')} />
             </Suspense>
           </motion.div>
         )}

@@ -133,6 +133,8 @@ class CVSessionResponse(BaseModel):
     cv_filename: str
     match_score: Optional[float]
     created_at: datetime
+    has_gap_report: bool
+    jd_snippet: Optional[str]
 
 
 # ---------------------------------------------------------------------------
@@ -607,6 +609,7 @@ class QuickWin(BaseModel):
 class RoadmapGenerateRequest(BaseModel):
     cv_session_id: Optional[int] = None
     target_role: str
+    role_description: Optional[str] = None
 
 
 class RoadmapListItem(BaseModel):

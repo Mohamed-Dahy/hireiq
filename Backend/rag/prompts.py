@@ -161,6 +161,7 @@ CRITICAL ANTI-PATTERNS — you MUST NEVER include these in the output:
 - Do NOT recommend beginner-level courses to Mid/Senior candidates
 - Do NOT pad phases with skills the candidate already has at the required level
 - quick_wins MUST address the actual gap_summary above — not generic career advice
+- Do NOT include phases for skills already present in the candidate's skill_inventory at 'advanced' or 'intermediate' level.
 
 PHASE RULES:
 - Start phases from the candidate's ACTUAL current skill level — skip everything they already know
@@ -230,4 +231,75 @@ Return ONLY the JSON object:"""
 career_roadmap_prompt = PromptTemplate(
     input_variables=["target_role", "current_skills", "jd_text", "gap_summary", "available_resources"],
     template=CAREER_ROADMAP_TEMPLATE,
+)
+
+
+# ---------------------------------------------------------------------------
+# Career Roadmap (role-only) — no CV provided, generates from role + description
+# ---------------------------------------------------------------------------
+
+CAREER_ROADMAP_ROLE_ONLY_TEMPLATE = """You are a senior career coach and curriculum designer who has coached engineers from junior to FAANG Staff level.
+
+A candidate wants to become: {target_role}
+
+Role context provided by the candidate (may be empty):
+{role_description}
+
+No CV was provided — generate a comprehensive learning roadmap covering the key skills needed for this role. Assume an intermediate starting level unless the role description implies otherwise.
+
+AVAILABLE RESOURCES (use ONLY these, copy URLs exactly):
+{available_resources}
+
+Required JSON schema:
+{{
+  "phases": [
+    {{
+      "name": "string — specific phase name, e.g. 'Core Backend: APIs, Databases & System Design'",
+      "estimated_weeks": integer,
+      "skills_covered": ["skill1", "skill2"],
+      "resources": [
+        {{
+          "name": "string — exact name from AVAILABLE RESOURCES",
+          "url": "string — exact URL from AVAILABLE RESOURCES",
+          "type": "course|book|video|project|tool",
+          "is_free": boolean,
+          "estimated_hours": integer
+        }}
+      ],
+      "project_to_build": "string — concrete, non-trivial project with specific technical requirements",
+      "milestone": "string — what the candidate can demonstrate after this phase"
+    }}
+  ],
+  "career_insight": {{
+    "salary_range_local": "string in EGP e.g. '45,000-80,000 EGP/month'",
+    "salary_range_remote": "string in USD e.g. '$5,000-$10,000/month USD (remote)'",
+    "top_companies": ["Company A", "Company B", "Company C", "Company D", "Company E"],
+    "hot_skills": ["skill1", "skill2", "skill3", "skill4", "skill5"],
+    "market_demand": "high|medium|low"
+  }},
+  "quick_wins": [
+    {{
+      "action": "string — specific, high-impact action to start this week",
+      "why": "string — direct connection to {target_role} requirements",
+      "time_required": "string e.g. '3-4 hours' or '1 weekend'"
+    }}
+  ]
+}}
+
+Rules:
+- Generate 3-5 phases covering the key skills needed to become a {target_role}
+- Total estimated_weeks: 12-24 weeks
+- Each phase: 3-5 resources from AVAILABLE RESOURCES only, 1 concrete project, 1 measurable milestone
+- quick_wins: exactly 3 high-impact, immediately actionable items
+- career_insight: exactly 5 top_companies and 5 hot_skills for this role in 2025-2026 market
+- Salary ranges: realistic for Egyptian market + international remote work
+- ONLY use resources from the AVAILABLE RESOURCES list — do NOT invent or guess URLs
+
+Target role: {target_role}
+
+Return ONLY the JSON object:"""
+
+career_roadmap_role_only_prompt = PromptTemplate(
+    input_variables=["target_role", "role_description", "available_resources"],
+    template=CAREER_ROADMAP_ROLE_ONLY_TEMPLATE,
 )

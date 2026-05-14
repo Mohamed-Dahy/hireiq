@@ -182,6 +182,8 @@ export interface CVSession {
   cv_filename: string
   match_score: number | null
   created_at: string
+  has_gap_report: boolean
+  jd_snippet: string | null
 }
 
 export interface InterviewResult {
@@ -531,8 +533,8 @@ export interface RoadmapResponse {
   created_at: string
 }
 
-export const generateRoadmap = (cv_session_id: number | null, target_role: string) =>
-  api.post<RoadmapResponse>('/roadmap/generate', { cv_session_id, target_role })
+export const generateRoadmap = (cv_session_id: number | null, target_role: string, role_description?: string) =>
+  api.post<RoadmapResponse>('/roadmap/generate', { cv_session_id, target_role, role_description })
 
 export const listRoadmaps = () =>
   api.get<RoadmapListItem[]>('/roadmap')
@@ -541,4 +543,4 @@ export const getRoadmap = (id: number) =>
   api.get<RoadmapResponse>(`/roadmap/${id}`)
 
 export const getMySessions = () =>
-  api.get<Array<{ id: number; cv_filename: string; created_at: string; match_score: number | null }>>('/cv/sessions')
+  api.get<CVSession[]>('/cv/sessions')

@@ -47,6 +47,17 @@ class CVSession(Base):
     user             = relationship("User", back_populates="sessions")
     interview_results = relationship("InterviewResult", back_populates="session")
 
+    @property
+    def has_gap_report(self) -> bool:
+        return bool(self.gap_report)
+
+    @property
+    def jd_snippet(self) -> str | None:
+        if not self.jd_text:
+            return None
+        text = self.jd_text.strip()
+        return text[:80] + ('…' if len(text) > 80 else '')
+
 
 class InterviewResult(Base):
     __tablename__ = "interview_results"
