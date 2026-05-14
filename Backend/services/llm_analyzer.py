@@ -49,8 +49,15 @@ def _strip_fences(text: str) -> str:
 
 def stream_analysis(cv_text: str, jd_text: str):
     """Generator that streams the LLM response token by token for the SSE endpoint."""
-    for chunk in analysis_chain.stream({"cv_text": cv_text, "jd_text": jd_text}):
-        yield chunk
+    try:
+        for chunk in analysis_chain.stream({"cv_text": cv_text, "jd_text": jd_text}):
+            yield chunk
+    except Exception as exc:
+        err_str = str(exc)
+        if "rate_limit" in err_str.lower() or "429" in err_str:
+            yield "\n\n**Service temporarily unavailable:** The AI analysis quota has been reached. Please try again in a few minutes.\n"
+        else:
+            yield "\n\n**Analysis error:** Could not complete the analysis. Please try again.\n"
 
 
 def run_analysis(cv_text: str, jd_text: str) -> str:
@@ -66,6 +73,11 @@ def analyze_structured(cv_text: str, jd_text: str) -> dict:
     try:
         raw = structured_chain.invoke({"cv_text": cv_text, "jd_text": jd_text})
         raw = _strip_fences(raw)
-        return json.loads(raw)
+        data = json.loads(raw)
+        # Ensure required keys exist even if LLM omits them
+        data.setdefault("skill_inventory", [])
+        data.setdefault("gap_report", [])
+        data.setdefault("questions", [])
+        return data
     except Exception:
         return dict(_FALLBACK)
