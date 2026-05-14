@@ -4,6 +4,7 @@ import type { Variants } from 'framer-motion'
 import { Layers, Menu, X, Loader2 } from 'lucide-react'
 import Landing from './pages/Landing'
 import Auth from './pages/Auth'
+import VerifyOtp from './pages/VerifyOtp'
 import ThemeToggle from './components/ThemeToggle'
 import { getMe, logout as apiLogout, getJobStats, getReferralStats } from './api'
 import type { CVUploadResponse, UserProfile } from './api'
@@ -23,7 +24,7 @@ const Referrals = lazy(() => import('./pages/Referrals'))
 const CareerRoadmap = lazy(() => import('./pages/CareerRoadmap'))
 
 type Page = 'home' | 'upload' | 'results' | 'history' | 'detail' | 'interview' | 'profile' | 'jobs' | 'recruiter' | 'referrals' | 'roadmap'
-type View = 'landing' | 'auth' | 'app'
+type View = 'landing' | 'auth' | 'app' | 'verify-otp'
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -37,6 +38,8 @@ function getInitialViewAndMode(): { view: View; authMode: 'register' | 'login' |
   const token = params.get('token') ?? undefined
   if (path === '/verify-email' && token) return { view: 'auth', authMode: 'verify-email', urlToken: token }
   if (path === '/reset-password' && token) return { view: 'auth', authMode: 'reset-password', urlToken: token }
+  if (path === '/verify-otp') return { view: 'verify-otp', authMode: 'register' }
+  if (path === '/auth') return { view: 'auth', authMode: 'login' }
   if (path === '/referrals' && localStorage.getItem('access_token')) return { view: 'app', authMode: 'login' }
   if (localStorage.getItem('access_token')) return { view: 'app', authMode: 'login' }
   return { view: 'landing', authMode: 'register' }
@@ -78,6 +81,8 @@ export default function App() {
   const [referralConversionCount, setReferralConversionCount] = useState<number>(0)
   const [roadmapSessionId, setRoadmapSessionId] = useState<number | null>(null)
   const [offline, setOffline] = useState(false)
+  const [otpEmail, setOtpEmail] = useState('')
+  const [otpPurpose, setOtpPurpose] = useState('registration')
 
   const [dark, setDark] = useState(() => localStorage.getItem('theme') !== 'light')
 
@@ -125,6 +130,15 @@ export default function App() {
 
   const goToAuth = (mode: 'register' | 'login') => { setAuthMode(mode as any); setView('auth') }
   const onAuth = () => { sessionAuthenticated.current = true; setView('app'); setPage('home') }
+  const goToVerifyOtp = (email: string, purpose: string) => { setOtpEmail(email); setOtpPurpose(purpose); setView('verify-otp') }
+  const handleOtpSuccess = () => {
+    if (otpPurpose === 'password_change') {
+      setView('app')
+    } else {
+      setAuthMode('login')
+      setView('auth')
+    }
+  }
   const logout = () => {
     const refreshToken = localStorage.getItem('refresh_token') ?? undefined
     apiLogout(refreshToken).catch(() => {})
@@ -141,8 +155,9 @@ export default function App() {
 
   const openDetail = (sessionId: number) => { setDetailSessionId(sessionId); setPage('detail') }
 
+  if (view === 'verify-otp') return <VerifyOtp email={otpEmail} purpose={otpPurpose} onSuccess={handleOtpSuccess} onBack={() => setView('auth')} />
   if (view === 'landing') return <Landing onGetStarted={() => goToAuth('register')} onLogin={() => goToAuth('login')} dark={dark} onToggleDark={() => setDark(d => !d)} />
-  if (view === 'auth') return <Auth defaultMode={authMode as any} urlToken={urlToken} onAuth={onAuth} onBack={authMode === 'login' || authMode === 'register' ? () => setView('landing') : undefined} />
+  if (view === 'auth') return <Auth defaultMode={authMode as any} urlToken={urlToken} onAuth={onAuth} onNeedVerifyOtp={goToVerifyOtp} onBack={authMode === 'login' || authMode === 'register' ? () => setView('landing') : undefined} />
 
   const navItems = [
     { id: 'home'      as const, label: 'Home' },

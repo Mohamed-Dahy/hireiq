@@ -24,9 +24,10 @@ interface Props {
   onBack?: () => void
   defaultMode?: AuthMode
   urlToken?: string
+  onNeedVerifyOtp?: (email: string, purpose: string) => void
 }
 
-export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken }: Props) {
+export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken, onNeedVerifyOtp }: Props) {
   const [mode, setMode] = useState<AuthMode>(defaultMode)
   const [email, setEmail] = useState('')
   const [username, setUsername] = useState('')
@@ -71,10 +72,12 @@ export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken }
         onAuth()
       } else if (mode === 'register') {
         await register(trimEmail, trimUsername, password)
-        setMode('verification-pending')
+        onNeedVerifyOtp?.(trimEmail, 'registration')
+        return
       } else if (mode === 'forgot-password') {
         await forgotPassword(trimEmail)
-        setMode('forgot-sent')
+        onNeedVerifyOtp?.(trimEmail, 'password_reset')
+        return
       } else if (mode === 'reset-password' && urlToken) {
         await resetPassword(urlToken, newPassword)
         setInfo('Password reset successfully. You can now log in.')

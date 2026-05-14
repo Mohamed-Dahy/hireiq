@@ -1,20 +1,21 @@
 """
 routers/auth.py
 ---------------
-POST   /auth/register           — create account, send verification email
+POST   /auth/register           — create account, send OTP email
 POST   /auth/login              — verify credentials, return tokens
 POST   /auth/logout             — blacklist JTIs
 POST   /auth/refresh            — rotate refresh token
 GET    /auth/me                 — current user profile
-POST   /auth/verify-email       — consume email verification token
-POST   /auth/resend-verification — re-send verification email
-POST   /auth/forgot-password    — send password reset email
+POST   /auth/send-otp           — send OTP for any purpose
+POST   /auth/verify-otp         — verify OTP code
+POST   /auth/forgot-password    — send password reset OTP
 POST   /auth/reset-password     — consume reset token, set new password
 DELETE /auth/account            — permanently delete account and all data
 """
 
 import os
 import time
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
@@ -24,7 +25,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from limiter import limiter
-from models.user import User, CVSession, InterviewResult
+from models.user import User, CVSession, InterviewResult, OtpCode
 from models.schemas import (
     RegisterRequest,
     LoginRequest,
@@ -34,6 +35,9 @@ from models.schemas import (
     EmailRequest,
     ResetPasswordRequest,
     UserProfileResponse,
+    OtpSendRequest,
+    OtpVerifyRequest,
+    PasswordResetWithTokenRequest,
 )
 from services.auth_service import (
     bearer_scheme,
@@ -49,8 +53,11 @@ from services.auth_service import (
     record_failed_login,
     reset_failed_login,
     check_forgot_password_rate,
+    create_reset_session,
+    consume_reset_session,
 )
-from services.email_service import send_account_deletion_email
+from services import otp_service
+from services.email_service import send_otp_email, send_account_deletion_email
 from services.security_service import write_audit_log
 from services.rag_scorer import delete_embeddings
 from app.config import settings
@@ -96,8 +103,11 @@ async def register(
         except Exception:
             pass
 
+    code = otp_service.create_otp(db, user.email, "registration")
+    send_otp_email(user.email, user.username, code, "registration")
+
     return RegisterResponse(
-        message="Account created. An OTP will be sent to your email to verify your account.",
+        message="Account created. A 5-digit verification code has been sent to your email.",
         email=user.email,
     )
 
@@ -231,23 +241,57 @@ def get_me(
     )
 
 
-@router.post("/verify-email", status_code=status.HTTP_410_GONE)
-def verify_email():
-    raise HTTPException(
-        status_code=status.HTTP_410_GONE,
-        detail="Magic-link verification is no longer supported. Use OTP-based verification.",
-    )
-
-
-@router.post("/resend-verification", response_model=MessageResponse)
-@limiter.limit("2/minute")
-async def resend_verification(
+@router.post("/send-otp", response_model=MessageResponse)
+@limiter.limit("5/minute")
+async def send_otp(
     request: Request,
-    payload: EmailRequest,
+    payload: OtpSendRequest,
     db: Session = Depends(get_db),
 ):
-    # OTP-based resend is implemented in Phase 3 (POST /auth/otp/send)
-    return MessageResponse(message="If that email exists and is unverified, a new verification code has been sent.")
+    otp_service.check_otp_rate_limit(payload.email)
+    user = db.query(User).filter(User.email == payload.email).first()
+    if user:
+        code = otp_service.create_otp(db, payload.email, payload.purpose, user.id)
+        send_otp_email(payload.email, user.username, code, payload.purpose)
+    return MessageResponse(message="A 5-digit code has been sent to your email. Valid for 10 minutes.")
+
+
+@router.post("/verify-otp")
+def verify_otp(
+    request: Request,
+    payload: OtpVerifyRequest,
+    db: Session = Depends(get_db),
+):
+    ok, reason = otp_service.verify_otp(db, payload.email, payload.code, payload.purpose)
+    if not ok:
+        if reason == "expired":
+            raise HTTPException(status_code=400, detail="Code has expired. Please request a new one.")
+        if reason == "locked":
+            raise HTTPException(status_code=400, detail="Too many incorrect attempts. Please request a new code.")
+        record = db.query(OtpCode).filter(
+            OtpCode.email == payload.email.lower(),
+            OtpCode.purpose == payload.purpose,
+            OtpCode.used_at.is_(None),
+        ).order_by(OtpCode.created_at.desc()).first()
+        remaining = (settings.otp_max_attempts - record.attempt_count) if record else 0
+        raise HTTPException(status_code=400, detail=f"Invalid code. {remaining} attempts remaining.")
+
+    if payload.purpose == "registration":
+        user = db.query(User).filter(User.email == payload.email).first()
+        if user:
+            user.email_verified = True
+            db.commit()
+            write_audit_log(db, "auth.email_verified", _client_ip(request), "allowed", user_id=user.id)
+        return MessageResponse(message="Email verified. You can now log in.")
+
+    if payload.purpose == "password_reset":
+        user = db.query(User).filter(User.email == payload.email).first()
+        if not user:
+            raise HTTPException(status_code=400, detail="User not found.")
+        reset_token = create_reset_session(user.id)
+        return {"message": "Code verified.", "reset_token": reset_token}
+
+    raise HTTPException(status_code=400, detail="Invalid purpose.")
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
@@ -257,17 +301,33 @@ async def forgot_password(
     payload: EmailRequest,
     db: Session = Depends(get_db),
 ):
-    check_forgot_password_rate(payload.email)  # per-email: 3 per 15 min
-    # OTP-based reset is implemented in Phase 3 (POST /auth/otp/send with purpose=reset)
-    return MessageResponse(message="If that email is registered, a reset code has been sent.")
+    check_forgot_password_rate(payload.email)
+    otp_service.check_otp_rate_limit(payload.email)
+    user = db.query(User).filter(User.email == payload.email).first()
+    if user and user.email_verified:
+        code = otp_service.create_otp(db, payload.email, "password_reset", user.id)
+        send_otp_email(payload.email, user.username, code, "password_reset")
+    return MessageResponse(message="If that email is registered, a 5-digit reset code has been sent.")
 
 
-@router.post("/reset-password", status_code=status.HTTP_410_GONE)
-def reset_password():
-    raise HTTPException(
-        status_code=status.HTTP_410_GONE,
-        detail="Token-based password reset is no longer supported. Use OTP-based reset.",
-    )
+@router.post("/reset-password", response_model=MessageResponse)
+def reset_password(
+    request: Request,
+    payload: PasswordResetWithTokenRequest,
+    db: Session = Depends(get_db),
+):
+    user_id = consume_reset_session(payload.reset_token)
+    if user_id is None:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token.")
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="User not found.")
+    user.hashed_password = hash_password(payload.new_password)
+    user.sessions_revoked_at = datetime.utcnow()
+    reset_failed_login(db, user)
+    db.commit()
+    write_audit_log(db, "auth.password_change", _client_ip(request), "allowed", user_id=user.id)
+    return MessageResponse(message="Password reset successfully. You can now log in.")
 
 
 @router.delete("/account", response_model=MessageResponse)

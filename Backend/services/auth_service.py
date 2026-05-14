@@ -213,3 +213,24 @@ def get_current_user(
     check_account_locked(user)
 
     return user
+
+
+def create_reset_session(user_id: int) -> str:
+    token = str(uuid.uuid4())
+    try:
+        redis_client.setex(f"reset_session:{token}", 900, str(user_id))
+    except Exception:
+        pass
+    return token
+
+
+def consume_reset_session(token: str) -> int | None:
+    key = f"reset_session:{token}"
+    try:
+        value = redis_client.get(key)
+        if value is None:
+            return None
+        redis_client.delete(key)
+        return int(value)
+    except Exception:
+        return None
