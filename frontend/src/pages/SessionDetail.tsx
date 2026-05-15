@@ -31,7 +31,7 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
           initial={{ width: 0 }}
           animate={{ width: `${value * 10}%` }}
           transition={{ duration: 0.7, ease: [0, 0, 0.2, 1] }}
-          className="bg-violet-500 h-1.5 rounded-full"
+          className="bg-primary-500 h-1.5 rounded-full"
         />
       </div>
     </div>
@@ -52,7 +52,7 @@ function InterviewCard({ result, index }: { result: InterviewResult; index: numb
         className="w-full flex items-start justify-between gap-3 px-5 py-4 text-left cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
       >
         <div className="flex gap-3 items-start">
-          <span className="mt-0.5 text-xs font-medium text-violet-500 bg-violet-50 dark:bg-violet-950/30 px-2 py-0.5 rounded-full shrink-0">
+          <span className="mt-0.5 text-xs font-medium text-primary-500 bg-primary-50 dark:bg-primary-950/30 px-2 py-0.5 rounded-full shrink-0">
             Q{index + 1}
           </span>
           <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{result.question}</p>
@@ -94,7 +94,7 @@ function InterviewCard({ result, index }: { result: InterviewResult; index: numb
           {result.eye_contact_ratio != null && (
             <div className="flex items-center justify-between text-sm text-zinc-600 dark:text-zinc-400">
               <span>Eye contact</span>
-              <span className="font-medium text-violet-500">
+              <span className="font-medium text-primary-500">
                 {Math.round(result.eye_contact_ratio * 100)}%
               </span>
             </div>
@@ -213,7 +213,7 @@ export default function SessionDetail({ sessionId, onBack, onPractice }: Props) 
           {practiceQuestions.length > 0 && (
             <button
               onClick={() => onPractice(practiceQuestions)}
-              className="text-sm bg-violet-600 hover:bg-violet-500 text-white px-4 py-1.5 rounded-lg font-medium transition-colors cursor-pointer"
+              className="text-sm bg-primary-600 hover:bg-primary-500 text-white px-4 py-1.5 rounded-lg font-medium transition-colors cursor-pointer"
             >
               Practice these →
             </button>
@@ -251,7 +251,7 @@ export default function SessionDetail({ sessionId, onBack, onPractice }: Props) 
           <button
             onClick={startAnalysis}
             disabled={streaming}
-            className="text-xs border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 px-3 py-1.5 rounded-lg hover:border-violet-400 dark:hover:border-violet-500 hover:text-violet-600 dark:hover:text-violet-400 disabled:opacity-50 transition-colors cursor-pointer"
+            className="text-xs border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 px-3 py-1.5 rounded-lg hover:border-primary-400 dark:hover:border-primary-500 hover:text-primary-600 dark:hover:text-primary-400 disabled:opacity-50 transition-colors cursor-pointer"
           >
             {streaming ? 'Analyzing…' : analysisStarted ? 'Re-analyze' : 'Run Analysis'}
           </button>

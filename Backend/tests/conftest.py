@@ -49,9 +49,10 @@ def _disable_rate_limits():
     from limiter import limiter
     from services.cache import redis_client
     limiter.enabled = False
-    # Clear any per-email forgot-password rate keys left by a previous test run
     try:
         for key in redis_client.scan_iter("fp:rate:*"):
+            redis_client.delete(key)
+        for key in redis_client.scan_iter("otp:rate:*"):
             redis_client.delete(key)
     except Exception:
         pass

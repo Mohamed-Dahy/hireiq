@@ -45,7 +45,7 @@ export default function Landing({ onGetStarted, onLogin, dark, onToggleDark }: P
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Layers size={18} strokeWidth={1.5} className="text-violet-500" />
+            <Layers size={18} strokeWidth={1.5} className="text-primary-500" />
             <span className="font-semibold text-zinc-900 dark:text-zinc-50 text-sm tracking-tight">HireIQ</span>
           </div>
           <div className="hidden sm:flex items-center gap-6">
@@ -69,7 +69,7 @@ export default function Landing({ onGetStarted, onLogin, dark, onToggleDark }: P
             </button>
             <button
               onClick={onGetStarted}
-              className="text-sm bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-md font-medium transition-colors cursor-pointer"
+              className="text-sm bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-md font-medium transition-colors cursor-pointer"
             >
               Get started
             </button>
@@ -85,7 +85,7 @@ export default function Landing({ onGetStarted, onLogin, dark, onToggleDark }: P
           className="max-w-4xl mx-auto text-center"
         >
           <motion.div variants={fade} className="inline-flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 text-xs font-medium px-3 py-1.5 rounded-full mb-8 cursor-default">
-            <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+            <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />
             Now with voice-based interview scoring
             <ArrowRight size={11} />
           </motion.div>
@@ -101,7 +101,7 @@ export default function Landing({ onGetStarted, onLogin, dark, onToggleDark }: P
           <motion.div variants={fade} className="flex flex-col sm:flex-row items-center gap-3 justify-center">
             <button
               onClick={onGetStarted}
-              className="bg-violet-600 hover:bg-violet-500 text-white px-6 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer flex items-center gap-2"
+              className="bg-primary-600 hover:bg-primary-500 text-white px-6 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer flex items-center gap-2"
             >
               Analyze my CV — it's free
               <ArrowRight size={14} strokeWidth={2} />
@@ -166,7 +166,7 @@ export default function Landing({ onGetStarted, onLogin, dark, onToggleDark }: P
                     <div key={item.label} className="flex items-center gap-3">
                       <span className="text-xs text-zinc-500 w-28 font-mono shrink-0">{item.label}</span>
                       <div className="flex-1 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-violet-500 rounded-full" style={{ width: `${item.w}%` }} />
+                        <div className="h-full bg-primary-500 rounded-full" style={{ width: `${item.w}%` }} />
                       </div>
                       <span className="text-xs text-zinc-400 w-8 text-right font-mono">{item.w}%</span>
                     </div>
@@ -218,7 +218,7 @@ export default function Landing({ onGetStarted, onLogin, dark, onToggleDark }: P
                 variants={fade}
                 className="bg-white dark:bg-zinc-950 p-6 group"
               >
-                <div className="w-8 h-8 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4 text-violet-500">
+                <div className="w-8 h-8 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4 text-primary-500">
                   <f.icon size={16} strokeWidth={1.5} />
                 </div>
                 <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-2">{f.title}</h3>
@@ -328,13 +328,13 @@ export default function Landing({ onGetStarted, onLogin, dark, onToggleDark }: P
                   variants={fade}
                   className={`relative bg-white dark:bg-zinc-950 rounded-xl p-6 border flex flex-col ${
                     isPro
-                      ? 'border-violet-500 shadow-sm shadow-violet-500/10'
+                      ? 'border-primary-500 shadow-sm shadow-primary-500/10'
                       : 'border-zinc-200 dark:border-zinc-800'
                   }`}
                 >
                   {isPro && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <span className="bg-violet-600 text-white text-[11px] font-medium px-3 py-0.5 rounded-full">Most popular</span>
+                      <span className="bg-primary-600 text-white text-[11px] font-medium px-3 py-0.5 rounded-full">Most popular</span>
                     </div>
                   )}
                   <div className="mb-5">
@@ -347,7 +347,7 @@ export default function Landing({ onGetStarted, onLogin, dark, onToggleDark }: P
                   <ul className="space-y-2.5 flex-1 mb-6">
                     {plan.features.map((f) => (
                       <li key={f} className="flex items-start gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-                        <Check size={14} strokeWidth={2} className="text-violet-500 shrink-0 mt-0.5" />
+                        <Check size={14} strokeWidth={2} className="text-primary-500 shrink-0 mt-0.5" />
                         {f}
                       </li>
                     ))}
@@ -356,7 +356,7 @@ export default function Landing({ onGetStarted, onLogin, dark, onToggleDark }: P
                     onClick={onGetStarted}
                     className={`w-full py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
                       isPro
-                        ? 'bg-violet-600 hover:bg-violet-500 text-white'
+                        ? 'bg-primary-600 hover:bg-primary-500 text-white'
                         : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
                     }`}
                   >
@@ -386,7 +386,7 @@ export default function Landing({ onGetStarted, onLogin, dark, onToggleDark }: P
             </p>
             <button
               onClick={onGetStarted}
-              className="bg-violet-600 hover:bg-violet-500 text-white font-medium px-8 py-2.5 rounded-md text-sm transition-colors cursor-pointer inline-flex items-center gap-2"
+              className="bg-primary-600 hover:bg-primary-500 text-white font-medium px-8 py-2.5 rounded-md text-sm transition-colors cursor-pointer inline-flex items-center gap-2"
             >
               Start for free
               <ArrowRight size={14} strokeWidth={2} />
@@ -399,7 +399,7 @@ export default function Landing({ onGetStarted, onLogin, dark, onToggleDark }: P
       <footer className="border-t border-zinc-200 dark:border-zinc-800 py-8 px-6">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Layers size={16} strokeWidth={1.5} className="text-violet-500" />
+            <Layers size={16} strokeWidth={1.5} className="text-primary-500" />
             <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">HireIQ</span>
           </div>
           <p className="text-xs text-zinc-400">Built with FastAPI · LangChain · Groq · React · Tailwind CSS</p>

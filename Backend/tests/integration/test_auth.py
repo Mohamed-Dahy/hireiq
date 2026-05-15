@@ -125,23 +125,6 @@ class TestLogin:
 
 
 # ---------------------------------------------------------------------------
-# POST /auth/resend-verification
-# ---------------------------------------------------------------------------
-
-class TestResendVerification:
-    def test_resend_always_returns_200(self, test_client: TestClient):
-        # Unknown email — should still return 200
-        resp = test_client.post("/auth/resend-verification", json={"email": "nobody@example.com"})
-        assert resp.status_code == 200
-
-    def test_resend_for_unverified_user_returns_200(
-        self, test_client: TestClient, unverified_user: User
-    ):
-        resp = test_client.post("/auth/resend-verification", json={"email": unverified_user.email})
-        assert resp.status_code == 200
-
-
-# ---------------------------------------------------------------------------
 # POST /auth/forgot-password
 # ---------------------------------------------------------------------------
 

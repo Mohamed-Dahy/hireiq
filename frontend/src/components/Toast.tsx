@@ -35,8 +35,8 @@ const kindConfig: Record<ToastKind, { border: string; icon: React.ReactNode }> =
     icon: <XCircle size={15} strokeWidth={1.5} className="text-red-500 dark:text-red-400 shrink-0" />,
   },
   info: {
-    border: 'border-violet-200 dark:border-violet-800',
-    icon: <Info size={15} strokeWidth={1.5} className="text-violet-500 dark:text-violet-400 shrink-0" />,
+    border: 'border-primary-200 dark:border-primary-800',
+    icon: <Info size={15} strokeWidth={1.5} className="text-primary-500 dark:text-primary-400 shrink-0" />,
   },
 }
 

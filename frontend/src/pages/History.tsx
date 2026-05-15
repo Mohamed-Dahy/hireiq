@@ -65,7 +65,7 @@ export default function History({ onSelect }: Props) {
   }
 
   const filterChips: { id: ScoreFilter; label: string; activeColor: string }[] = [
-    { id: 'all',  label: 'All',     activeColor: 'bg-violet-600 text-white border-violet-600' },
+    { id: 'all',  label: 'All',     activeColor: 'bg-primary-600 text-white border-primary-600' },
     { id: 'high', label: '70%+',    activeColor: 'bg-emerald-600 text-white border-emerald-600' },
     { id: 'mid',  label: '40–69%',  activeColor: 'bg-amber-500 text-white border-amber-500' },
     { id: 'low',  label: '<40%',    activeColor: 'bg-red-500 text-white border-red-500' },
@@ -98,7 +98,7 @@ export default function History({ onSelect }: Props) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by CV filename…"
-              className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl pl-9 pr-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
+              className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl pl-9 pr-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
             />
           </div>
 

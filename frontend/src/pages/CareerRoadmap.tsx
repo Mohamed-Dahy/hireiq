@@ -116,7 +116,7 @@ export default function CareerRoadmap({ initialSessionId, onNavigateToUpload }: 
       {/* Header */}
       <div>
         <div className="flex items-center gap-2">
-          <Map size={20} strokeWidth={1.5} className="text-violet-500" />
+          <Map size={20} strokeWidth={1.5} className="text-primary-500" />
           <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Career Roadmap</h1>
         </div>
         <p className="text-sm text-zinc-500 mt-1">Generate a personalised learning path from your CV analysis or a target role</p>
@@ -161,7 +161,7 @@ export default function CareerRoadmap({ initialSessionId, onNavigateToUpload }: 
               {onNavigateToUpload && (
                 <button
                   onClick={onNavigateToUpload}
-                  className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
                 >
                   Analyse a CV
                 </button>
@@ -181,18 +181,18 @@ export default function CareerRoadmap({ initialSessionId, onNavigateToUpload }: 
                       onClick={() => setSelectedSessionId(s.id)}
                       className={`text-left p-3.5 rounded-xl border transition-all cursor-pointer ${
                         isSelected
-                          ? 'border-violet-500 bg-violet-50 dark:bg-violet-950/30 ring-1 ring-violet-500'
-                          : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-violet-300 dark:hover:border-violet-700'
+                          ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30 ring-1 ring-primary-500'
+                          : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-primary-300 dark:hover:border-primary-700'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
-                          <FileText size={14} strokeWidth={1.5} className={`shrink-0 ${isSelected ? 'text-violet-500' : 'text-zinc-400'}`} />
+                          <FileText size={14} strokeWidth={1.5} className={`shrink-0 ${isSelected ? 'text-primary-500' : 'text-zinc-400'}`} />
                           <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
                             {formatFilename(s.cv_filename)}
                           </span>
                         </div>
-                        {isSelected && <CheckCircle2 size={14} strokeWidth={1.5} className="text-violet-500 shrink-0 mt-0.5" />}
+                        {isSelected && <CheckCircle2 size={14} strokeWidth={1.5} className="text-primary-500 shrink-0 mt-0.5" />}
                       </div>
 
                       {s.jd_snippet && (
@@ -251,7 +251,7 @@ export default function CareerRoadmap({ initialSessionId, onNavigateToUpload }: 
                   onChange={(e) => setTargetRole(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
                   placeholder="e.g. Senior Data Engineer, Full-Stack Developer, ML Engineer…"
-                  className="w-full px-3 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-zinc-400"
+                  className="w-full px-3 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder:text-zinc-400"
                 />
               </div>
 
@@ -262,7 +262,7 @@ export default function CareerRoadmap({ initialSessionId, onNavigateToUpload }: 
               <button
                 onClick={handleGenerate}
                 disabled={generating || !canGenerate}
-                className="w-full flex items-center justify-center gap-2 py-3 bg-violet-600 hover:bg-violet-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:cursor-not-allowed text-white text-sm font-medium rounded-xl transition-colors cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:cursor-not-allowed text-white text-sm font-medium rounded-xl transition-colors cursor-pointer"
               >
                 {generating ? (
                   <><Loader2 size={16} strokeWidth={2} className="animate-spin" /> Generating…</>
@@ -290,7 +290,7 @@ export default function CareerRoadmap({ initialSessionId, onNavigateToUpload }: 
               onChange={(e) => setTargetRole(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
               placeholder="e.g. DevOps Engineer, Product Manager, Data Scientist…"
-              className="w-full px-3 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-zinc-400"
+              className="w-full px-3 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder:text-zinc-400"
             />
           </div>
 
@@ -303,14 +303,14 @@ export default function CareerRoadmap({ initialSessionId, onNavigateToUpload }: 
               onChange={(e) => setRoleDescription(e.target.value)}
               placeholder="Describe the role, seniority level, tech stack, or anything specific you want the roadmap to address…"
               rows={4}
-              className="w-full px-3 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-zinc-400 resize-none"
+              className="w-full px-3 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder:text-zinc-400 resize-none"
             />
           </div>
 
           <button
             onClick={handleGenerate}
             disabled={generating || !canGenerate}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-violet-600 hover:bg-violet-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:cursor-not-allowed text-white text-sm font-medium rounded-xl transition-colors cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:cursor-not-allowed text-white text-sm font-medium rounded-xl transition-colors cursor-pointer"
           >
             {generating ? (
               <><Loader2 size={16} strokeWidth={2} className="animate-spin" /> Generating…</>
@@ -326,7 +326,7 @@ export default function CareerRoadmap({ initialSessionId, onNavigateToUpload }: 
         <div>
           <button
             onClick={() => setShowSaved(!showSaved)}
-            className="text-xs text-violet-600 dark:text-violet-400 font-medium hover:underline cursor-pointer"
+            className="text-xs text-primary-600 dark:text-primary-400 font-medium hover:underline cursor-pointer"
           >
             {showSaved ? 'Hide saved roadmaps' : `View saved roadmaps (${roadmaps.length})`}
           </button>
@@ -336,7 +336,7 @@ export default function CareerRoadmap({ initialSessionId, onNavigateToUpload }: 
                 <button
                   key={rm.id}
                   onClick={() => loadRoadmap(rm.id)}
-                  className="w-full text-left px-4 py-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:border-violet-300 dark:hover:border-violet-700 transition-colors cursor-pointer"
+                  className="w-full text-left px-4 py-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:border-primary-300 dark:hover:border-primary-700 transition-colors cursor-pointer"
                 >
                   <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{rm.target_role}</p>
                   <p className="text-xs text-zinc-400">~{rm.total_estimated_weeks} weeks · {new Date(rm.created_at).toLocaleDateString()}</p>
@@ -381,7 +381,7 @@ export default function CareerRoadmap({ initialSessionId, onNavigateToUpload }: 
           />
 
           <div className="flex items-center gap-2 mb-2">
-            <MapPin size={16} strokeWidth={1.5} className="text-violet-500" />
+            <MapPin size={16} strokeWidth={1.5} className="text-primary-500" />
             <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Learning Path</h2>
           </div>
 

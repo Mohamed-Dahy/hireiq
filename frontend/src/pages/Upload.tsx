@@ -188,9 +188,9 @@ export default function Upload({ onDone }: Props) {
             <div className="flex flex-col items-center">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium transition-all ${
                 i < currentStep
-                  ? 'bg-violet-600 text-white'
+                  ? 'bg-primary-600 text-white'
                   : i === currentStep
-                  ? 'bg-violet-100 dark:bg-violet-900/50 text-violet-600 dark:text-violet-400 ring-2 ring-violet-500 ring-offset-2 dark:ring-offset-zinc-950'
+                  ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400 ring-2 ring-primary-500 ring-offset-2 dark:ring-offset-zinc-950'
                   : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400'
               }`}>
                 {i < currentStep ? (
@@ -202,7 +202,7 @@ export default function Upload({ onDone }: Props) {
               <p className={`text-xs mt-1.5 ${i <= currentStep ? 'text-zinc-600 dark:text-zinc-400' : 'text-zinc-400'}`}>{step.label}</p>
             </div>
             {i < STEPS.length - 1 && (
-              <div className={`flex-1 h-px mx-2 mb-5 transition-colors ${i < currentStep ? 'bg-violet-500' : 'bg-zinc-200 dark:bg-zinc-700'}`} />
+              <div className={`flex-1 h-px mx-2 mb-5 transition-colors ${i < currentStep ? 'bg-primary-500' : 'bg-zinc-200 dark:bg-zinc-700'}`} />
             )}
           </div>
         ))}
@@ -222,9 +222,9 @@ export default function Upload({ onDone }: Props) {
             onClick={() => document.getElementById('cv-file')?.click()}
             className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
               dragging
-                ? 'border-violet-500 bg-violet-500/5'
+                ? 'border-primary-500 bg-primary-500/5'
                 : file
-                ? 'border-violet-500/50 bg-zinc-50 dark:bg-zinc-900/50'
+                ? 'border-primary-500/50 bg-zinc-50 dark:bg-zinc-900/50'
                 : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500 bg-white dark:bg-zinc-900'
             }`}
           >
@@ -232,10 +232,10 @@ export default function Upload({ onDone }: Props) {
               onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
             <div className="flex flex-col items-center gap-3">
               <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
-                file ? 'bg-violet-100 dark:bg-violet-900/40' : 'bg-zinc-100 dark:bg-zinc-800'
+                file ? 'bg-primary-100 dark:bg-primary-900/40' : 'bg-zinc-100 dark:bg-zinc-800'
               }`}>
                 {file
-                  ? <FileText size={20} strokeWidth={1.5} className="text-violet-500" />
+                  ? <FileText size={20} strokeWidth={1.5} className="text-primary-500" />
                   : <CloudUpload size={20} strokeWidth={1.5} className="text-zinc-400" />
                 }
               </div>
@@ -259,7 +259,7 @@ export default function Upload({ onDone }: Props) {
                   <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                     {dragging ? 'Drop to upload' : 'Drop your PDF here'}
                   </p>
-                  <p className="text-xs text-zinc-400 mt-1">or <span className="text-violet-500">browse files</span> · PDF only</p>
+                  <p className="text-xs text-zinc-400 mt-1">or <span className="text-primary-500">browse files</span> · PDF only</p>
                 </div>
               )}
             </div>
@@ -284,7 +284,7 @@ export default function Upload({ onDone }: Props) {
                     onClick={() => applyTemplate(t)}
                     className={`px-3 py-1 rounded-md text-xs font-medium border transition-all cursor-pointer ${
                       isActive
-                        ? 'bg-violet-600 text-white border-violet-600'
+                        ? 'bg-primary-600 text-white border-primary-600'
                         : 'bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500'
                     }`}
                   >
@@ -301,7 +301,7 @@ export default function Upload({ onDone }: Props) {
               value={jd}
               onChange={(e) => handleJdChange(e.target.value)}
               rows={11}
-              className="w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none transition-colors"
+              className="w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none transition-colors"
             />
             <AnimatePresence>
               {jd.length > 0 && (
@@ -337,7 +337,7 @@ export default function Upload({ onDone }: Props) {
           <button
             type="submit"
             disabled={loading || !file || !jd.trim()}
-            className="w-full bg-violet-600 hover:bg-violet-500 text-white py-3 rounded-xl text-sm font-medium disabled:opacity-40 transition-colors cursor-pointer flex items-center justify-center gap-2"
+            className="w-full bg-primary-600 hover:bg-primary-500 text-white py-3 rounded-xl text-sm font-medium disabled:opacity-40 transition-colors cursor-pointer flex items-center justify-center gap-2"
           >
             {loading ? (
               <><Loader2 size={15} strokeWidth={2} className="animate-spin" /> Analyzing your CV…</>

@@ -87,7 +87,7 @@ export default function Jobs() {
         </div>
         <button
           onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors cursor-pointer"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors cursor-pointer"
         >
           <Plus size={15} strokeWidth={2} />
           Add Job
@@ -109,13 +109,13 @@ export default function Jobs() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search company or title…"
-            className="w-full border border-zinc-200 dark:border-zinc-700 rounded-lg pl-8 pr-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-colors"
+            className="w-full border border-zinc-200 dark:border-zinc-700 rounded-lg pl-8 pr-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
           />
         </div>
         <select
           value={filterStatus}
           onChange={e => setFilterStatus(e.target.value)}
-          className="border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-colors"
+          className="border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
         >
           <option value="">All statuses</option>
           {KANBAN_COLS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
@@ -128,7 +128,7 @@ export default function Jobs() {
               onClick={() => setView(v)}
               className={`px-3 py-2 text-xs font-medium capitalize transition-colors cursor-pointer ${
                 view === v
-                  ? 'bg-violet-600 text-white'
+                  ? 'bg-primary-600 text-white'
                   : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
               }`}
             >
@@ -140,7 +140,7 @@ export default function Jobs() {
 
       {loading ? (
         <div className="flex justify-center py-20">
-          <Loader2 size={24} strokeWidth={1.5} className="animate-spin text-violet-500" />
+          <Loader2 size={24} strokeWidth={1.5} className="animate-spin text-primary-500" />
         </div>
       ) : (
         <>
@@ -182,7 +182,7 @@ export default function Jobs() {
               {filtered.length === 0 ? (
                 <div className="text-center py-16 text-sm text-zinc-400">
                   No applications found.{' '}
-                  <button onClick={() => setShowAdd(true)} className="text-violet-500 hover:text-violet-400 cursor-pointer transition-colors">Add one</button>
+                  <button onClick={() => setShowAdd(true)} className="text-primary-500 hover:text-primary-400 cursor-pointer transition-colors">Add one</button>
                 </div>
               ) : (
                 <table className="w-full text-sm">
@@ -231,7 +231,7 @@ export default function Jobs() {
               <p className="text-zinc-400 text-sm mb-4">Your job pipeline is empty.</p>
               <button
                 onClick={() => setShowAdd(true)}
-                className="px-5 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium cursor-pointer transition-colors"
+                className="px-5 py-2.5 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium cursor-pointer transition-colors"
               >
                 Add Your First Application
               </button>

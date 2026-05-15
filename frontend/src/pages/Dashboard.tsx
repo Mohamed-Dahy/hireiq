@@ -119,7 +119,7 @@ export default function Dashboard({ onAnalyze, onHistory, onInterview, onSession
               <p className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 leading-none tabular-nums">{profile.best_score}%</p>
             </div>
             <div className="w-8 h-8 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-              <Sparkles size={14} strokeWidth={1.5} className="text-violet-500" />
+              <Sparkles size={14} strokeWidth={1.5} className="text-primary-500" />
             </div>
           </div>
         )}
@@ -143,7 +143,7 @@ export default function Dashboard({ onAnalyze, onHistory, onInterview, onSession
             <div>
               <p className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 leading-none tabular-nums">{s.value}</p>
               <p className="text-xs text-zinc-400 mt-1">{s.label}</p>
-              {s.sub && <p className="text-xs text-violet-500 mt-0.5">{s.sub}</p>}
+              {s.sub && <p className="text-xs text-primary-500 mt-0.5">{s.sub}</p>}
             </div>
           </motion.div>
         ))}
@@ -156,13 +156,13 @@ export default function Dashboard({ onAnalyze, onHistory, onInterview, onSession
           <h2 className="text-xs font-medium text-zinc-400 uppercase tracking-widest">Quick Actions</h2>
           <button
             onClick={onAnalyze}
-            className="w-full text-left bg-violet-600 hover:bg-violet-500 transition-colors rounded-xl p-4 cursor-pointer"
+            className="w-full text-left bg-primary-600 hover:bg-primary-500 transition-colors rounded-xl p-4 cursor-pointer"
           >
-            <div className="w-7 h-7 rounded-md bg-violet-500 flex items-center justify-center mb-3">
+            <div className="w-7 h-7 rounded-md bg-primary-500 flex items-center justify-center mb-3">
               <Upload size={13} strokeWidth={2} className="text-white" />
             </div>
             <p className="text-sm font-medium text-white">Analyze New CV</p>
-            <p className="text-xs text-violet-200 mt-0.5">Upload a PDF and get instant feedback</p>
+            <p className="text-xs text-primary-200 mt-0.5">Upload a PDF and get instant feedback</p>
           </button>
           <button
             onClick={onInterview}
@@ -192,7 +192,7 @@ export default function Dashboard({ onAnalyze, onHistory, onInterview, onSession
             <>
               <div className="flex items-center justify-between">
                 <h2 className="text-xs font-medium text-zinc-400 uppercase tracking-widest">Recent Sessions</h2>
-                <button onClick={onHistory} className="text-xs text-violet-500 hover:text-violet-400 cursor-pointer transition-colors">
+                <button onClick={onHistory} className="text-xs text-primary-500 hover:text-primary-400 cursor-pointer transition-colors">
                   View all →
                 </button>
               </div>
@@ -241,7 +241,7 @@ export default function Dashboard({ onAnalyze, onHistory, onInterview, onSession
               <p className="text-xs text-zinc-500 mb-5 max-w-xs">Upload your first CV to get a match score and personalized interview questions.</p>
               <button
                 onClick={onAnalyze}
-                className="bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-5 py-2 rounded-md transition-colors cursor-pointer"
+                className="bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium px-5 py-2 rounded-md transition-colors cursor-pointer"
               >
                 Get Started →
               </button>
@@ -262,7 +262,7 @@ export default function Dashboard({ onAnalyze, onHistory, onInterview, onSession
               <p className="text-xs text-zinc-400 mt-0.5">Last {chartData.length} scored sessions</p>
             </div>
             <div className="flex items-center gap-1.5 text-xs text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1.5 rounded-md">
-              <span className="w-2 h-2 rounded-full bg-violet-500" />
+              <span className="w-2 h-2 rounded-full bg-primary-500" />
               Match score
             </div>
           </div>

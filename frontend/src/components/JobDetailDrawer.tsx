@@ -26,7 +26,7 @@ interface Props {
 
 type Tab = 'overview' | 'activity' | 'contacts' | 'prep'
 
-const inputCls = 'border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1.5 text-xs bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-colors'
+const inputCls = 'border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1.5 text-xs bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors'
 
 export default function JobDetailDrawer({ job, onClose, onUpdated }: Props) {
   const [tab, setTab] = useState<Tab>('overview')
@@ -126,7 +126,7 @@ export default function JobDetailDrawer({ job, onClose, onUpdated }: Props) {
               onClick={() => setTab(t)}
               className={`flex-1 py-2.5 text-xs font-medium capitalize transition-colors cursor-pointer ${
                 tab === t
-                  ? 'text-violet-600 dark:text-violet-400 border-b-2 border-violet-500'
+                  ? 'text-primary-600 dark:text-primary-400 border-b-2 border-primary-500'
                   : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
               }`}
             >
@@ -177,7 +177,7 @@ export default function JobDetailDrawer({ job, onClose, onUpdated }: Props) {
                       <button
                         key={s}
                         onClick={() => advance(s)}
-                        className="px-3 py-1 rounded-lg text-xs bg-violet-50 dark:bg-violet-950 text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-900 cursor-pointer transition-colors"
+                        className="px-3 py-1 rounded-lg text-xs bg-primary-50 dark:bg-primary-950 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900 cursor-pointer transition-colors"
                       >
                         {s.replace('_', ' ')}
                       </button>
@@ -209,7 +209,7 @@ export default function JobDetailDrawer({ job, onClose, onUpdated }: Props) {
                 <button
                   onClick={logAct}
                   disabled={actSaving}
-                  className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs rounded-lg disabled:opacity-50 cursor-pointer transition-colors flex items-center gap-1"
+                  className="px-3 py-1.5 bg-primary-600 hover:bg-primary-500 text-white text-xs rounded-lg disabled:opacity-50 cursor-pointer transition-colors flex items-center gap-1"
                 >
                   {actSaving ? <Loader2 size={12} strokeWidth={2} className="animate-spin" /> : 'Log'}
                 </button>
@@ -227,7 +227,7 @@ export default function JobDetailDrawer({ job, onClose, onUpdated }: Props) {
                 <button
                   onClick={addCt}
                   disabled={ctSaving}
-                  className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs rounded-lg disabled:opacity-50 cursor-pointer transition-colors"
+                  className="px-3 py-1.5 bg-primary-600 hover:bg-primary-500 text-white text-xs rounded-lg disabled:opacity-50 cursor-pointer transition-colors"
                 >
                   Add
                 </button>
@@ -266,7 +266,7 @@ export default function JobDetailDrawer({ job, onClose, onUpdated }: Props) {
               <button
                 onClick={runAnalysis}
                 disabled={analyzing}
-                className="w-full py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 text-xs font-medium hover:border-violet-400 dark:hover:border-violet-600 hover:text-violet-600 dark:hover:text-violet-400 disabled:opacity-50 cursor-pointer transition-colors flex items-center justify-center gap-2"
+                className="w-full py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 text-xs font-medium hover:border-primary-400 dark:hover:border-primary-600 hover:text-primary-600 dark:hover:text-primary-400 disabled:opacity-50 cursor-pointer transition-colors flex items-center justify-center gap-2"
               >
                 {analyzing
                   ? <><Loader2 size={12} strokeWidth={2} className="animate-spin" /> Analyzing…</>

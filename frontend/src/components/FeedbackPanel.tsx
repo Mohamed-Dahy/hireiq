@@ -17,7 +17,7 @@ function ScoreBar({ label, value }: ScoreBarProps) {
           initial={{ width: 0 }}
           animate={{ width: `${value * 10}%` }}
           transition={{ duration: 0.7, ease: [0, 0, 0.2, 1] }}
-          className="bg-violet-500 h-1.5 rounded-full"
+          className="bg-primary-500 h-1.5 rounded-full"
         />
       </div>
     </div>
@@ -45,7 +45,7 @@ export default function FeedbackPanel({ transcript, clarity, relevance, depth, e
       {eyeContact >= 0 && (
         <div className="flex justify-between text-sm text-zinc-600 dark:text-zinc-400">
           <span>Eye Contact</span>
-          <span className="font-medium text-violet-500">{eyeContact}%</span>
+          <span className="font-medium text-primary-500">{eyeContact}%</span>
         </div>
       )}
     </div>

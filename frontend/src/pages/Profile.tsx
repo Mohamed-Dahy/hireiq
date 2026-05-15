@@ -172,7 +172,7 @@ export default function Profile({ onBack, onLogout }: Props) {
           initial={reduced ? {} : { scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.4, ease: [0, 0, 0.2, 1] }}
-          className="w-20 h-20 rounded-full bg-violet-600 flex items-center justify-center"
+          className="w-20 h-20 rounded-full bg-primary-600 flex items-center justify-center"
         >
           <span className="text-2xl font-semibold text-white">{initials}</span>
         </motion.div>
@@ -219,14 +219,14 @@ export default function Profile({ onBack, onLogout }: Props) {
           <a
             href="/referrals"
             onClick={(e) => { e.preventDefault(); window.location.pathname = '/referrals' }}
-            className="block bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 hover:border-violet-200 dark:hover:border-violet-800 transition-colors group"
+            className="block bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 hover:border-primary-200 dark:hover:border-primary-800 transition-colors group"
           >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <Gift size={16} strokeWidth={1.5} className="text-violet-500" />
+                <Gift size={16} strokeWidth={1.5} className="text-primary-500" />
                 <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Referrals</span>
               </div>
-              <ArrowRight size={14} strokeWidth={1.5} className="text-zinc-400 group-hover:text-violet-500 transition-colors" />
+              <ArrowRight size={14} strokeWidth={1.5} className="text-zinc-400 group-hover:text-primary-500 transition-colors" />
             </div>
             <div className="flex items-center gap-4 text-sm">
               <div className="flex items-center gap-1.5 text-zinc-500">
@@ -240,7 +240,7 @@ export default function Profile({ onBack, onLogout }: Props) {
                 <span> days free earned</span>
               </div>
             </div>
-            <div className="mt-2 text-xs text-violet-500 font-medium">View Full Referral Hub →</div>
+            <div className="mt-2 text-xs text-primary-500 font-medium">View Full Referral Hub →</div>
           </a>
         </motion.div>
       )}
@@ -293,7 +293,7 @@ export default function Profile({ onBack, onLogout }: Props) {
               }`}
             >
               <div className={`w-9 h-9 rounded-lg flex items-center justify-center mx-auto mb-2 ${
-                a.earned ? 'bg-violet-600 text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-400'
+                a.earned ? 'bg-primary-600 text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-400'
               }`}>
                 {a.icon}
               </div>

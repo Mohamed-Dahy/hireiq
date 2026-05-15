@@ -23,7 +23,7 @@ function renderLine(line: string, i: number) {
   if (numbered) {
     return (
       <div key={i} className="flex gap-2 mb-2">
-        <span className="text-violet-500 font-medium text-sm min-w-[1.2rem]">{numbered[1]}.</span>
+        <span className="text-primary-500 font-medium text-sm min-w-[1.2rem]">{numbered[1]}.</span>
         <span
           className="text-zinc-700 dark:text-zinc-300 text-sm leading-relaxed"
           dangerouslySetInnerHTML={{ __html: numbered[2].replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }}
@@ -36,7 +36,7 @@ function renderLine(line: string, i: number) {
   if (bullet) {
     return (
       <div key={i} className="flex gap-2 mb-1.5">
-        <span className="text-violet-400 mt-0.5">•</span>
+        <span className="text-primary-400 mt-0.5">•</span>
         <span
           className="text-zinc-700 dark:text-zinc-300 text-sm leading-relaxed"
           dangerouslySetInnerHTML={{ __html: bullet[1].replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }}
@@ -69,7 +69,7 @@ export default function SkillGapList({ text, loading }: Props) {
     <div className="bg-zinc-50 dark:bg-zinc-800 rounded-xl p-5 text-left">
       {lines.map((line, i) => renderLine(line, i))}
       {loading && (
-        <span className="inline-block w-1.5 h-4 bg-violet-400 animate-pulse rounded-sm ml-1 align-middle" />
+        <span className="inline-block w-1.5 h-4 bg-primary-400 animate-pulse rounded-sm ml-1 align-middle" />
       )}
     </div>
   )

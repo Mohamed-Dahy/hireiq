@@ -121,7 +121,7 @@ export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken, 
     }
   }
 
-  const inputCls = 'w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-colors'
+  const inputCls = 'w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors'
 
   // ── Confirmation screens ────────────────────────────────────────────────────
   if (mode === 'verification-pending' || mode === 'forgot-sent') {
@@ -134,7 +134,7 @@ export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken, 
           className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl w-full max-w-md p-8 text-center"
         >
           <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-5">
-            <CheckCircle size={22} strokeWidth={1.5} className="text-violet-500" />
+            <CheckCircle size={22} strokeWidth={1.5} className="text-primary-500" />
           </div>
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-2">Check your inbox</h2>
           <p className="text-sm text-zinc-500 mb-6 leading-relaxed">
@@ -144,7 +144,7 @@ export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken, 
             }
           </p>
           {isVerify && (
-            <button onClick={handleResend} disabled={loading} className="text-sm text-violet-500 hover:text-violet-400 disabled:opacity-50 mb-5 block mx-auto transition-colors cursor-pointer">
+            <button onClick={handleResend} disabled={loading} className="text-sm text-primary-500 hover:text-primary-400 disabled:opacity-50 mb-5 block mx-auto transition-colors cursor-pointer">
               Didn't receive it? Resend
             </button>
           )}
@@ -181,7 +181,7 @@ export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken, 
     <div className="min-h-screen bg-white dark:bg-zinc-950 dark:[background-image:radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(139,92,246,0.12),transparent)] flex flex-col items-center justify-center p-4">
       {/* Logo */}
       <div className="flex items-center gap-2 mb-8">
-        <Layers size={20} strokeWidth={1.5} className="text-violet-500" />
+        <Layers size={20} strokeWidth={1.5} className="text-primary-500" />
         <span className="font-semibold text-zinc-900 dark:text-zinc-50 text-base tracking-tight">HireIQ</span>
       </div>
 
@@ -299,7 +299,7 @@ export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken, 
               <p>{error}</p>
               {mode === 'login' && error.toLowerCase().includes('verif') && (
                 <button type="button" onClick={handleResend} disabled={loading}
-                  className="mt-1.5 underline text-violet-500 hover:text-violet-400 disabled:opacity-50 cursor-pointer">
+                  className="mt-1.5 underline text-primary-500 hover:text-primary-400 disabled:opacity-50 cursor-pointer">
                   Resend verification email
                 </button>
               )}
@@ -308,7 +308,7 @@ export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken, 
 
           <button
             type="submit" disabled={loading}
-            className="w-full bg-violet-600 text-white py-2.5 rounded-md text-sm font-medium hover:bg-violet-500 disabled:opacity-50 transition-colors cursor-pointer mt-1 flex items-center justify-center gap-2"
+            className="w-full bg-primary-600 text-white py-2.5 rounded-md text-sm font-medium hover:bg-primary-500 disabled:opacity-50 transition-colors cursor-pointer mt-1 flex items-center justify-center gap-2"
           >
             {loading ? (
               <><Loader2 size={14} strokeWidth={2} className="animate-spin" /> Please wait…</>

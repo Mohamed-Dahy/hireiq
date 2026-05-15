@@ -15,7 +15,7 @@ const LEVEL_COLORS: Record<string, string> = {
 }
 
 const CATEGORY_DOT: Record<string, string> = {
-  hard: 'bg-violet-500',
+  hard: 'bg-primary-500',
   soft: 'bg-pink-400',
 }
 
@@ -50,7 +50,7 @@ export default function SkillsInventory({ skills }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 text-xs text-zinc-400">
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-violet-500 inline-block"/>Technical</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary-500 inline-block"/>Technical</span>
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-pink-400 inline-block"/>Soft skill</span>
       </div>
       {hard.length > 0 && renderGroup(hard, 'Technical Skills')}

@@ -25,7 +25,7 @@ export default function AppShell({ children, activeNav, navItems, onLogout }: Ap
     <nav className="hidden md:flex flex-col h-screen w-64 bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 fixed top-0 left-0 z-40 overflow-y-auto">
       {/* Logo */}
       <div className="h-12 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-2 px-4 shrink-0">
-        <Layers size={18} strokeWidth={1.5} className="text-violet-500" />
+        <Layers size={18} strokeWidth={1.5} className="text-primary-500" />
         <span className="font-semibold text-zinc-900 dark:text-zinc-50 text-sm tracking-tight">HireIQ</span>
       </div>
 
@@ -82,7 +82,7 @@ export default function AppShell({ children, activeNav, navItems, onLogout }: Ap
             onClick={() => { item.onClick(); setMobileNavOpen(false) }}
             className={`flex flex-col items-center justify-center min-w-[50px] h-14 gap-1 rounded-lg transition-colors cursor-pointer ${
               isActive
-                ? 'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-950/30'
+                ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/30'
                 : 'text-zinc-600 dark:text-zinc-400'
             }`}
             aria-label={item.label}

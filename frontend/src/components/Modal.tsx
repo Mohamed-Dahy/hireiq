@@ -82,7 +82,7 @@ export default function Modal({
                     className={`px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50 transition-colors cursor-pointer flex items-center gap-2 ${
                       danger
                         ? 'bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500'
-                        : 'bg-violet-600 hover:bg-violet-500'
+                        : 'bg-primary-600 hover:bg-primary-500'
                     }`}
                   >
                     {loading ? (

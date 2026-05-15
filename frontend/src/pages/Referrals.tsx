@@ -16,7 +16,7 @@ function StatCard({ label, value, icon }: { label: string; value: string; icon: 
       variants={fadeUp}
       className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 flex items-center gap-4"
     >
-      <div className="w-10 h-10 rounded-lg bg-violet-100 dark:bg-violet-950/50 flex items-center justify-center text-violet-600 dark:text-violet-400">
+      <div className="w-10 h-10 rounded-lg bg-primary-100 dark:bg-primary-950/50 flex items-center justify-center text-primary-600 dark:text-primary-400">
         {icon}
       </div>
       <div>
@@ -105,7 +105,7 @@ export default function Referrals() {
       className="max-w-2xl mx-auto py-8 px-4 sm:px-6 space-y-6"
     >
       <div className="flex items-center gap-2 mb-2">
-        <Gift size={20} strokeWidth={1.5} className="text-violet-500" />
+        <Gift size={20} strokeWidth={1.5} className="text-primary-500" />
         <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Referral Hub</h1>
       </div>
 

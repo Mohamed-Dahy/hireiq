@@ -13,7 +13,7 @@ const TYPE_COLORS: Record<string, string> = {
   course: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
   book: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300',
   video: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
-  project: 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300',
+  project: 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300',
   tool: 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400',
 }
 
@@ -26,7 +26,7 @@ export default function RoadmapPhaseCard({ phase, index, defaultOpen }: Props) {
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-3 px-5 py-4 text-left cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
       >
-        <span className="w-7 h-7 rounded-lg bg-violet-100 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 text-xs font-bold flex items-center justify-center shrink-0">
+        <span className="w-7 h-7 rounded-lg bg-primary-100 dark:bg-primary-950/50 text-primary-700 dark:text-primary-300 text-xs font-bold flex items-center justify-center shrink-0">
           {index + 1}
         </span>
         <div className="flex-1 min-w-0">
@@ -72,7 +72,7 @@ export default function RoadmapPhaseCard({ phase, index, defaultOpen }: Props) {
                         href={r.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-violet-600 dark:text-violet-400 hover:underline truncate flex items-center gap-1"
+                        className="text-primary-600 dark:text-primary-400 hover:underline truncate flex items-center gap-1"
                       >
                         {r.name}
                         <ExternalLink size={10} strokeWidth={2} />
@@ -99,9 +99,9 @@ export default function RoadmapPhaseCard({ phase, index, defaultOpen }: Props) {
                 </p>
               </div>
 
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800/50">
-                <CheckCircle size={14} strokeWidth={1.5} className="text-violet-600 dark:text-violet-400 mt-0.5 shrink-0" />
-                <p className="text-xs text-violet-800 dark:text-violet-200">
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-primary-50 dark:bg-primary-950/30 border border-primary-200 dark:border-primary-800/50">
+                <CheckCircle size={14} strokeWidth={1.5} className="text-primary-600 dark:text-primary-400 mt-0.5 shrink-0" />
+                <p className="text-xs text-primary-800 dark:text-primary-200">
                   <span className="font-medium">Milestone:</span> {phase.milestone}
                 </p>
               </div>

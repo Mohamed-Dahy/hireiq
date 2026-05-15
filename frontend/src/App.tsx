@@ -28,7 +28,7 @@ type View = 'landing' | 'auth' | 'app' | 'verify-otp'
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen">
-    <Loader2 size={28} strokeWidth={1.5} className="animate-spin text-violet-500" />
+    <Loader2 size={28} strokeWidth={1.5} className="animate-spin text-primary-500" />
   </div>
 )
 
@@ -180,7 +180,7 @@ export default function App() {
       {/* Nav */}
       <nav className="bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 px-4 sm:px-6 h-12 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => goToPage('home')}>
-          <Layers size={18} strokeWidth={1.5} className="text-violet-500" />
+          <Layers size={18} strokeWidth={1.5} className="text-primary-500" />
           <span className="font-semibold text-zinc-900 dark:text-zinc-50 text-sm tracking-tight">HireIQ</span>
         </div>
 
@@ -198,7 +198,7 @@ export default function App() {
             >
               {label}
               {badge != null && badge > 0 && (
-                <span className="absolute -top-1.5 -right-3 bg-violet-600 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                <span className="absolute -top-1.5 -right-3 bg-primary-600 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
                   {badge > 99 ? '99' : badge}
                 </span>
               )}
@@ -273,7 +273,7 @@ export default function App() {
                   >
                     {label}
                     {badge != null && badge > 0 && (
-                      <span className="absolute top-2.5 left-24 bg-violet-600 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5">
+                      <span className="absolute top-2.5 left-24 bg-primary-600 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5">
                         {badge}
                       </span>
                     )}

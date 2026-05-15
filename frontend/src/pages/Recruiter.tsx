@@ -136,7 +136,7 @@ export default function Recruiter() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 size={24} strokeWidth={1.5} className="animate-spin text-violet-500" />
+        <Loader2 size={24} strokeWidth={1.5} className="animate-spin text-primary-500" />
       </div>
     )
   }
@@ -153,19 +153,19 @@ export default function Recruiter() {
               placeholder="List name *"
               value={newListName}
               onChange={e => setNewListName(e.target.value)}
-              className="w-full border border-zinc-200 dark:border-zinc-700 rounded-md px-3 py-1.5 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-colors"
+              className="w-full border border-zinc-200 dark:border-zinc-700 rounded-md px-3 py-1.5 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
             />
             <input
               type="text"
               placeholder="Position / job title"
               value={newListTitle}
               onChange={e => setNewListTitle(e.target.value)}
-              className="w-full border border-zinc-200 dark:border-zinc-700 rounded-md px-3 py-1.5 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-colors"
+              className="w-full border border-zinc-200 dark:border-zinc-700 rounded-md px-3 py-1.5 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
             />
             <button
               type="submit"
               disabled={creating || !newListName.trim()}
-              className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white rounded-md py-1.5 text-sm font-medium transition-colors cursor-pointer"
+              className="w-full bg-primary-600 hover:bg-primary-500 disabled:opacity-50 text-white rounded-md py-1.5 text-sm font-medium transition-colors cursor-pointer"
             >
               {creating ? 'Creating…' : '+ New List'}
             </button>
@@ -182,7 +182,7 @@ export default function Recruiter() {
                 onClick={() => loadCandidates(list)}
                 className={`flex items-center justify-between p-3 cursor-pointer border-b border-zinc-100 dark:border-zinc-800 transition-colors hover:bg-white dark:hover:bg-zinc-900 ${
                   selectedList?.id === list.id
-                    ? 'bg-white dark:bg-zinc-900 border-l-2 border-l-violet-600'
+                    ? 'bg-white dark:bg-zinc-900 border-l-2 border-l-primary-600'
                     : ''
                 }`}
               >
@@ -191,7 +191,7 @@ export default function Recruiter() {
                   {list.job_title && (
                     <p className="text-xs text-zinc-500 truncate">{list.job_title}</p>
                   )}
-                  <p className="text-xs text-violet-500">{list.candidate_count} candidate{list.candidate_count !== 1 ? 's' : ''}</p>
+                  <p className="text-xs text-primary-500">{list.candidate_count} candidate{list.candidate_count !== 1 ? 's' : ''}</p>
                 </div>
                 <button
                   onClick={e => { e.stopPropagation(); handleDeleteList(list.id) }}
@@ -233,7 +233,7 @@ export default function Recruiter() {
               <button
                 onClick={handleExport}
                 disabled={exporting}
-                className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
+                className="flex items-center gap-2 bg-primary-600 hover:bg-primary-500 disabled:opacity-50 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
               >
                 {exporting
                   ? <><Loader2 size={14} strokeWidth={2} className="animate-spin" /> Generating…</>
@@ -249,7 +249,7 @@ export default function Recruiter() {
                 <select
                   value={addSessionId}
                   onChange={e => { setAddSessionId(e.target.value); setAddError('') }}
-                  className="flex-1 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-colors"
+                  className="flex-1 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
                 >
                   <option value="">Select a CV session…</option>
                   {availableSessions.map(s => (
@@ -261,14 +261,14 @@ export default function Recruiter() {
                 <button
                   type="submit"
                   disabled={!addSessionId}
-                  className="bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white rounded-lg px-4 py-1.5 text-sm font-medium transition-colors cursor-pointer"
+                  className="bg-primary-600 hover:bg-primary-500 disabled:opacity-50 text-white rounded-lg px-4 py-1.5 text-sm font-medium transition-colors cursor-pointer"
                 >
                   Add
                 </button>
               </form>
               {addError && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{addError}</p>}
               {availableSessions.length === 0 && sessions.some(s => s.match_score !== null) && (
-                <p className="text-violet-500 text-xs mt-1">All scored sessions are already in this list.</p>
+                <p className="text-primary-500 text-xs mt-1">All scored sessions are already in this list.</p>
               )}
               {sessions.every(s => s.match_score === null) && sessions.length > 0 && (
                 <p className="text-amber-600 dark:text-amber-400 text-xs mt-1">
@@ -280,7 +280,7 @@ export default function Recruiter() {
             {/* Candidate table */}
             {candidateData === null ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 size={20} strokeWidth={1.5} className="animate-spin text-violet-500" />
+                <Loader2 size={20} strokeWidth={1.5} className="animate-spin text-primary-500" />
               </div>
             ) : (
               <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
