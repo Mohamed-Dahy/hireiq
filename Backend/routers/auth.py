@@ -15,7 +15,7 @@ DELETE /auth/account            — permanently delete account and all data
 
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
@@ -57,6 +57,7 @@ from services.auth_service import (
     check_forgot_password_rate,
     create_reset_session,
     consume_reset_session,
+    create_default_profile,
 )
 from services import otp_service
 from services.email_service import send_otp_email, send_account_deletion_email
@@ -97,6 +98,8 @@ async def register(
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    create_default_profile(db, user.id)
 
     if ref:
         from services.referral_service import register_via_referral
@@ -243,11 +246,23 @@ def get_me(
 
     recent = sorted(sessions, key=lambda s: s.created_at, reverse=True)[:5]
 
+    window_start = datetime.utcnow() - timedelta(days=settings.free_tier_window_days)
+    analyses_in_window = sum(1 for s in sessions if s.created_at >= window_start)
+    window_resets_at = None
+    if analyses_in_window > 0:
+        oldest = min((s.created_at for s in sessions if s.created_at >= window_start), default=None)
+        if oldest:
+            window_resets_at = oldest + timedelta(days=settings.free_tier_window_days)
+
+    profile = current_user.profile
+
     return UserProfileResponse(
         id=current_user.id,
         email=current_user.email,
         username=current_user.username,
         created_at=current_user.created_at,
+        is_admin=current_user.is_admin,
+        tier=current_user.tier,
         total_sessions=len(sessions),
         avg_match_score=round(sum(scores) / len(scores), 1) if scores else None,
         total_interviews=total_interviews,
@@ -255,6 +270,14 @@ def get_me(
         sessions_this_month=sessions_this_month,
         roadmaps_generated=roadmaps_generated,
         recent_sessions=[CVSessionResponse.model_validate(s) for s in recent],
+        linkedin_url=profile.linkedin_url if profile else None,
+        github_url=profile.github_url if profile else None,
+        portfolio_url=profile.portfolio_url if profile else None,
+        bio=profile.bio if profile else None,
+        stored_cv_filename=profile.stored_cv_filename if profile else None,
+        has_stored_cv=bool(profile and profile.stored_cv_path),
+        analyses_in_window=analyses_in_window,
+        window_resets_at=window_resets_at,
     )
 
 

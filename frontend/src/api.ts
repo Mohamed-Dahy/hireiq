@@ -146,6 +146,17 @@ export interface UserProfile {
   sessions_this_month: number
   roadmaps_generated: number
   recent_sessions: RecentSession[]
+  // Phase 7 profile extensions
+  is_admin: boolean
+  tier: string
+  linkedin_url: string | null
+  github_url: string | null
+  portfolio_url: string | null
+  bio: string | null
+  stored_cv_filename: string | null
+  has_stored_cv: boolean
+  analyses_in_window: number
+  window_resets_at: string | null
 }
 
 export interface CVUploadResponse {
@@ -556,3 +567,36 @@ export const getRoadmap = (id: number) =>
 
 export const getMySessions = () =>
   api.get<CVSession[]>('/cv/sessions')
+
+// ── Phase 7: User Profile ────────────────────────────────────────────────────
+
+export interface ProfileUpdatePayload {
+  username?: string
+  bio?: string
+  linkedin_url?: string
+  github_url?: string
+  portfolio_url?: string
+}
+
+export const getProfile = () =>
+  api.get<UserProfile>('/profile/me')
+
+export const updateProfile = (data: ProfileUpdatePayload) =>
+  api.put<MessageResponse>('/profile/update', data)
+
+export const uploadStoredCv = (file: File) => {
+  const form = new FormData()
+  form.append('file', file)
+  return api.post<{ message: string; filename: string }>('/profile/cv', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
+export const deleteStoredCv = () =>
+  api.delete<MessageResponse>('/profile/cv')
+
+export const sendChangeOtp = () =>
+  api.post<MessageResponse>('/profile/send-change-otp', {})
+
+export const changePassword = (otp_code: string, new_password: string) =>
+  api.post<MessageResponse>('/profile/change-password', { otp_code, new_password })

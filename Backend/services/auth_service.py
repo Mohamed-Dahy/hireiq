@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from database import get_db
-from models.user import User
+from models.user import User, UserProfile
 from services.cache import redis_client
 
 bearer_scheme = HTTPBearer()
@@ -213,6 +213,12 @@ def get_current_user(
     check_account_locked(user)
 
     return user
+
+
+def create_default_profile(db: Session, user_id: int) -> None:
+    profile = UserProfile(user_id=user_id)
+    db.add(profile)
+    db.commit()
 
 
 def create_reset_session(user_id: int) -> str:
