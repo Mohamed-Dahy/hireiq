@@ -307,7 +307,7 @@ export default function App() {
         {page === 'home' && (
           <motion.div key="home" variants={pageVariants} initial="initial" animate="animate" exit="exit">
             <Suspense fallback={<PageLoader />}>
-              <Dashboard onAnalyze={() => setPage('upload')} onHistory={() => setPage('history')} onInterview={() => setPage('interview')} onSession={openDetail} />
+              <Dashboard onAnalyze={() => setPage('upload')} onHistory={() => setPage('history')} onInterview={() => setPage('interview')} onSession={openDetail} onRoadmap={() => setPage('roadmap')} />
             </Suspense>
           </motion.div>
         )}

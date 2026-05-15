@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from limiter import limiter
 from models.user import User, CVSession, InterviewResult, OtpCode
+from models.roadmap import CareerRoadmap
 from models.schemas import (
     RegisterRequest,
     LoginRequest,
@@ -35,6 +36,7 @@ from models.schemas import (
     EmailRequest,
     ResetPasswordRequest,
     UserProfileResponse,
+    CVSessionResponse,
     OtpSendRequest,
     OtpVerifyRequest,
     PasswordResetWithTokenRequest,
@@ -229,6 +231,18 @@ def get_me(
             .scalar() or 0
         )
 
+    now = datetime.utcnow()
+    month_start = datetime(now.year, now.month, 1)
+    sessions_this_month = sum(1 for s in sessions if s.created_at >= month_start)
+
+    roadmaps_generated = (
+        db.query(func.count(CareerRoadmap.id))
+        .filter(CareerRoadmap.user_id == current_user.id)
+        .scalar() or 0
+    )
+
+    recent = sorted(sessions, key=lambda s: s.created_at, reverse=True)[:5]
+
     return UserProfileResponse(
         id=current_user.id,
         email=current_user.email,
@@ -238,6 +252,9 @@ def get_me(
         avg_match_score=round(sum(scores) / len(scores), 1) if scores else None,
         total_interviews=total_interviews,
         best_score=max(scores) if scores else None,
+        sessions_this_month=sessions_this_month,
+        roadmaps_generated=roadmaps_generated,
+        recent_sessions=[CVSessionResponse.model_validate(s) for s in recent],
     )
 
 

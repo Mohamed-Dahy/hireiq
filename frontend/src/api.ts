@@ -125,6 +125,15 @@ export interface MessageResponse {
   message: string
 }
 
+export interface RecentSession {
+  id: number
+  cv_filename: string
+  match_score: number | null
+  created_at: string
+  has_gap_report: boolean
+  jd_snippet: string | null
+}
+
 export interface UserProfile {
   id: number
   email: string
@@ -134,6 +143,9 @@ export interface UserProfile {
   avg_match_score: number | null
   total_interviews: number
   best_score: number | null
+  sessions_this_month: number
+  roadmaps_generated: number
+  recent_sessions: RecentSession[]
 }
 
 export interface CVUploadResponse {

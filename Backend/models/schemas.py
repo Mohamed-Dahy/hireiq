@@ -215,6 +215,10 @@ class UserProfileResponse(BaseModel):
     analyses_in_window: int = 0
     window_resets_at: Optional[datetime] = None
 
+    # Phase 6: Dashboard stats
+    sessions_this_month: int = 0
+    recent_sessions: list[CVSessionResponse] = []
+
 
 # ---------------------------------------------------------------------------
 # Phase 2: OTP & Profile
