@@ -157,7 +157,7 @@ export default function Dashboard({ onAnalyze, onHistory, onInterview, onRoadmap
       className="max-w-6xl mx-auto py-8 px-4 sm:px-6 space-y-6"
     >
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <p className="text-xs text-zinc-400 mb-1">{today}</p>
           <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">

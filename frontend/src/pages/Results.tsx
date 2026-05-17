@@ -100,7 +100,7 @@ export default function Results({ result, onBack, onPractice, onRoadmap }: Props
       className="max-w-2xl mx-auto py-8 px-4 sm:px-6 space-y-8"
     >
       {/* Top actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <button
           onClick={onBack}
           className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors cursor-pointer"
