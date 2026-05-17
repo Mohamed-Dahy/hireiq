@@ -600,3 +600,62 @@ export const sendChangeOtp = () =>
 
 export const changePassword = (otp_code: string, new_password: string) =>
   api.post<MessageResponse>('/profile/change-password', { otp_code, new_password })
+
+// ── Phase 9: Interview Question Bank ────────────────────────────────────────
+
+export interface BankQuestion {
+  id: number
+  question_text: string
+  model_answer: string
+  level: string
+  practiced: boolean
+}
+
+export interface BankSearchResult extends BankQuestion {
+  role: string
+  category: string
+}
+
+export interface BankQuestionsResponse {
+  role: string
+  level: string
+  total_questions: number
+  categories: Record<string, BankQuestion[]>
+}
+
+export interface BankSearchResponse {
+  query: string
+  results: BankSearchResult[]
+  total: number
+}
+
+export interface BankProgressCategory {
+  practiced: number
+  total: number
+  pct: number
+}
+
+export interface BankProgressResponse {
+  role: string
+  level: string
+  overall_readiness_pct: number
+  by_category: Record<string, BankProgressCategory>
+}
+
+export const getInterviewRoles = () =>
+  api.get<{ roles: string[] }>('/interview-bank/roles')
+
+export const getInterviewQuestions = (role: string, level: string) =>
+  api.get<BankQuestionsResponse>('/interview-bank/questions', { params: { role, level } })
+
+export const searchInterviewQuestions = (q: string, role?: string, level?: string) =>
+  api.get<BankSearchResponse>('/interview-bank/search', { params: { q, role, level } })
+
+export const markQuestionPracticed = (questionId: number, practiced: boolean) =>
+  api.post<{ question_id: number; practiced: boolean; practiced_at: string | null }>(
+    '/interview-bank/progress',
+    { question_id: questionId, practiced },
+  )
+
+export const getInterviewProgress = (role: string, level: string) =>
+  api.get<BankProgressResponse>('/interview-bank/progress', { params: { role, level } })

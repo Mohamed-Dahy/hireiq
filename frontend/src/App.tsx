@@ -22,8 +22,9 @@ const Jobs = lazy(() => import('./pages/Jobs'))
 const Recruiter = lazy(() => import('./pages/Recruiter'))
 const Referrals = lazy(() => import('./pages/Referrals'))
 const CareerRoadmap = lazy(() => import('./pages/CareerRoadmap'))
+const Bank = lazy(() => import('./pages/Bank'))
 
-type Page = 'home' | 'upload' | 'results' | 'history' | 'detail' | 'interview' | 'profile' | 'jobs' | 'recruiter' | 'referrals' | 'roadmap'
+type Page = 'home' | 'upload' | 'results' | 'history' | 'detail' | 'interview' | 'profile' | 'jobs' | 'recruiter' | 'referrals' | 'roadmap' | 'bank'
 type View = 'landing' | 'auth' | 'app' | 'verify-otp'
 
 const PageLoader = () => (
@@ -166,6 +167,7 @@ export default function App() {
     { id: 'recruiter' as const, label: 'Recruiter' },
     { id: 'referrals' as const, label: 'Referrals', badge: referralConversionCount > 0 ? referralConversionCount : undefined },
     { id: 'roadmap'   as const, label: 'Career Roadmap' },
+    { id: 'bank'      as const, label: 'Bank' },
     { id: 'history'   as const, label: 'History' },
     { id: 'interview' as const, label: 'Interview' },
   ]
@@ -384,6 +386,13 @@ export default function App() {
           <motion.div key="profile" variants={pageVariants} initial="initial" animate="animate" exit="exit">
             <Suspense fallback={<PageLoader />}>
               <Profile onBack={() => setPage('home')} onLogout={logout} />
+            </Suspense>
+          </motion.div>
+        )}
+        {page === 'bank' && (
+          <motion.div key="bank" variants={pageVariants} initial="initial" animate="animate" exit="exit">
+            <Suspense fallback={<PageLoader />}>
+              <Bank />
             </Suspense>
           </motion.div>
         )}

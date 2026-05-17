@@ -21,6 +21,7 @@ from models.user import User, UserProfile
 from services.cache import redis_client
 
 bearer_scheme = HTTPBearer()
+optional_bearer_scheme = HTTPBearer(auto_error=False)
 
 MAX_FAILED_LOGINS = 5
 LOCKOUT_MINUTES = 15
@@ -213,6 +214,24 @@ def get_current_user(
     check_account_locked(user)
 
     return user
+
+
+def get_optional_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(optional_bearer_scheme),
+    db: Session = Depends(get_db),
+) -> User | None:
+    if credentials is None:
+        return None
+    try:
+        payload = decode_token(credentials.credentials)
+        if payload.get("type") != "access":
+            return None
+        user_id = payload.get("sub")
+        if user_id is None:
+            return None
+        return db.query(User).filter(User.id == int(user_id)).first()
+    except Exception:
+        return None
 
 
 def create_default_profile(db: Session, user_id: int) -> None:
