@@ -536,7 +536,7 @@ export default function Landing({ onGetStarted, onLogin, dark, onToggleDark }: P
                 Ready to ace your next interview?
               </h2>
               <p className="text-primary-200 mb-8 text-sm leading-relaxed">
-                No credit card required. Free tier includes 3 CV analyses and 5 mock interview questions every month.
+                No credit card required. Free tier includes 2 CV analyses every 10 days and unlimited mock interview questions.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <button onClick={onGetStarted}

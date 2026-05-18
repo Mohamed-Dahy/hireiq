@@ -6,6 +6,7 @@ import type { CVUploadResponse } from '../api'
 
 interface Props {
   onDone: (result: CVUploadResponse) => void
+  onViewLastSession?: () => void
 }
 
 interface Template {
@@ -123,7 +124,7 @@ const STEPS = [
   { label: 'Analyze',          desc: 'Get your score' },
 ]
 
-export default function Upload({ onDone }: Props) {
+export default function Upload({ onDone, onViewLastSession }: Props) {
   const [file, setFile] = useState<File | null>(null)
   const [jd, setJd] = useState('')
   const [activeTemplate, setActiveTemplate] = useState<string | null>(null)
@@ -191,6 +192,23 @@ export default function Upload({ onDone }: Props) {
       transition={{ duration: 0.3 }}
       className="max-w-2xl mx-auto py-8 px-4 sm:px-6"
     >
+      {/* Active session banner */}
+      {onViewLastSession && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 mb-6"
+        >
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">You have an active analysis session.</p>
+          <button
+            type="button"
+            onClick={onViewLastSession}
+            className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 ml-4 shrink-0 cursor-pointer"
+          >
+            View results →
+          </button>
+        </motion.div>
+      )}
+
       {/* Header */}
       <div className="mb-7">
         <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight mb-1">Analyze Your CV</h2>
@@ -308,7 +326,7 @@ export default function Upload({ onDone }: Props) {
               {file ? (
                 <div className="flex items-center gap-3 bg-zinc-100 dark:bg-zinc-800 rounded-lg px-3 py-2">
                   <div className="min-w-0 text-left">
-                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate max-w-[200px]">{file.name}</p>
+                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate max-w-50">{file.name}</p>
                     <p className="text-xs text-zinc-500">{(file.size / 1024).toFixed(1)} KB</p>
                   </div>
                   <button

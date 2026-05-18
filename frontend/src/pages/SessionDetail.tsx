@@ -4,10 +4,14 @@ import type { Variants } from 'framer-motion'
 import { Download, ChevronDown } from 'lucide-react'
 import { getSessionDetail } from '../api'
 import { parseQuestions } from '../utils/parseQuestions'
-import type { CVSessionDetail, InterviewResult } from '../api'
+import type { CVSessionDetail, InterviewResult, StructuredAnalysis } from '../api'
 import ScoreGauge from '../components/ScoreGauge'
 import SkillGapList from '../components/SkillGapList'
+import SkillsInventory from '../components/SkillsInventory'
+import SkillGapChart from '../components/SkillGapChart'
+import QuestionCard from '../components/QuestionCard'
 import { useToast } from '../components/Toast'
+import { getSessionLabel } from '../utils/sessionLabel'
 
 interface Props {
   sessionId: number
@@ -118,6 +122,7 @@ export default function SessionDetail({ sessionId, onBack, onPractice }: Props) 
   const [analysis, setAnalysis] = useState('')
   const [streaming, setStreaming] = useState(false)
   const [analysisStarted, setAnalysisStarted] = useState(false)
+  const [structured, setStructured] = useState<StructuredAnalysis | null>(null)
 
   useEffect(() => {
     getSessionDetail(sessionId)
@@ -128,10 +133,14 @@ export default function SessionDetail({ sessionId, onBack, onPractice }: Props) 
 
   const startAnalysis = () => {
     setAnalysis('')
+    setStructured(null)
     setStreaming(true)
     setAnalysisStarted(true)
     const token = localStorage.getItem('access_token')
     const es = new EventSource(`/analyze?session_id=${sessionId}&token=${token}`)
+    es.addEventListener('structured', (e: MessageEvent) => {
+      try { setStructured(JSON.parse(e.data) as StructuredAnalysis) } catch {}
+    })
     es.onmessage = (e) => {
       if (e.data === '[DONE]') { setStreaming(false); es.close(); return }
       setAnalysis((prev) => prev + e.data.replace(/\\n/g, '\n'))
@@ -223,7 +232,7 @@ export default function SessionDetail({ sessionId, onBack, onPractice }: Props) 
 
       {/* Session header */}
       <div>
-        <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 truncate">{detail.cv_filename}</h2>
+        <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 truncate">{getSessionLabel(detail)}</h2>
         <p className="text-xs text-zinc-400 mt-1">
           Uploaded {new Date(detail.created_at).toLocaleDateString('en-GB', {
             day: 'numeric', month: 'long', year: 'numeric',
@@ -265,6 +274,53 @@ export default function SessionDetail({ sessionId, onBack, onPractice }: Props) 
           </div>
         )}
       </motion.div>
+
+      {/* Structured analysis results */}
+      {structured && (
+        <motion.div variants={fadeUp} initial="hidden" animate="show" className="space-y-6">
+          {structured.candidate_level && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">Assessed level:</span>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary-100 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800">
+                {structured.candidate_level}
+              </span>
+            </div>
+          )}
+
+          {structured.skill_inventory?.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-3">Your Skills</h3>
+              <SkillsInventory skills={structured.skill_inventory} />
+            </div>
+          )}
+
+          {structured.gap_report?.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-3">Priority Gaps</h3>
+              <SkillGapChart gaps={structured.gap_report} />
+            </div>
+          )}
+
+          {parseQuestions(analysis).length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Interview Questions</h3>
+                <button
+                  onClick={() => onPractice(parseQuestions(analysis))}
+                  className="text-xs bg-primary-600 hover:bg-primary-500 text-white px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer"
+                >
+                  Practice these →
+                </button>
+              </div>
+              <div className="space-y-3">
+                {parseQuestions(analysis).map((q, i) => (
+                  <QuestionCard key={i} question={q} index={i} />
+                ))}
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
 
       {/* Interview results */}
       <motion.div variants={fadeUp} initial="hidden" animate="show">

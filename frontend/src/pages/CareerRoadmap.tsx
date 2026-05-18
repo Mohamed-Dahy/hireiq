@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { Loader2, Map, MapPin, Layers, Clock, BookOpen, Upload, AlertCircle, CheckCircle2, FileText, User } from 'lucide-react'
-import RoadmapPhaseCard from '../components/RoadmapPhaseCard'
-import CareerInsightCard from '../components/CareerInsightCard'
-import QuickWinsCard from '../components/QuickWinsCard'
+import { Loader2, Map, MapPin, Layers, Clock, Upload, AlertCircle, CheckCircle2, FileText, User, ArrowDown, Target } from 'lucide-react'
 import { getMySessions, generateRoadmap, listRoadmaps, getRoadmap } from '../api'
-import type { RoadmapResponse, RoadmapListItem, CVSession } from '../api'
+import type { RoadmapPhase, RoadmapResponse, RoadmapListItem, CVSession } from '../api'
+import { getSessionLabel } from '../utils/sessionLabel'
 
 interface Props {
   initialSessionId?: number | null
@@ -14,8 +12,81 @@ interface Props {
 
 type Mode = 'cv' | 'role'
 
-function formatFilename(name: string): string {
-  return name.replace(/\.[^.]+$/, '').replace(/[_\-]/g, ' ')
+const PHASE_COLORS = [
+  'bg-primary-500',
+  'bg-accent-500',
+  'bg-emerald-500',
+  'bg-amber-500',
+  'bg-rose-500',
+  'bg-indigo-500',
+]
+
+function VisualRoadmap({ phases }: { phases: RoadmapPhase[] }) {
+  return (
+    <div className="relative">
+      {phases.map((phase, i) => (
+        <div key={i}>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: i * 0.07, ease: [0, 0, 0.2, 1] }}
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 hover:border-primary-400 dark:hover:border-primary-600 hover:shadow-sm transition-all"
+          >
+            {/* Phase header */}
+            <div className="flex items-start gap-3 mb-3">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-bold shrink-0 ${PHASE_COLORS[i % PHASE_COLORS.length]}`}>
+                {i + 1}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-snug">{phase.name}</h3>
+                <span className="inline-flex items-center gap-1 text-xs text-zinc-400 mt-0.5">
+                  <Clock size={10} strokeWidth={1.5} />
+                  ~{phase.estimated_weeks} {phase.estimated_weeks === 1 ? 'week' : 'weeks'}
+                </span>
+              </div>
+            </div>
+
+            {/* Skills */}
+            {phase.skills_covered.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pl-11">
+                {phase.skills_covered.map((skill) => (
+                  <span
+                    key={skill}
+                    className="text-xs px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Milestone */}
+            {phase.milestone && (
+              <div className="mt-3 pl-11 flex items-start gap-1.5">
+                <Target size={11} strokeWidth={1.5} className="text-primary-500 shrink-0 mt-0.5" />
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">{phase.milestone}</p>
+              </div>
+            )}
+          </motion.div>
+
+          {/* Connector */}
+          {i < phases.length - 1 && (
+            <div className="flex justify-center py-2">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: i * 0.07 + 0.2 }}
+                className="flex flex-col items-center gap-0.5"
+              >
+                <div className="w-px h-4 bg-linear-to-b from-primary-400 to-primary-300 dark:from-primary-600 dark:to-primary-700" />
+                <ArrowDown size={12} strokeWidth={2} className="text-primary-400 dark:text-primary-600" />
+              </motion.div>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function ScoreChip({ score }: { score: number | null }) {
@@ -90,9 +161,7 @@ export default function CareerRoadmap({ initialSessionId, onNavigateToUpload }: 
     }
   }
 
-  const totalResources = selectedRoadmap?.phases.reduce(
-    (sum, p) => sum + p.resources.length, 0
-  ) ?? 0
+  const totalWeeks = selectedRoadmap?.total_estimated_weeks ?? 0
 
   if (loading) {
     return (
@@ -189,7 +258,7 @@ export default function CareerRoadmap({ initialSessionId, onNavigateToUpload }: 
                         <div className="flex items-center gap-2 min-w-0">
                           <FileText size={14} strokeWidth={1.5} className={`shrink-0 ${isSelected ? 'text-primary-500' : 'text-zinc-400'}`} />
                           <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
-                            {formatFilename(s.cv_filename)}
+                            {getSessionLabel(s)}
                           </span>
                         </div>
                         {isSelected && <CheckCircle2 size={14} strokeWidth={1.5} className="text-primary-500 shrink-0 mt-0.5" />}
@@ -358,43 +427,27 @@ export default function CareerRoadmap({ initialSessionId, onNavigateToUpload }: 
       {/* Generated roadmap */}
       {selectedRoadmap && (
         <>
-          <div className="flex items-center gap-3">
+          {/* Stats row */}
+          <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-600 dark:text-zinc-400">
               <Layers size={12} strokeWidth={1.5} />
-              {selectedRoadmap.phases.length} Phases
+              {selectedRoadmap.phases.length} phases
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-600 dark:text-zinc-400">
               <Clock size={12} strokeWidth={1.5} />
-              {selectedRoadmap.total_estimated_weeks} Total Weeks
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-600 dark:text-zinc-400">
-              <BookOpen size={12} strokeWidth={1.5} />
-              {totalResources} Resources
+              ~{totalWeeks} weeks total
             </div>
           </div>
 
-          <CareerInsightCard insight={selectedRoadmap.career_insight} />
-
-          <QuickWinsCard
-            quickWins={selectedRoadmap.quick_wins}
-            sessionId={selectedRoadmap.id}
-          />
-
-          <div className="flex items-center gap-2 mb-2">
+          {/* Visual path header */}
+          <div className="flex items-center gap-2">
             <MapPin size={16} strokeWidth={1.5} className="text-primary-500" />
-            <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Learning Path</h2>
+            <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+              Learning Path — {selectedRoadmap.target_role}
+            </h2>
           </div>
 
-          <div className="space-y-3">
-            {selectedRoadmap.phases.map((phase, i) => (
-              <RoadmapPhaseCard
-                key={i}
-                phase={phase}
-                index={i}
-                defaultOpen={i === 0}
-              />
-            ))}
-          </div>
+          <VisualRoadmap phases={selectedRoadmap.phases} />
         </>
       )}
 

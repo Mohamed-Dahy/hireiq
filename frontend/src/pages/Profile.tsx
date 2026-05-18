@@ -60,9 +60,10 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: s
 interface Props {
   onBack: () => void
   onLogout: () => void
+  onReferrals?: () => void
 }
 
-export default function Profile({ onBack, onLogout }: Props) {
+export default function Profile({ onBack, onLogout, onReferrals }: Props) {
   const reduced = useReducedMotion()
   const navigate = useNavigate()
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -313,7 +314,7 @@ export default function Profile({ onBack, onLogout }: Props) {
           {profile.has_stored_cv && profile.stored_cv_filename ? (
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-lg bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center flex-shrink-0">
+                <div className="w-9 h-9 rounded-lg bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center shrink-0">
                   <FileText size={16} strokeWidth={1.5} className="text-primary-500" />
                 </div>
                 <div className="min-w-0">
@@ -321,7 +322,7 @@ export default function Profile({ onBack, onLogout }: Props) {
                   <p className="text-xs text-zinc-400">Ready to use for analysis</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => cvInputRef.current?.click()}
                   className="text-xs text-primary-500 hover:text-primary-600 font-medium cursor-pointer"
@@ -502,10 +503,9 @@ export default function Profile({ onBack, onLogout }: Props) {
       {/* Referral mini-card */}
       {referralStats && (
         <motion.div variants={fadeUp} initial="hidden" animate="show">
-          <a
-            href="/referrals"
-            onClick={(e) => { e.preventDefault(); window.location.pathname = '/referrals' }}
-            className="block bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 hover:border-primary-200 dark:hover:border-primary-800 transition-colors group"
+          <button
+            onClick={onReferrals}
+            className="w-full text-left bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 hover:border-primary-200 dark:hover:border-primary-800 transition-colors group cursor-pointer"
           >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -527,7 +527,7 @@ export default function Profile({ onBack, onLogout }: Props) {
               </div>
             </div>
             <div className="mt-2 text-xs text-primary-500 font-medium">View Full Referral Hub →</div>
-          </a>
+          </button>
         </motion.div>
       )}
 

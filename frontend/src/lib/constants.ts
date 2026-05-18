@@ -10,7 +10,7 @@ export const PLANS = [
     period: 'forever',
     color: 'gray',
     features: [
-      '3 CV analyses / month',
+      '2 CV analyses / 10 days',
       'AI skill gap report',
       '5 mock interview questions',
       'Basic score gauge',

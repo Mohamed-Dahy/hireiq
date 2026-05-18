@@ -105,7 +105,7 @@ export default function Results({ result, onBack, onPractice, onRoadmap }: Props
           onClick={onBack}
           className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors cursor-pointer"
         >
-          ← Upload another CV
+          ← Analyze another CV
         </button>
 
         <button

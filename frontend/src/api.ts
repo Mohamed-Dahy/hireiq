@@ -56,8 +56,7 @@ api.interceptors.response.use(
 
     // Skip refresh for auth endpoints — their 401s are credential errors, not expired tokens
     const AUTH_NO_REFRESH = [
-      '/auth/login', '/auth/register', '/auth/verify-email',
-      '/auth/resend-verification', '/auth/forgot-password',
+      '/auth/login', '/auth/register', '/auth/forgot-password',
       '/auth/reset-password', '/auth/refresh',
     ]
     const isAuthEndpoint = AUTH_NO_REFRESH.some(ep => original.url?.includes(ep))
@@ -235,17 +234,8 @@ export const login = (email: string, password: string) =>
 export const logout = (refreshToken?: string) =>
   api.post<MessageResponse>('/auth/logout', refreshToken ? { refresh_token: refreshToken } : {})
 
-export const verifyEmail = (token: string) =>
-  api.post<MessageResponse>('/auth/verify-email', { token })
-
-export const resendVerification = (email: string) =>
-  api.post<MessageResponse>('/auth/resend-verification', { email })
-
 export const forgotPassword = (email: string) =>
   api.post<MessageResponse>('/auth/forgot-password', { email })
-
-export const resetPassword = (token: string, newPassword: string) =>
-  api.post<MessageResponse>('/auth/reset-password', { token, new_password: newPassword })
 
 export const getMe = () =>
   api.get<UserProfile>('/auth/me')
