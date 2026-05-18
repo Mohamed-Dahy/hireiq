@@ -360,9 +360,11 @@ export interface CreateJobPayload {
   priority?: string
   deadline_date?: string
   followup_date?: string
+  applied_date?: string
   salary_min?: number
   salary_max?: number
   notes?: string
+  cover_letter?: string
 }
 
 export const getJobs = (filters?: JobFilters) =>
@@ -434,6 +436,7 @@ export interface RecruiterCandidate {
   session_id: number
   rank: number | null
   cv_filename: string
+  jd_snippet: string | null
   match_score: number | null
   skill_inventory: unknown
   created_at: string

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { FileText, TrendingUp, Calendar, Upload, ChevronRight, Sparkles, Mic, Map } from 'lucide-react'
+import { FileText, TrendingUp, Calendar, Upload, ChevronRight, Sparkles, Mic, Map, Briefcase } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts'
@@ -13,6 +13,7 @@ interface Props {
   onHistory:   () => void
   onInterview: () => void
   onRoadmap:   () => void
+  onJobs:      () => void
   onSession:   (id: number) => void
 }
 
@@ -75,7 +76,7 @@ function ChartTooltip({
   )
 }
 
-export default function Dashboard({ onAnalyze, onHistory, onInterview, onRoadmap, onSession }: Props) {
+export default function Dashboard({ onAnalyze, onHistory, onInterview, onRoadmap, onJobs, onSession }: Props) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [sessions, setSessions] = useState<CVSession[]>([])
   const [loading, setLoading] = useState(true)
@@ -235,6 +236,16 @@ export default function Dashboard({ onAnalyze, onHistory, onInterview, onRoadmap
             </div>
             <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Career Roadmap</p>
             <p className="text-xs text-zinc-500 mt-0.5">Personalized learning path</p>
+          </button>
+          <button
+            onClick={onJobs}
+            className="w-full text-left bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors rounded-xl p-4 cursor-pointer"
+          >
+            <div className="w-7 h-7 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-3">
+              <Briefcase size={13} strokeWidth={1.5} className="text-zinc-500 dark:text-zinc-400" />
+            </div>
+            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Jobs Pipeline</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Track your applications</p>
           </button>
         </div>
 

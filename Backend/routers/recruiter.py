@@ -46,6 +46,7 @@ def _candidate_to_response(c: RecruiterCandidate) -> RecruiterCandidateResponse:
         session_id=c.session_id,
         rank=c.rank,
         cv_filename=c.session.cv_filename,
+        jd_snippet=c.session.jd_snippet,
         match_score=c.session.match_score,
         skill_inventory=c.session.skill_inventory,
         created_at=c.created_at,

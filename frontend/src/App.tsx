@@ -454,7 +454,7 @@ export default function App() {
         {page === 'home' && (
           <motion.div key="home" variants={pageVariants} initial="initial" animate="animate" exit="exit">
             <Suspense fallback={<PageLoader />}>
-              <Dashboard onAnalyze={() => setPage('upload')} onHistory={() => setPage('history')} onInterview={() => setPage('interview')} onSession={openDetail} onRoadmap={() => setPage('roadmap')} />
+              <Dashboard onAnalyze={() => setPage('upload')} onHistory={() => setPage('history')} onInterview={() => setPage('interview')} onSession={openDetail} onRoadmap={() => setPage('roadmap')} onJobs={() => setPage('jobs')} />
             </Suspense>
           </motion.div>
         )}
@@ -508,7 +508,7 @@ export default function App() {
         {page === 'jobs' && (
           <motion.div key="jobs" variants={pageVariants} initial="initial" animate="animate" exit="exit">
             <Suspense fallback={<PageLoader />}>
-              <Jobs />
+              <Jobs onNavigateToRoadmap={(sid) => { setRoadmapSessionId(sid); setPage('roadmap') }} />
             </Suspense>
           </motion.div>
         )}

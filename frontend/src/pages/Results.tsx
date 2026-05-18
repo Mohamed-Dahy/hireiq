@@ -124,7 +124,7 @@ export default function Results({ result, onBack, onDiscard, onPractice, onRoadm
   useEffect(() => {
     if (reduced || result.match_score < 70) return
     const t = setTimeout(() => {
-      const colors = ['#7c3aed', '#a78bfa', '#c4b5fd', '#ddd6fe']
+      const colors = ['#2563eb', '#3b82f6', '#60a5fa', '#0d9488', '#14b8a6']
       confetti({ particleCount: 90, spread: 70, origin: { y: 0.35 }, colors, scalar: 0.9, ticks: 220 })
     }, 600)
     return () => clearTimeout(t)

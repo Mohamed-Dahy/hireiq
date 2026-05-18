@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { Share2, Users, TrendingUp, Gift, Trophy } from 'lucide-react'
+import { Share2, Users, TrendingUp, Gift, Trophy, Copy, Check } from 'lucide-react'
 import ReferralCard from '../components/ReferralCard'
 import { getMyReferralCode, getReferralStats, getLeaderboard } from '../api'
 import type { ReferralCodeResponse, ReferralStats, LeaderboardEntry } from '../api'
@@ -65,6 +65,15 @@ export default function Referrals() {
   const [codeData, setCodeData] = useState<ReferralCodeResponse | null>(null)
   const [stats, setStats] = useState<ReferralStats | null>(null)
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [copied, setCopied] = useState(false)
+
+  const copyLink = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch { /* ignore */ }
+  }
 
   useEffect(() => {
     Promise.all([
@@ -126,11 +135,20 @@ export default function Referrals() {
         <StatCard label="Days Earned" value={String(stats?.days_earned ?? 0)} icon={<Gift size={18} strokeWidth={1.5} />} />
       </motion.div>
 
-      {shareLinks && (
+      {shareLinks && codeData && (
         <motion.div variants={fadeUp} initial="hidden" animate="show">
           <div className="flex items-center gap-2 mb-3">
             <Share2 size={14} strokeWidth={1.5} className="text-zinc-400" />
             <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Share</span>
+          </div>
+          <div className="flex items-center gap-2 mb-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2">
+            <span className="flex-1 text-xs text-zinc-500 dark:text-zinc-400 truncate">{codeData.referral_url}</span>
+            <button
+              onClick={() => copyLink(codeData.referral_url)}
+              className="shrink-0 flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 hover:text-primary-500 cursor-pointer transition-colors font-medium"
+            >
+              {copied ? <><Check size={12} strokeWidth={2} /> Copied!</> : <><Copy size={12} strokeWidth={1.75} /> Copy</>}
+            </button>
           </div>
           <div className="flex gap-2">
             <a

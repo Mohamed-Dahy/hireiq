@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import type { RecruiterCandidate } from '../api'
+import { getSessionLabel } from '../utils/sessionLabel'
 
 interface Props {
   candidates: RecruiterCandidate[]
@@ -8,7 +9,7 @@ interface Props {
   onRankUpdate: (candidateId: number, rank: number) => void
 }
 
-type SortKey = 'rank' | 'match_score' | 'cv_filename'
+type SortKey = 'rank' | 'match_score' | 'label'
 
 export default function CandidateCompare({ candidates, onRemove, onRankUpdate }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('match_score')
@@ -21,7 +22,7 @@ export default function CandidateCompare({ candidates, onRemove, onRankUpdate }:
     let bv: number | string = 0
     if (sortKey === 'match_score') { av = a.match_score ?? -1; bv = b.match_score ?? -1 }
     else if (sortKey === 'rank')   { av = a.rank ?? 999;      bv = b.rank ?? 999 }
-    else                            { av = a.cv_filename;      bv = b.cv_filename }
+    else                            { av = getSessionLabel(a); bv = getSessionLabel(b) }
     if (av < bv) return sortDir === 'asc' ? -1 : 1
     if (av > bv) return sortDir === 'asc' ? 1 : -1
     return 0
@@ -75,9 +76,9 @@ export default function CandidateCompare({ candidates, onRemove, onRankUpdate }:
             </th>
             <th
               className="px-4 py-3 text-left text-xs font-medium uppercase tracking-widest cursor-pointer select-none border-b border-zinc-200 dark:border-zinc-700"
-              onClick={() => toggle('cv_filename')}
+              onClick={() => toggle('label')}
             >
-              CV File{arrow('cv_filename')}
+              Candidate{arrow('label')}
             </th>
             <th
               className="px-4 py-3 text-center text-xs font-medium uppercase tracking-widest cursor-pointer select-none border-b border-zinc-200 dark:border-zinc-700 w-24"
@@ -129,8 +130,8 @@ export default function CandidateCompare({ candidates, onRemove, onRankUpdate }:
                   )}
                 </td>
 
-                <td className="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100 max-w-[200px] truncate" title={c.cv_filename}>
-                  {c.cv_filename}
+                <td className="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100 max-w-[200px] truncate" title={getSessionLabel(c)}>
+                  {getSessionLabel(c)}
                 </td>
 
                 <td className="px-4 py-3 text-center">

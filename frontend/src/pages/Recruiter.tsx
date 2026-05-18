@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Loader2, Download, X } from 'lucide-react'
+import { getSessionLabel } from '../utils/sessionLabel'
 import {
   getRecruiterLists,
   createRecruiterList,
@@ -28,6 +29,7 @@ export default function Recruiter() {
   const [addError, setAddError] = useState('')
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
 
   useEffect(() => {
     Promise.all([getRecruiterLists(), getSessions()])
@@ -61,13 +63,13 @@ export default function Recruiter() {
   }
 
   const handleDeleteList = async (listId: number) => {
-    if (!window.confirm('Delete this list and all its candidates?')) return
     await deleteRecruiterList(listId)
     setLists(prev => prev.filter(l => l.id !== listId))
     if (selectedList?.id === listId) {
       setSelectedList(null)
       setCandidateData(null)
     }
+    setConfirmDeleteId(null)
   }
 
   const handleAddCandidate = async (e: React.FormEvent) => {
@@ -193,13 +195,30 @@ export default function Recruiter() {
                   )}
                   <p className="text-xs text-primary-500">{list.candidate_count} candidate{list.candidate_count !== 1 ? 's' : ''}</p>
                 </div>
-                <button
-                  onClick={e => { e.stopPropagation(); handleDeleteList(list.id) }}
-                  className="text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors ml-2 cursor-pointer"
-                  title="Delete list"
-                >
-                  <X size={14} strokeWidth={1.5} />
-                </button>
+                {confirmDeleteId === list.id ? (
+                  <div className="flex items-center gap-1 ml-2" onClick={e => e.stopPropagation()}>
+                    <button
+                      onClick={() => handleDeleteList(list.id)}
+                      className="text-[10px] px-1.5 py-0.5 rounded bg-red-500 text-white hover:bg-red-600 transition-colors cursor-pointer font-medium"
+                    >
+                      Delete
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteId(null)}
+                      className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={e => { e.stopPropagation(); setConfirmDeleteId(list.id) }}
+                    className="text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors ml-2 cursor-pointer"
+                    title="Delete list"
+                  >
+                    <X size={14} strokeWidth={1.5} />
+                  </button>
+                )}
               </div>
             ))
           )}
@@ -254,7 +273,7 @@ export default function Recruiter() {
                   <option value="">Select a CV session…</option>
                   {availableSessions.map(s => (
                     <option key={s.id} value={s.id}>
-                      {s.cv_filename} — {s.match_score !== null ? `${s.match_score.toFixed(1)}%` : 'No score'}
+                      {getSessionLabel(s)} — {s.match_score !== null ? `${s.match_score.toFixed(1)}%` : 'No score'}
                     </option>
                   ))}
                 </select>

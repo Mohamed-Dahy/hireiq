@@ -294,28 +294,6 @@ class ChangePasswordRequest(BaseModel):
         return v
 
 
-class SalaryQueryResponse(BaseModel):
-    role: str
-    level: str
-    country: str
-    currency: str
-    min_salary: int
-    median_salary: int
-    max_salary: int
-    usd_min: int
-    usd_max: int
-    confidence: str
-    last_updated_at: datetime
-    source: str
-
-
-class RolesListResponse(BaseModel):
-    roles: list[str]
-
-
-class CountriesListResponse(BaseModel):
-    countries: list[str]
-
 
 class InterviewQuestionResponse(BaseModel):
     id: int
@@ -540,6 +518,7 @@ class RecruiterCandidateResponse(BaseModel):
     session_id:       int
     rank:             Optional[int]
     cv_filename:      str
+    jd_snippet:       Optional[str]
     match_score:      Optional[float]
     skill_inventory:  Optional[Any]
     created_at:       datetime

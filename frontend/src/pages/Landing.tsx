@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Layers, FileText, Sparkles, Mic, Eye, Briefcase, Users,
-  Check, ArrowRight, Moon, Sun, ChevronDown,
+  Check, ArrowRight, Moon, Sun, ChevronDown, Menu, X,
   Zap, Shield, Star, BarChart2,
 } from 'lucide-react'
 import { PLANS, TESTIMONIALS } from '../lib/constants'
@@ -60,6 +60,7 @@ function useClickOutside(ref: React.RefObject<HTMLElement | null>, handler: () =
 export default function Landing({ onGetStarted, onLogin, dark, onToggleDark }: Props) {
   const [servicesOpen, setServicesOpen] = useState(false)
   const [platformOpen, setPlatformOpen] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const servicesRef = useRef<HTMLDivElement>(null)
   const platformRef = useRef<HTMLDivElement>(null)
 
@@ -177,15 +178,73 @@ export default function Landing({ onGetStarted, onLogin, dark, onToggleDark }: P
               className="w-8 h-8 flex items-center justify-center rounded-md text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer">
               {dark ? <Sun size={15} strokeWidth={1.5} /> : <Moon size={15} strokeWidth={1.5} />}
             </button>
-            <button onClick={onLogin} className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 font-medium transition-colors cursor-pointer px-2 py-1">
+            <button onClick={onLogin} className="hidden sm:block text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 font-medium transition-colors cursor-pointer px-2 py-1">
               Sign in
             </button>
-            <button onClick={onGetStarted} className="text-sm bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg font-medium transition-colors cursor-pointer">
+            <button onClick={onGetStarted} className="hidden sm:block text-sm bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg font-medium transition-colors cursor-pointer">
               Get started
+            </button>
+            {/* Mobile hamburger */}
+            <button
+              onClick={() => setMobileOpen(v => !v)}
+              aria-label="Menu"
+              className="sm:hidden w-8 h-8 flex items-center justify-center rounded-md text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            >
+              {mobileOpen ? <X size={17} strokeWidth={1.5} /> : <Menu size={17} strokeWidth={1.5} />}
             </button>
           </div>
         </div>
       </nav>
+
+      {/* Mobile nav drawer */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              onClick={() => setMobileOpen(false)}
+              className="fixed inset-0 bg-black/30 dark:bg-black/50 z-40 sm:hidden"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: [0, 0, 0.2, 1] }}
+              className="fixed top-14 left-0 right-0 z-40 sm:hidden bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 shadow-lg"
+            >
+              <div className="px-5 py-4 flex flex-col gap-1">
+                <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-2">Navigate</p>
+                <button
+                  onClick={() => { setMobileOpen(false); document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }) }}
+                  className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 py-2.5 border-b border-zinc-100 dark:border-zinc-800 cursor-pointer"
+                >
+                  Services
+                </button>
+                <button
+                  onClick={() => { setMobileOpen(false); document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' }) }}
+                  className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 py-2.5 border-b border-zinc-100 dark:border-zinc-800 cursor-pointer"
+                >
+                  Why HireIQ
+                </button>
+                <a
+                  href="#pricing"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 py-2.5 border-b border-zinc-100 dark:border-zinc-800 cursor-pointer"
+                >
+                  Pricing
+                </a>
+                <div className="flex gap-2 pt-3">
+                  <button onClick={() => { setMobileOpen(false); onLogin() }} className="flex-1 text-sm border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400 py-2.5 rounded-xl font-medium transition-colors cursor-pointer">
+                    Sign in
+                  </button>
+                  <button onClick={() => { setMobileOpen(false); onGetStarted() }} className="flex-1 text-sm bg-primary-600 hover:bg-primary-500 text-white py-2.5 rounded-xl font-medium transition-colors cursor-pointer">
+                    Get started
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* ── HERO ─────────────────────────────────────────────────────────────── */}
       <section className="pt-36 pb-24 px-6 relative">
