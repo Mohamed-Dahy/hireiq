@@ -20,9 +20,12 @@ class User(Base):
     locked_until        = Column(DateTime, nullable=True)
     sessions_revoked_at = Column(DateTime, nullable=True)
 
+    # Phase 2: tier + admin flag
+    is_admin            = Column(Boolean, default=False, nullable=False)
+    tier                = Column(String(10), default="free", nullable=False)
+
     sessions            = relationship("CVSession", back_populates="user")
-    verification_tokens = relationship("EmailVerificationToken", back_populates="user")
-    reset_tokens        = relationship("PasswordResetToken", back_populates="user")
+    profile             = relationship("UserProfile", back_populates="user", uselist=False)
 
 
 class CVSession(Base):
@@ -44,6 +47,17 @@ class CVSession(Base):
     user             = relationship("User", back_populates="sessions")
     interview_results = relationship("InterviewResult", back_populates="session")
 
+    @property
+    def has_gap_report(self) -> bool:
+        return bool(self.gap_report)
+
+    @property
+    def jd_snippet(self) -> str | None:
+        if not self.jd_text:
+            return None
+        text = self.jd_text.strip()
+        return text[:80] + ('…' if len(text) > 80 else '')
+
 
 class InterviewResult(Base):
     __tablename__ = "interview_results"
@@ -61,25 +75,32 @@ class InterviewResult(Base):
     session = relationship("CVSession", back_populates="interview_results")
 
 
-class EmailVerificationToken(Base):
-    __tablename__ = "email_verification_tokens"
+class OtpCode(Base):
+    __tablename__ = "otp_codes"
 
-    id         = Column(Integer, primary_key=True)
-    user_id    = Column(Integer, ForeignKey("users.id"), nullable=False)
-    token      = Column(String, unique=True, nullable=False, index=True)
-    expires_at = Column(DateTime, nullable=False)
-    used_at    = Column(DateTime, nullable=True)
+    id            = Column(Integer, primary_key=True)
+    email         = Column(String, nullable=False, index=True)
+    user_id       = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    code_hmac     = Column(String(64), nullable=False)
+    purpose       = Column(String(20), nullable=False)
+    expires_at    = Column(DateTime, nullable=False)
+    attempt_count = Column(Integer, default=0, nullable=False)
+    used_at       = Column(DateTime, nullable=True)
+    created_at    = Column(DateTime, default=datetime.utcnow)
 
-    user = relationship("User", back_populates="verification_tokens")
 
+class UserProfile(Base):
+    __tablename__ = "user_profiles"
 
-class PasswordResetToken(Base):
-    __tablename__ = "password_reset_tokens"
+    id                = Column(Integer, primary_key=True)
+    user_id           = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    stored_cv_path    = Column(String, nullable=True)
+    stored_cv_filename = Column(String, nullable=True)
+    linkedin_url      = Column(String(500), nullable=True)
+    github_url        = Column(String(500), nullable=True)
+    portfolio_url     = Column(String(500), nullable=True)
+    bio               = Column(Text, nullable=True)
+    avatar_url        = Column(String(500), nullable=True)
+    updated_at        = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    id         = Column(Integer, primary_key=True)
-    user_id    = Column(Integer, ForeignKey("users.id"), nullable=False)
-    token      = Column(String, unique=True, nullable=False, index=True)
-    expires_at = Column(DateTime, nullable=False)
-    used_at    = Column(DateTime, nullable=True)
-
-    user = relationship("User", back_populates="reset_tokens")
+    user = relationship("User", back_populates="profile")

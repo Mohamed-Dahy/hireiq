@@ -47,7 +47,13 @@ def generate(
                 gap_report = None
         jd_text = session.jd_text or ""
 
-    roadmap_data = generate_career_roadmap(current_skills, body.target_role, jd_text, gap_report)
+    roadmap_data = generate_career_roadmap(
+        current_skills,
+        body.target_role,
+        jd_text,
+        gap_report,
+        role_description=body.role_description or "",
+    )
     total_weeks = sum(p.get("estimated_weeks", 0) for p in roadmap_data.get("phases", []))
     rm = save_roadmap(db, current_user.id, body.cv_session_id, body.target_role, roadmap_data)
 

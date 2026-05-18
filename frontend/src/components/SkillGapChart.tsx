@@ -47,7 +47,7 @@ export default function SkillGapChart({ gaps }: Props) {
             <p className="text-xs text-zinc-500 dark:text-zinc-400">{gap.reason}</p>
 
             {gap.resource && (
-              <p className="text-xs text-violet-500 font-medium flex items-center gap-1">
+              <p className="text-xs text-primary-500 font-medium flex items-center gap-1">
                 <BookOpen size={11} strokeWidth={1.5} className="shrink-0" />
                 {gap.resource}
               </p>

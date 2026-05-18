@@ -1,20 +1,21 @@
 """
 routers/auth.py
 ---------------
-POST   /auth/register           — create account, send verification email
+POST   /auth/register           — create account, send OTP email
 POST   /auth/login              — verify credentials, return tokens
 POST   /auth/logout             — blacklist JTIs
 POST   /auth/refresh            — rotate refresh token
 GET    /auth/me                 — current user profile
-POST   /auth/verify-email       — consume email verification token
-POST   /auth/resend-verification — re-send verification email
-POST   /auth/forgot-password    — send password reset email
+POST   /auth/send-otp           — send OTP for any purpose
+POST   /auth/verify-otp         — verify OTP code
+POST   /auth/forgot-password    — send password reset OTP
 POST   /auth/reset-password     — consume reset token, set new password
 DELETE /auth/account            — permanently delete account and all data
 """
 
 import os
 import time
+from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
@@ -24,7 +25,8 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from limiter import limiter
-from models.user import User, CVSession, InterviewResult, EmailVerificationToken, PasswordResetToken
+from models.user import User, CVSession, InterviewResult, OtpCode
+from models.roadmap import CareerRoadmap
 from models.schemas import (
     RegisterRequest,
     LoginRequest,
@@ -34,6 +36,10 @@ from models.schemas import (
     EmailRequest,
     ResetPasswordRequest,
     UserProfileResponse,
+    CVSessionResponse,
+    OtpSendRequest,
+    OtpVerifyRequest,
+    PasswordResetWithTokenRequest,
 )
 from services.auth_service import (
     bearer_scheme,
@@ -48,18 +54,13 @@ from services.auth_service import (
     check_account_locked,
     record_failed_login,
     reset_failed_login,
-    create_verification_token,
-    consume_verification_token,
-    create_password_reset_token,
-    consume_password_reset_token,
     check_forgot_password_rate,
-    RESET_MINUTES,
+    create_reset_session,
+    consume_reset_session,
+    create_default_profile,
 )
-from services.email_service import (
-    send_verification_email,
-    send_password_reset_email,
-    send_account_deletion_email,
-)
+from services import otp_service
+from services.email_service import send_otp_email, send_account_deletion_email
 from services.security_service import write_audit_log
 from services.rag_scorer import delete_embeddings
 from app.config import settings
@@ -98,6 +99,8 @@ async def register(
     db.commit()
     db.refresh(user)
 
+    create_default_profile(db, user.id)
+
     if ref:
         from services.referral_service import register_via_referral
         try:
@@ -105,11 +108,11 @@ async def register(
         except Exception:
             pass
 
-    token = create_verification_token(db, user.id)
-    send_verification_email(user.email, user.username, token)
+    code = otp_service.create_otp(db, user.email, "registration")
+    send_otp_email(user.email, user.username, code, "registration")
 
     return RegisterResponse(
-        message="Account created. Please check your email to verify your account.",
+        message="Account created. A 5-digit verification code has been sent to your email.",
         email=user.email,
     )
 
@@ -231,42 +234,104 @@ def get_me(
             .scalar() or 0
         )
 
+    now = datetime.utcnow()
+    month_start = datetime(now.year, now.month, 1)
+    sessions_this_month = sum(1 for s in sessions if s.created_at >= month_start)
+
+    roadmaps_generated = (
+        db.query(func.count(CareerRoadmap.id))
+        .filter(CareerRoadmap.user_id == current_user.id)
+        .scalar() or 0
+    )
+
+    recent = sorted(sessions, key=lambda s: s.created_at, reverse=True)[:5]
+
+    window_start = datetime.utcnow() - timedelta(days=settings.free_tier_window_days)
+    analyses_in_window = sum(1 for s in sessions if s.created_at >= window_start)
+    window_resets_at = None
+    if analyses_in_window > 0:
+        oldest = min((s.created_at for s in sessions if s.created_at >= window_start), default=None)
+        if oldest:
+            window_resets_at = oldest + timedelta(days=settings.free_tier_window_days)
+
+    profile = current_user.profile
+
     return UserProfileResponse(
         id=current_user.id,
         email=current_user.email,
         username=current_user.username,
         created_at=current_user.created_at,
+        is_admin=current_user.is_admin,
+        tier=current_user.tier,
         total_sessions=len(sessions),
         avg_match_score=round(sum(scores) / len(scores), 1) if scores else None,
         total_interviews=total_interviews,
         best_score=max(scores) if scores else None,
+        sessions_this_month=sessions_this_month,
+        roadmaps_generated=roadmaps_generated,
+        recent_sessions=[CVSessionResponse.model_validate(s) for s in recent],
+        linkedin_url=profile.linkedin_url if profile else None,
+        github_url=profile.github_url if profile else None,
+        portfolio_url=profile.portfolio_url if profile else None,
+        bio=profile.bio if profile else None,
+        stored_cv_filename=profile.stored_cv_filename if profile else None,
+        has_stored_cv=bool(profile and profile.stored_cv_path),
+        analyses_in_window=analyses_in_window,
+        window_resets_at=window_resets_at,
     )
 
 
-@router.post("/verify-email", response_model=MessageResponse)
-def verify_email(
+@router.post("/send-otp", response_model=MessageResponse)
+@limiter.limit("5/minute")
+async def send_otp(
     request: Request,
-    token: str = Body(..., embed=True),
+    payload: OtpSendRequest,
     db: Session = Depends(get_db),
 ):
-    user = consume_verification_token(db, token)
-    write_audit_log(db, "auth.email_verified", _client_ip(request), "allowed", user_id=user.id)
-    return MessageResponse(message="Email verified. You can now log in.")
-
-
-@router.post("/resend-verification", response_model=MessageResponse)
-@limiter.limit("2/minute")
-async def resend_verification(
-    request: Request,
-    payload: EmailRequest,
-    db: Session = Depends(get_db),
-):
+    otp_service.check_otp_rate_limit(payload.email)
     user = db.query(User).filter(User.email == payload.email).first()
-    # Always return 200 — don't reveal whether the email exists
-    if user and not user.email_verified:
-        token = create_verification_token(db, user.id)
-        send_verification_email(user.email, user.username, token)
-    return MessageResponse(message="If that email exists and is unverified, a new link has been sent.")
+    if user:
+        code = otp_service.create_otp(db, payload.email, payload.purpose, user.id)
+        send_otp_email(payload.email, user.username, code, payload.purpose)
+    return MessageResponse(message="A 5-digit code has been sent to your email. Valid for 10 minutes.")
+
+
+@router.post("/verify-otp")
+def verify_otp(
+    request: Request,
+    payload: OtpVerifyRequest,
+    db: Session = Depends(get_db),
+):
+    ok, reason = otp_service.verify_otp(db, payload.email, payload.code, payload.purpose)
+    if not ok:
+        if reason == "expired":
+            raise HTTPException(status_code=400, detail="Code has expired. Please request a new one.")
+        if reason == "locked":
+            raise HTTPException(status_code=400, detail="Too many incorrect attempts. Please request a new code.")
+        record = db.query(OtpCode).filter(
+            OtpCode.email == payload.email.lower(),
+            OtpCode.purpose == payload.purpose,
+            OtpCode.used_at.is_(None),
+        ).order_by(OtpCode.created_at.desc()).first()
+        remaining = (settings.otp_max_attempts - record.attempt_count) if record else 0
+        raise HTTPException(status_code=400, detail=f"Invalid code. {remaining} attempts remaining.")
+
+    if payload.purpose == "registration":
+        user = db.query(User).filter(User.email == payload.email).first()
+        if user:
+            user.email_verified = True
+            db.commit()
+            write_audit_log(db, "auth.email_verified", _client_ip(request), "allowed", user_id=user.id)
+        return MessageResponse(message="Email verified. You can now log in.")
+
+    if payload.purpose == "password_reset":
+        user = db.query(User).filter(User.email == payload.email).first()
+        if not user:
+            raise HTTPException(status_code=400, detail="User not found.")
+        reset_token = create_reset_session(user.id)
+        return {"message": "Code verified.", "reset_token": reset_token}
+
+    raise HTTPException(status_code=400, detail="Invalid purpose.")
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
@@ -276,25 +341,29 @@ async def forgot_password(
     payload: EmailRequest,
     db: Session = Depends(get_db),
 ):
-    check_forgot_password_rate(payload.email)  # per-email: 3 per 15 min
+    check_forgot_password_rate(payload.email)
+    otp_service.check_otp_rate_limit(payload.email)
     user = db.query(User).filter(User.email == payload.email).first()
-    # Always return 200 — don't reveal whether the email exists
     if user and user.email_verified:
-        token = create_password_reset_token(db, user.id)
-        send_password_reset_email(user.email, user.username, token)
-    return MessageResponse(message=f"If that email is registered, a reset link has been sent (valid {RESET_MINUTES} min).")
+        code = otp_service.create_otp(db, payload.email, "password_reset", user.id)
+        send_otp_email(payload.email, user.username, code, "password_reset")
+    return MessageResponse(message="If that email is registered, a 5-digit reset code has been sent.")
 
 
 @router.post("/reset-password", response_model=MessageResponse)
 def reset_password(
     request: Request,
-    payload: ResetPasswordRequest,
+    payload: PasswordResetWithTokenRequest,
     db: Session = Depends(get_db),
 ):
-    from datetime import datetime as _dt
-    user = consume_password_reset_token(db, payload.token)
+    user_id = consume_reset_session(payload.reset_token)
+    if user_id is None:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token.")
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="User not found.")
     user.hashed_password = hash_password(payload.new_password)
-    user.sessions_revoked_at = _dt.utcnow()  # invalidate all tokens issued before now
+    user.sessions_revoked_at = datetime.utcnow()
     reset_failed_login(db, user)
     db.commit()
     write_audit_log(db, "auth.password_change", _client_ip(request), "allowed", user_id=user.id)
@@ -348,9 +417,6 @@ def delete_account(
     if session_ids:
         db.query(InterviewResult).filter(InterviewResult.session_id.in_(session_ids)).delete(synchronize_session=False)
     db.query(CVSession).filter(CVSession.user_id == user.id).delete(synchronize_session=False)
-    db.query(EmailVerificationToken).filter(EmailVerificationToken.user_id == user.id).delete(synchronize_session=False)
-    db.query(PasswordResetToken).filter(PasswordResetToken.user_id == user.id).delete(synchronize_session=False)
-
     email = user.email
     username = user.username
     db.delete(user)

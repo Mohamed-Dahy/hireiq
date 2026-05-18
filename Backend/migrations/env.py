@@ -10,7 +10,12 @@ from alembic import context
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 from models.user import Base
-import models.security  # noqa: F401 — registers SecurityAuditLog on the shared Base
+import models.security       # noqa: F401 — registers SecurityAuditLog on the shared Base
+import models.jobs           # noqa: F401
+import models.referral       # noqa: F401
+import models.roadmap        # noqa: F401
+import models.content        # noqa: F401 — registers SalaryBenchmark, InterviewQuestion, UserQuestionProgress
+import models.token_tracking # noqa: F401 — registers TokenUsageLog
 
 config = context.config
 

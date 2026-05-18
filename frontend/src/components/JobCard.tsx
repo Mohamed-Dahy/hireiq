@@ -5,7 +5,7 @@ const STATUS_COLORS: Record<JobStatus, string> = {
   applied:      'bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300',
   phone_screen: 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300',
   technical:    'bg-orange-50 dark:bg-orange-950 text-orange-700 dark:text-orange-300',
-  final_round:  'bg-violet-50 dark:bg-violet-950 text-violet-700 dark:text-violet-300',
+  final_round:  'bg-primary-50 dark:bg-primary-950 text-primary-700 dark:text-primary-300',
   offer:        'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300',
   accepted:     'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200',
   rejected:     'bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400',

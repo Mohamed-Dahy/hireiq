@@ -10,7 +10,7 @@ import json
 import os
 import uuid
 
-from fastapi import APIRouter, Request, UploadFile, File, Form, Depends, HTTPException
+from fastapi import APIRouter, Body, Request, UploadFile, File, Form, Depends, HTTPException
 from fastapi.responses import Response, JSONResponse
 from sqlalchemy.orm import Session
 
@@ -101,6 +101,58 @@ async def upload_cv(
         match_score=score,
         skills_found=parsed["skills"],
         is_linkedin=linkedin,
+    )
+
+
+@router.post("/use-stored", response_model=CVUploadResponse)
+@limiter.limit("2/minute")
+async def use_stored_cv(
+    request: Request,
+    jd_text: str = Body(..., embed=True),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Create a CVSession using the user's previously stored personal CV."""
+    profile = current_user.profile
+    if not profile or not profile.stored_cv_path:
+        raise HTTPException(status_code=400, detail="No stored CV found. Upload one from your profile first.")
+
+    cv_path = profile.stored_cv_path
+    if not os.path.exists(cv_path):
+        raise HTTPException(status_code=400, detail="Stored CV file not found on disk.")
+
+    parsed = parse_cv(cv_path)
+    cv_text = parsed["raw_text"]
+    score = compute_match_score(cv_text, jd_text)
+
+    # Copy into the main uploads dir under a UUID name so /analyze can find it
+    os.makedirs(settings.upload_dir, exist_ok=True)
+    uuid_name = f"{uuid.uuid4()}.pdf"
+    dest_path = os.path.join(settings.upload_dir, uuid_name)
+    with open(cv_path, "rb") as src:
+        cv_bytes = src.read()
+    with open(dest_path, "wb") as dst:
+        dst.write(cv_bytes)
+
+    session = CVSession(
+        user_id=current_user.id,
+        cv_filename=uuid_name,
+        jd_text=jd_text,
+        match_score=score,
+        is_linkedin=is_linkedin_pdf(cv_bytes),
+    )
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+
+    store_embeddings(session_id=session.id, cv_text=cv_text, jd_text=jd_text)
+    set_cached_score(session_id=session.id, score=score)
+
+    return CVUploadResponse(
+        session_id=session.id,
+        cv_filename=uuid_name,
+        match_score=score,
+        skills_found=parsed["skills"],
     )
 
 

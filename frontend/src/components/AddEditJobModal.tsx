@@ -13,7 +13,7 @@ const SOURCE_OPTIONS = ['linkedin', 'indeed', 'glassdoor', 'company', 'referral'
 const PRIORITY_OPTIONS = ['high', 'medium', 'low']
 const REMOTE_OPTIONS = ['onsite', 'hybrid', 'remote']
 
-const inputCls = 'w-full border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-colors'
+const inputCls = 'w-full border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors'
 
 export default function AddEditJobModal({ job, onClose, onSaved }: Props) {
   const [form, setForm] = useState<CreateJobPayload>({
@@ -166,7 +166,7 @@ export default function AddEditJobModal({ job, onClose, onSaved }: Props) {
             <button
               type="submit"
               disabled={saving}
-              className="px-5 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium disabled:opacity-50 cursor-pointer transition-colors flex items-center gap-2"
+              className="px-5 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium disabled:opacity-50 cursor-pointer transition-colors flex items-center gap-2"
             >
               {saving ? <><Loader2 size={14} strokeWidth={2} className="animate-spin" /> Saving…</> : job ? 'Update' : 'Add Application'}
             </button>

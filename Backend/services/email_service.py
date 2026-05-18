@@ -30,18 +30,6 @@ def _send(to: str, subject: str, html: str) -> None:
         logger.error("Email delivery failed | to={} subject={} error={}", to, subject, exc)
 
 
-def send_verification_email(to_email: str, username: str, token: str) -> None:
-    verify_url = f"{settings.app_base_url}/verify-email?token={token}"
-    html = f"""
-<p>Hi {username},</p>
-<p>Thanks for signing up for HireIQ. Please verify your email address:</p>
-<p><a href="{verify_url}">Verify Email</a></p>
-<p>This link expires in 24 hours.</p>
-<p>If you did not create an account, you can ignore this email.</p>
-"""
-    _send(to_email, "Verify your HireIQ email", html)
-
-
 def send_account_deletion_email(to_email: str, username: str) -> None:
     html = f"""
 <p>Hi {username},</p>
@@ -52,13 +40,17 @@ def send_account_deletion_email(to_email: str, username: str) -> None:
     _send(to_email, "Your HireIQ account has been deleted", html)
 
 
-def send_password_reset_email(to_email: str, username: str, token: str) -> None:
-    reset_url = f"{settings.app_base_url}/reset-password?token={token}"
+def send_otp_email(to_email: str, username: str, otp_code: str, purpose: str) -> None:
+    subjects = {
+        "registration": "Your HireIQ verification code",
+        "password_reset": "Your HireIQ password reset code",
+        "password_change": "Your HireIQ password change code",
+    }
+    subject = subjects.get(purpose, "Your HireIQ verification code")
     html = f"""
 <p>Hi {username},</p>
-<p>We received a request to reset your HireIQ password:</p>
-<p><a href="{reset_url}">Reset Password</a></p>
-<p>This link expires in 60 minutes.</p>
-<p>If you did not request a password reset, you can ignore this email.</p>
+<p>{subject}:</p>
+<p style="font-size:2em; font-weight:bold; letter-spacing:4px; text-align:center; margin:24px 0;">{otp_code}</p>
+<p>This code expires in 10 minutes. If you did not request this code, you can ignore this email.</p>
 """
-    _send(to_email, "Reset your HireIQ password", html)
+    _send(to_email, subject, html)

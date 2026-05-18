@@ -52,7 +52,7 @@ export default function QuickWinsCard({ quickWins, sessionId }: Props) {
             type="checkbox"
             checked={checked[i] ?? false}
             onChange={() => toggle(i)}
-            className="mt-0.5 w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 text-violet-600 focus:ring-violet-500 cursor-pointer"
+            className="mt-0.5 w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 text-primary-600 focus:ring-primary-500 cursor-pointer"
           />
           <div className="flex-1 min-w-0">
             <p className={`text-sm font-medium ${checked[i] ? 'line-through text-zinc-400 dark:text-zinc-500' : 'text-zinc-900 dark:text-zinc-100'}`}>

@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CloudUpload, FileText, X, Sparkles, Loader2 } from 'lucide-react'
-import { uploadCV } from '../api'
+import { uploadCV, getProfile } from '../api'
 import type { CVUploadResponse } from '../api'
 
 interface Props {
@@ -130,6 +130,18 @@ export default function Upload({ onDone }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [dragging, setDragging] = useState(false)
+  const [storedCvFilename, setStoredCvFilename] = useState<string | null>(null)
+  const [usingStoredCv, setUsingStoredCv] = useState(false)
+
+  useEffect(() => {
+    getProfile()
+      .then((res) => {
+        if (res.data.has_stored_cv && res.data.stored_cv_filename) {
+          setStoredCvFilename(res.data.stored_cv_filename)
+        }
+      })
+      .catch(() => {/* not logged in or no profile — ignore */})
+  }, [])
 
   const applyTemplate = (t: Template) => { setJd(t.jd); setActiveTemplate(t.id) }
 
@@ -143,12 +155,18 @@ export default function Upload({ onDone }: Props) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!file || !jd.trim()) return
+    if ((!file && !usingStoredCv) || !jd.trim()) return
     setError('')
     setLoading(true)
     try {
-      const res = await uploadCV(file, jd)
-      onDone(res.data)
+      if (usingStoredCv) {
+        // Use stored CV via dedicated endpoint
+        const { data } = await import('../api').then(m => m.default.post<CVUploadResponse>('/cv/use-stored', { jd_text: jd }))
+        onDone(data)
+      } else {
+        const res = await uploadCV(file!, jd)
+        onDone(res.data)
+      }
     } catch (err: any) {
       const detail = err.response?.data?.detail
       if (Array.isArray(detail)) setError(detail.map((d: any) => d.msg).join(', '))
@@ -165,7 +183,7 @@ export default function Upload({ onDone }: Props) {
     if (dropped?.type === 'application/pdf') setFile(dropped)
   }
 
-  const currentStep = !file ? 0 : !jd.trim() ? 1 : 2
+  const currentStep = !(file || usingStoredCv) ? 0 : !jd.trim() ? 1 : 2
 
   return (
     <motion.div
@@ -188,9 +206,9 @@ export default function Upload({ onDone }: Props) {
             <div className="flex flex-col items-center">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium transition-all ${
                 i < currentStep
-                  ? 'bg-violet-600 text-white'
+                  ? 'bg-primary-600 text-white'
                   : i === currentStep
-                  ? 'bg-violet-100 dark:bg-violet-900/50 text-violet-600 dark:text-violet-400 ring-2 ring-violet-500 ring-offset-2 dark:ring-offset-zinc-950'
+                  ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400 ring-2 ring-primary-500 ring-offset-2 dark:ring-offset-zinc-950'
                   : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400'
               }`}>
                 {i < currentStep ? (
@@ -202,40 +220,88 @@ export default function Upload({ onDone }: Props) {
               <p className={`text-xs mt-1.5 ${i <= currentStep ? 'text-zinc-600 dark:text-zinc-400' : 'text-zinc-400'}`}>{step.label}</p>
             </div>
             {i < STEPS.length - 1 && (
-              <div className={`flex-1 h-px mx-2 mb-5 transition-colors ${i < currentStep ? 'bg-violet-500' : 'bg-zinc-200 dark:bg-zinc-700'}`} />
+              <div className={`flex-1 h-px mx-2 mb-5 transition-colors ${i < currentStep ? 'bg-primary-500' : 'bg-zinc-200 dark:bg-zinc-700'}`} />
             )}
           </div>
         ))}
       </div>
 
       <form onSubmit={submit} className="space-y-5">
-        {/* Drop zone */}
-        <div className="space-y-2">
+        {/* Stored CV banner */}
+        {storedCvFilename && !usingStoredCv && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-between bg-primary-50 dark:bg-primary-950/30 border border-primary-200 dark:border-primary-800 rounded-xl px-4 py-3"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <FileText size={15} strokeWidth={1.5} className="text-primary-500 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{storedCvFilename}</p>
+                <p className="text-xs text-zinc-500">Your stored CV</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setUsingStoredCv(true); setFile(null) }}
+              className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 shrink-0 ml-3 cursor-pointer"
+            >
+              Use this CV
+            </button>
+          </motion.div>
+        )}
+
+        {usingStoredCv && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-between bg-primary-50 dark:bg-primary-950/30 border border-primary-500/50 rounded-xl px-4 py-3"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <FileText size={15} strokeWidth={1.5} className="text-primary-500 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{storedCvFilename}</p>
+                <p className="text-xs text-primary-500">Using stored CV</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setUsingStoredCv(false)}
+              className="text-zinc-400 hover:text-red-500 ml-3 cursor-pointer"
+              aria-label="Cancel stored CV"
+            >
+              <X size={14} strokeWidth={2} />
+            </button>
+          </motion.div>
+        )}
+
+        {/* Drop zone — hidden when using stored CV */}
+        <div className={`space-y-2 transition-all ${usingStoredCv ? 'opacity-40 pointer-events-none select-none' : ''}`}>
           <label className="text-xs font-medium text-zinc-500 uppercase tracking-widest flex items-center gap-2">
             <span className="w-4 h-4 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-[10px] flex items-center justify-center font-bold">1</span>
             Upload your CV
           </label>
           <div
-            onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+            onDragOver={(e) => { if (!usingStoredCv) { e.preventDefault(); setDragging(true) } }}
             onDragLeave={() => setDragging(false)}
-            onDrop={onDrop}
-            onClick={() => document.getElementById('cv-file')?.click()}
-            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
-              dragging
-                ? 'border-violet-500 bg-violet-500/5'
+            onDrop={(e) => { if (!usingStoredCv) onDrop(e) }}
+            onClick={() => { if (!usingStoredCv) document.getElementById('cv-file')?.click() }}
+            className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
+              usingStoredCv
+                ? 'border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/30 cursor-not-allowed'
+                : dragging
+                ? 'border-primary-500 bg-primary-500/5 cursor-pointer'
                 : file
-                ? 'border-violet-500/50 bg-zinc-50 dark:bg-zinc-900/50'
-                : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500 bg-white dark:bg-zinc-900'
+                ? 'border-primary-500/50 bg-zinc-50 dark:bg-zinc-900/50 cursor-pointer'
+                : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500 bg-white dark:bg-zinc-900 cursor-pointer'
             }`}
           >
             <input id="cv-file" type="file" accept=".pdf" className="hidden"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
             <div className="flex flex-col items-center gap-3">
               <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
-                file ? 'bg-violet-100 dark:bg-violet-900/40' : 'bg-zinc-100 dark:bg-zinc-800'
+                file ? 'bg-primary-100 dark:bg-primary-900/40' : 'bg-zinc-100 dark:bg-zinc-800'
               }`}>
                 {file
-                  ? <FileText size={20} strokeWidth={1.5} className="text-violet-500" />
+                  ? <FileText size={20} strokeWidth={1.5} className="text-primary-500" />
                   : <CloudUpload size={20} strokeWidth={1.5} className="text-zinc-400" />
                 }
               </div>
@@ -259,7 +325,7 @@ export default function Upload({ onDone }: Props) {
                   <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                     {dragging ? 'Drop to upload' : 'Drop your PDF here'}
                   </p>
-                  <p className="text-xs text-zinc-400 mt-1">or <span className="text-violet-500">browse files</span> · PDF only</p>
+                  <p className="text-xs text-zinc-400 mt-1">or <span className="text-primary-500">browse files</span> · PDF only</p>
                 </div>
               )}
             </div>
@@ -284,7 +350,7 @@ export default function Upload({ onDone }: Props) {
                     onClick={() => applyTemplate(t)}
                     className={`px-3 py-1 rounded-md text-xs font-medium border transition-all cursor-pointer ${
                       isActive
-                        ? 'bg-violet-600 text-white border-violet-600'
+                        ? 'bg-primary-600 text-white border-primary-600'
                         : 'bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500'
                     }`}
                   >
@@ -301,7 +367,7 @@ export default function Upload({ onDone }: Props) {
               value={jd}
               onChange={(e) => handleJdChange(e.target.value)}
               rows={11}
-              className="w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none transition-colors"
+              className="w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none transition-colors"
             />
             <AnimatePresence>
               {jd.length > 0 && (
@@ -336,8 +402,8 @@ export default function Upload({ onDone }: Props) {
         <div className="pt-1">
           <button
             type="submit"
-            disabled={loading || !file || !jd.trim()}
-            className="w-full bg-violet-600 hover:bg-violet-500 text-white py-3 rounded-xl text-sm font-medium disabled:opacity-40 transition-colors cursor-pointer flex items-center justify-center gap-2"
+            disabled={loading || (!file && !usingStoredCv) || !jd.trim()}
+            className="w-full bg-primary-600 hover:bg-primary-500 text-white py-3 rounded-xl text-sm font-medium disabled:opacity-40 transition-colors cursor-pointer flex items-center justify-center gap-2"
           >
             {loading ? (
               <><Loader2 size={15} strokeWidth={2} className="animate-spin" /> Analyzing your CV…</>
@@ -345,11 +411,11 @@ export default function Upload({ onDone }: Props) {
               <><Sparkles size={15} strokeWidth={1.5} /> Analyze CV</>
             )}
           </button>
-          {(!file || !jd.trim()) && (
+          {(!file && !usingStoredCv) || !jd.trim() ? (
             <p className="text-center text-xs text-zinc-400 mt-2">
-              {!file ? 'Upload a PDF CV to continue' : 'Add a job description to continue'}
+              {!file && !usingStoredCv ? 'Upload a PDF CV to continue' : 'Add a job description to continue'}
             </p>
-          )}
+          ) : null}
         </div>
       </form>
     </motion.div>

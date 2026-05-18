@@ -100,7 +100,7 @@ export default function Results({ result, onBack, onPractice, onRoadmap }: Props
       className="max-w-2xl mx-auto py-8 px-4 sm:px-6 space-y-8"
     >
       {/* Top actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <button
           onClick={onBack}
           className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors cursor-pointer"
@@ -151,7 +151,7 @@ export default function Results({ result, onBack, onPractice, onRoadmap }: Props
                 hidden: { opacity: 0, scale: 0.7 },
                 show:   { opacity: 1, scale: 1, transition: { duration: 0.2, ease: [0, 0, 0.2, 1] } },
               }}
-              className="bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-300 text-xs px-3 py-1 rounded-full font-medium border border-violet-200 dark:border-violet-800"
+              className="bg-primary-50 dark:bg-primary-950/30 text-primary-700 dark:text-primary-300 text-xs px-3 py-1 rounded-full font-medium border border-primary-200 dark:border-primary-800"
             >
               {s}
             </motion.span>
@@ -176,7 +176,7 @@ export default function Results({ result, onBack, onPractice, onRoadmap }: Props
           {structured.candidate_level && (
             <div className="flex items-center gap-2">
               <span className="text-xs text-zinc-500 dark:text-zinc-400">Assessed level:</span>
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-violet-100 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800">
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary-100 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800">
                 {structured.candidate_level}
               </span>
             </div>
@@ -198,7 +198,7 @@ export default function Results({ result, onBack, onPractice, onRoadmap }: Props
 
           <button
             onClick={() => onRoadmap(result.session_id)}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium rounded-xl transition-colors cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 py-3 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-xl transition-colors cursor-pointer"
           >
             <MapIcon size={16} strokeWidth={1.5} />
             Build My Career Roadmap →
@@ -217,7 +217,7 @@ export default function Results({ result, onBack, onPractice, onRoadmap }: Props
             <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Interview Questions</h3>
             <button
               onClick={() => onPractice(questions)}
-              className="text-xs bg-violet-600 hover:bg-violet-500 text-white px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer"
+              className="text-xs bg-primary-600 hover:bg-primary-500 text-white px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer"
             >
               Practice these →
             </button>

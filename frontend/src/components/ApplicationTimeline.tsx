@@ -26,7 +26,7 @@ export default function ApplicationTimeline({ activities }: Props) {
       {activities.map((a, i) => (
         <div key={a.id} className="flex gap-3">
           <div className="flex flex-col items-center">
-            <div className="w-7 h-7 rounded-full bg-violet-50 dark:bg-violet-950 border border-violet-200 dark:border-violet-800 flex items-center justify-center text-sm shrink-0">
+            <div className="w-7 h-7 rounded-full bg-primary-50 dark:bg-primary-950 border border-primary-200 dark:border-primary-800 flex items-center justify-center text-sm shrink-0">
               {EVENT_ICONS[a.event_type] ?? '•'}
             </div>
             {i < activities.length - 1 && (

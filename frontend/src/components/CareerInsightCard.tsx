@@ -15,7 +15,7 @@ export default function CareerInsightCard({ insight }: Props) {
   return (
     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 space-y-4">
       <div className="flex items-center gap-2">
-        <TrendingUp size={16} strokeWidth={1.5} className="text-violet-500" />
+        <TrendingUp size={16} strokeWidth={1.5} className="text-primary-500" />
         <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Market Intelligence</h3>
       </div>
 
@@ -41,7 +41,7 @@ export default function CareerInsightCard({ insight }: Props) {
         </div>
         <div className="flex flex-wrap gap-1.5">
           {insight.hot_skills.map((s) => (
-            <span key={s} className="text-xs px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300">
+            <span key={s} className="text-xs px-2 py-0.5 rounded-full bg-primary-100 dark:bg-primary-950/50 text-primary-700 dark:text-primary-300">
               {s}
             </span>
           ))}

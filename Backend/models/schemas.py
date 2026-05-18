@@ -133,6 +133,8 @@ class CVSessionResponse(BaseModel):
     cv_filename: str
     match_score: Optional[float]
     created_at: datetime
+    has_gap_report: bool
+    jd_snippet: Optional[str]
 
 
 # ---------------------------------------------------------------------------
@@ -199,6 +201,142 @@ class UserProfileResponse(BaseModel):
     avg_match_score: Optional[float]
     total_interviews: int
     best_score: Optional[float]
+
+    # Phase 2 extensions
+    is_admin: bool = False
+    tier: str = "free"
+    roadmaps_generated: int = 0
+    linkedin_url: Optional[str] = None
+    github_url: Optional[str] = None
+    portfolio_url: Optional[str] = None
+    bio: Optional[str] = None
+    stored_cv_filename: Optional[str] = None
+    has_stored_cv: bool = False
+    analyses_in_window: int = 0
+    window_resets_at: Optional[datetime] = None
+
+    # Phase 6: Dashboard stats
+    sessions_this_month: int = 0
+    recent_sessions: list[CVSessionResponse] = []
+
+
+# ---------------------------------------------------------------------------
+# Phase 2: OTP & Profile
+# ---------------------------------------------------------------------------
+
+class OtpSendRequest(BaseModel):
+    email: EmailStr
+    purpose: str
+
+    @field_validator("purpose")
+    @classmethod
+    def valid_purpose(cls, v: str) -> str:
+        allowed = {"registration", "password_reset"}
+        if v not in allowed:
+            raise ValueError(f"purpose must be one of {allowed}")
+        return v
+
+
+class OtpVerifyRequest(BaseModel):
+    email: EmailStr
+    code: str
+    purpose: str
+
+    @field_validator("code")
+    @classmethod
+    def five_digits(cls, v: str) -> str:
+        if not v.isdigit() or len(v) != 5:
+            raise ValueError("code must be exactly 5 digits")
+        return v
+
+    @field_validator("purpose")
+    @classmethod
+    def valid_purpose(cls, v: str) -> str:
+        allowed = {"registration", "password_change", "password_reset"}
+        if v not in allowed:
+            raise ValueError(f"purpose must be one of {allowed}")
+        return v
+
+
+class PasswordResetWithTokenRequest(BaseModel):
+    reset_token: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def password_length(cls, v: str) -> str:
+        if len(v.encode("utf-8")) > 72:
+            raise ValueError("Password must be 72 characters or fewer")
+        if len(v) < 6:
+            raise ValueError("Password must be at least 6 characters")
+        return v
+
+
+class ProfileUpdateRequest(BaseModel):
+    username: Optional[str] = None
+    bio: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    github_url: Optional[str] = None
+    portfolio_url: Optional[str] = None
+
+
+class ChangePasswordRequest(BaseModel):
+    otp_code: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def password_length(cls, v: str) -> str:
+        if len(v.encode("utf-8")) > 72:
+            raise ValueError("Password must be 72 characters or fewer")
+        if len(v) < 6:
+            raise ValueError("Password must be at least 6 characters")
+        return v
+
+
+class SalaryQueryResponse(BaseModel):
+    role: str
+    level: str
+    country: str
+    currency: str
+    min_salary: int
+    median_salary: int
+    max_salary: int
+    usd_min: int
+    usd_max: int
+    confidence: str
+    last_updated_at: datetime
+    source: str
+
+
+class RolesListResponse(BaseModel):
+    roles: list[str]
+
+
+class CountriesListResponse(BaseModel):
+    countries: list[str]
+
+
+class InterviewQuestionResponse(BaseModel):
+    id: int
+    question_text: str
+    model_answer: str
+    practiced: bool = False
+
+
+class QuestionsByCategoryResponse(BaseModel):
+    role: str
+    level: str
+    total_questions: int
+    categories: dict[str, list[InterviewQuestionResponse]]
+
+
+class QuotaExceededResponse(BaseModel):
+    detail: str
+    quota_type: str
+    used: int
+    limit: int
+    resets_at: datetime
 
 
 # ---------------------------------------------------------------------------
@@ -475,6 +613,7 @@ class QuickWin(BaseModel):
 class RoadmapGenerateRequest(BaseModel):
     cv_session_id: Optional[int] = None
     target_role: str
+    role_description: Optional[str] = None
 
 
 class RoadmapListItem(BaseModel):

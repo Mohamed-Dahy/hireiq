@@ -108,11 +108,11 @@ export default function Interview({ sessionId, questions = [] }: Props) {
                 onClick={() => { setSelectedQ(q); setCustomQ('') }}
                 className={`w-full text-left px-4 py-3 rounded-xl border text-sm transition-colors cursor-pointer ${
                   selectedQ === q
-                    ? 'border-violet-500 bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-300 font-medium'
+                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30 text-primary-700 dark:text-primary-300 font-medium'
                     : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400 dark:hover:border-zinc-500'
                 }`}
               >
-                <span className="text-violet-500 font-medium mr-2">Q{i + 1}</span>{q}
+                <span className="text-primary-500 font-medium mr-2">Q{i + 1}</span>{q}
               </button>
             ))}
           </div>
@@ -127,7 +127,7 @@ export default function Interview({ sessionId, questions = [] }: Props) {
             placeholder="e.g. Tell me about a challenging project you worked on…"
             value={customQ}
             onChange={(e) => { setCustomQ(e.target.value); setSelectedQ('') }}
-            className="w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-colors"
+            className="w-full border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
           />
         </div>
       </div>
@@ -136,7 +136,7 @@ export default function Interview({ sessionId, questions = [] }: Props) {
       {!active && (
         <button
           onClick={() => setActive(true)}
-          className="bg-violet-600 hover:bg-violet-500 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer"
+          className="bg-primary-600 hover:bg-primary-500 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer"
         >
           Enable Webcam &amp; Start
         </button>
@@ -216,7 +216,7 @@ export default function Interview({ sessionId, questions = [] }: Props) {
               <button
                 onClick={submitAnswer}
                 disabled={loading || !activeQuestion}
-                className="bg-violet-600 hover:bg-violet-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium disabled:opacity-50 transition-colors cursor-pointer flex items-center gap-2"
+                className="bg-primary-600 hover:bg-primary-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium disabled:opacity-50 transition-colors cursor-pointer flex items-center gap-2"
               >
                 {loading ? (
                   <><Loader2 size={14} strokeWidth={2} className="animate-spin" /> Scoring…</>

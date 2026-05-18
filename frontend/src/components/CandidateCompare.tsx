@@ -115,12 +115,12 @@ export default function CandidateCompare({ candidates, onRemove, onRankUpdate }:
                         value={rankInput}
                         onChange={e => setRankInput(e.target.value)}
                         onBlur={() => setEditingRank(null)}
-                        className="w-12 border border-violet-400 dark:border-violet-600 rounded px-1 py-0.5 text-center text-sm bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                        className="w-12 border border-primary-400 dark:border-primary-600 rounded px-1 py-0.5 text-center text-sm bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
                       />
                     </form>
                   ) : (
                     <span
-                      className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-950 text-violet-600 dark:text-violet-400 text-xs font-medium cursor-pointer hover:bg-violet-200 dark:hover:bg-violet-900 transition-colors"
+                      className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary-100 dark:bg-primary-950 text-primary-600 dark:text-primary-400 text-xs font-medium cursor-pointer hover:bg-primary-200 dark:hover:bg-primary-900 transition-colors"
                       title="Click to set manual rank"
                       onClick={() => { setEditingRank(c.id); setRankInput(String(c.rank ?? idx + 1)) }}
                     >
@@ -145,7 +145,7 @@ export default function CandidateCompare({ candidates, onRemove, onRankUpdate }:
                       skills.map((skill, i) => (
                         <span
                           key={i}
-                          className="px-2 py-0.5 rounded-full text-xs bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 font-medium"
+                          className="px-2 py-0.5 rounded-full text-xs bg-primary-100 dark:bg-primary-950 text-primary-700 dark:text-primary-300 font-medium"
                         >
                           {skill}
                         </span>

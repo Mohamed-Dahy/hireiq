@@ -7,7 +7,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from rag.prompts import career_roadmap_prompt
+from rag.prompts import career_roadmap_prompt, career_roadmap_role_only_prompt
 from rag.resources import select_resources, format_for_prompt
 from models.roadmap import CareerRoadmap
 
@@ -18,6 +18,7 @@ _roadmap_llm = ChatGroq(
     streaming=False,
 )
 _roadmap_chain = career_roadmap_prompt | _roadmap_llm | StrOutputParser()
+_roadmap_role_only_chain = career_roadmap_role_only_prompt | _roadmap_llm | StrOutputParser()
 
 _ROADMAP_FALLBACK = {
     "phases": [],
@@ -43,7 +44,7 @@ def _format_gap_summary(gap_report: list | None) -> str:
     if not gap_report:
         return "No structured gap report available — infer gaps from the skills list vs. the target role."
     lines = []
-    for g in gap_report[:5]:
+    for g in gap_report:
         skill = g.get("skill", "")
         importance = g.get("importance", "medium")
         reason = g.get("reason", "")
@@ -56,36 +57,50 @@ def generate_career_roadmap(
     target_role: str,
     jd_text: str = "",
     gap_report: list | None = None,
+    role_description: str = "",
 ) -> dict:
     try:
-        # Format skills preserving level info
-        skills_str = "\n".join(
-            f"- {s.get('skill', '')} ({s.get('category', 'hard')}, {s.get('level', 'intermediate')})"
-            if isinstance(s, dict) else f"- {s}"
-            for s in current_skills
-        ) or "No skills provided"
-
-        # Extract skill names for resource selection
-        skill_names = [
-            s.get("skill", "") if isinstance(s, dict) else str(s)
-            for s in current_skills
-        ]
-        if gap_report:
-            skill_names += [g.get("skill", "") for g in gap_report]
-
-        # Select real, curated resources relevant to this candidate
-        relevant_resources = select_resources(skill_names, target_role)
+        relevant_resources = select_resources(
+            [g.get("skill", "") for g in gap_report] if gap_report else [],
+            target_role,
+        )
         resources_block = format_for_prompt(relevant_resources)
 
-        gap_summary = _format_gap_summary(gap_report)
+        if gap_report:
+            # Full CV-based mode — use gap report and skill inventory
+            skills_str = "\n".join(
+                f"- {s.get('skill', '')} ({s.get('category', 'hard')}, {s.get('level', 'intermediate')})"
+                if isinstance(s, dict) else f"- {s}"
+                for s in current_skills
+            ) or "No skills provided"
 
-        raw = _roadmap_chain.invoke({
-            "target_role": target_role,
-            "current_skills": skills_str,
-            "jd_text": jd_text or "Not provided",
-            "gap_summary": gap_summary,
-            "available_resources": resources_block,
-        })
+            raw = _roadmap_chain.invoke({
+                "target_role": target_role,
+                "current_skills": skills_str,
+                "jd_text": jd_text or "Not provided",
+                "gap_summary": _format_gap_summary(gap_report),
+                "available_resources": resources_block,
+            })
+        elif jd_text:
+            # Session selected but no gap report — use JD text as context
+            raw = _roadmap_chain.invoke({
+                "target_role": target_role,
+                "current_skills": "No CV analysis available — assume intermediate level",
+                "jd_text": jd_text,
+                "gap_summary": (
+                    "No structured gap analysis available. Infer the key skills required "
+                    f"from the job description above and generate a roadmap toward {target_role}."
+                ),
+                "available_resources": resources_block,
+            })
+        else:
+            # Role-only mode — no CV, no JD
+            raw = _roadmap_role_only_chain.invoke({
+                "target_role": target_role,
+                "role_description": role_description or "Not provided",
+                "available_resources": resources_block,
+            })
+
         data = json.loads(_strip_fences(raw))
         if "phases" not in data or "career_insight" not in data:
             return dict(_ROADMAP_FALLBACK)

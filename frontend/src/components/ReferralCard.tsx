@@ -54,7 +54,7 @@ export default function ReferralCard({ referralUrl, stats }: Props) {
         </div>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
         >
           {copied ? <Check size={14} strokeWidth={2} /> : <Copy size={14} strokeWidth={1.5} />}
           {copied ? 'Copied!' : 'Copy Link'}
@@ -75,7 +75,7 @@ export default function ReferralCard({ referralUrl, stats }: Props) {
             initial={{ width: 0 }}
             animate={{ width: `${progressPercent}%` }}
             transition={{ duration: 0.5, ease: [0, 0, 0.2, 1] }}
-            className="h-full bg-violet-500 rounded-full"
+            className="h-full bg-primary-500 rounded-full"
           />
         </div>
       </div>

@@ -125,6 +125,15 @@ export interface MessageResponse {
   message: string
 }
 
+export interface RecentSession {
+  id: number
+  cv_filename: string
+  match_score: number | null
+  created_at: string
+  has_gap_report: boolean
+  jd_snippet: string | null
+}
+
 export interface UserProfile {
   id: number
   email: string
@@ -134,6 +143,20 @@ export interface UserProfile {
   avg_match_score: number | null
   total_interviews: number
   best_score: number | null
+  sessions_this_month: number
+  roadmaps_generated: number
+  recent_sessions: RecentSession[]
+  // Phase 7 profile extensions
+  is_admin: boolean
+  tier: string
+  linkedin_url: string | null
+  github_url: string | null
+  portfolio_url: string | null
+  bio: string | null
+  stored_cv_filename: string | null
+  has_stored_cv: boolean
+  analyses_in_window: number
+  window_resets_at: string | null
 }
 
 export interface CVUploadResponse {
@@ -182,6 +205,8 @@ export interface CVSession {
   cv_filename: string
   match_score: number | null
   created_at: string
+  has_gap_report: boolean
+  jd_snippet: string | null
 }
 
 export interface InterviewResult {
@@ -531,8 +556,8 @@ export interface RoadmapResponse {
   created_at: string
 }
 
-export const generateRoadmap = (cv_session_id: number | null, target_role: string) =>
-  api.post<RoadmapResponse>('/roadmap/generate', { cv_session_id, target_role })
+export const generateRoadmap = (cv_session_id: number | null, target_role: string, role_description?: string) =>
+  api.post<RoadmapResponse>('/roadmap/generate', { cv_session_id, target_role, role_description })
 
 export const listRoadmaps = () =>
   api.get<RoadmapListItem[]>('/roadmap')
@@ -541,4 +566,96 @@ export const getRoadmap = (id: number) =>
   api.get<RoadmapResponse>(`/roadmap/${id}`)
 
 export const getMySessions = () =>
-  api.get<Array<{ id: number; cv_filename: string; created_at: string; match_score: number | null }>>('/cv/sessions')
+  api.get<CVSession[]>('/cv/sessions')
+
+// ── Phase 7: User Profile ────────────────────────────────────────────────────
+
+export interface ProfileUpdatePayload {
+  username?: string
+  bio?: string
+  linkedin_url?: string
+  github_url?: string
+  portfolio_url?: string
+}
+
+export const getProfile = () =>
+  api.get<UserProfile>('/profile/me')
+
+export const updateProfile = (data: ProfileUpdatePayload) =>
+  api.put<MessageResponse>('/profile/update', data)
+
+export const uploadStoredCv = (file: File) => {
+  const form = new FormData()
+  form.append('file', file)
+  return api.post<{ message: string; filename: string }>('/profile/cv', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
+export const deleteStoredCv = () =>
+  api.delete<MessageResponse>('/profile/cv')
+
+export const sendChangeOtp = () =>
+  api.post<MessageResponse>('/profile/send-change-otp', {})
+
+export const changePassword = (otp_code: string, new_password: string) =>
+  api.post<MessageResponse>('/profile/change-password', { otp_code, new_password })
+
+// ── Phase 9: Interview Question Bank ────────────────────────────────────────
+
+export interface BankQuestion {
+  id: number
+  question_text: string
+  model_answer: string
+  level: string
+  practiced: boolean
+}
+
+export interface BankSearchResult extends BankQuestion {
+  role: string
+  category: string
+}
+
+export interface BankQuestionsResponse {
+  role: string
+  level: string
+  total_questions: number
+  categories: Record<string, BankQuestion[]>
+}
+
+export interface BankSearchResponse {
+  query: string
+  results: BankSearchResult[]
+  total: number
+}
+
+export interface BankProgressCategory {
+  practiced: number
+  total: number
+  pct: number
+}
+
+export interface BankProgressResponse {
+  role: string
+  level: string
+  overall_readiness_pct: number
+  by_category: Record<string, BankProgressCategory>
+}
+
+export const getInterviewRoles = () =>
+  api.get<{ roles: string[] }>('/interview-bank/roles')
+
+export const getInterviewQuestions = (role: string, level: string) =>
+  api.get<BankQuestionsResponse>('/interview-bank/questions', { params: { role, level } })
+
+export const searchInterviewQuestions = (q: string, role?: string, level?: string) =>
+  api.get<BankSearchResponse>('/interview-bank/search', { params: { q, role, level } })
+
+export const markQuestionPracticed = (questionId: number, practiced: boolean) =>
+  api.post<{ question_id: number; practiced: boolean; practiced_at: string | null }>(
+    '/interview-bank/progress',
+    { question_id: questionId, practiced },
+  )
+
+export const getInterviewProgress = (role: string, level: string) =>
+  api.get<BankProgressResponse>('/interview-bank/progress', { params: { role, level } })

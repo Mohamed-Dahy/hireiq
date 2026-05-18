@@ -17,14 +17,14 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from database import get_db
-from models.user import User, EmailVerificationToken, PasswordResetToken
+from models.user import User, UserProfile
 from services.cache import redis_client
 
 bearer_scheme = HTTPBearer()
+optional_bearer_scheme = HTTPBearer(auto_error=False)
 
 MAX_FAILED_LOGINS = 5
 LOCKOUT_MINUTES = 15
-VERIFICATION_HOURS = 24
 RESET_MINUTES = 60
 
 
@@ -162,87 +162,6 @@ def check_forgot_password_rate(email: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Email verification tokens
-# ---------------------------------------------------------------------------
-
-def create_verification_token(db: Session, user_id: int) -> str:
-    # Invalidate any previous unused tokens
-    db.query(EmailVerificationToken).filter(
-        EmailVerificationToken.user_id == user_id,
-        EmailVerificationToken.used_at.is_(None),
-    ).update({"used_at": datetime.utcnow()})
-
-    raw_token = str(uuid.uuid4())
-    record = EmailVerificationToken(
-        user_id=user_id,
-        token=raw_token,
-        expires_at=datetime.utcnow() + timedelta(hours=VERIFICATION_HOURS),
-    )
-    db.add(record)
-    db.commit()
-    return raw_token
-
-
-def consume_verification_token(db: Session, token: str) -> User:
-    record = db.query(EmailVerificationToken).filter(
-        EmailVerificationToken.token == token
-    ).first()
-
-    if not record:
-        raise HTTPException(status_code=400, detail="Invalid verification token")
-    if record.used_at is not None:
-        raise HTTPException(status_code=400, detail="Token already used")
-    if record.expires_at < datetime.utcnow():
-        raise HTTPException(status_code=400, detail="Token expired")
-
-    record.used_at = datetime.utcnow()
-    user = db.query(User).filter(User.id == record.user_id).first()
-    user.email_verified = True
-    db.commit()
-    return user
-
-
-# ---------------------------------------------------------------------------
-# Password reset tokens
-# ---------------------------------------------------------------------------
-
-def create_password_reset_token(db: Session, user_id: int) -> str:
-    # Invalidate any previous unused tokens
-    db.query(PasswordResetToken).filter(
-        PasswordResetToken.user_id == user_id,
-        PasswordResetToken.used_at.is_(None),
-    ).update({"used_at": datetime.utcnow()})
-
-    raw_token = str(uuid.uuid4())
-    record = PasswordResetToken(
-        user_id=user_id,
-        token=raw_token,
-        expires_at=datetime.utcnow() + timedelta(minutes=RESET_MINUTES),
-    )
-    db.add(record)
-    db.commit()
-    return raw_token
-
-
-def consume_password_reset_token(db: Session, token: str) -> User:
-    record = db.query(PasswordResetToken).filter(
-        PasswordResetToken.token == token
-    ).first()
-
-    if not record:
-        raise HTTPException(status_code=400, detail="Invalid reset token")
-    if record.used_at is not None:
-        raise HTTPException(status_code=400, detail="Token already used")
-    if record.expires_at < datetime.utcnow():
-        raise HTTPException(status_code=400, detail="Token expired")
-
-    record.used_at = datetime.utcnow()
-    db.commit()
-    user = db.query(User).filter(User.id == record.user_id).first()
-    return user
-
-
-# ---------------------------------------------------------------------------
 # Ownership check — raises 404 (not 403) to avoid resource-existence disclosure
 # ---------------------------------------------------------------------------
 
@@ -295,3 +214,48 @@ def get_current_user(
     check_account_locked(user)
 
     return user
+
+
+def get_optional_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(optional_bearer_scheme),
+    db: Session = Depends(get_db),
+) -> User | None:
+    if credentials is None:
+        return None
+    try:
+        payload = decode_token(credentials.credentials)
+        if payload.get("type") != "access":
+            return None
+        user_id = payload.get("sub")
+        if user_id is None:
+            return None
+        return db.query(User).filter(User.id == int(user_id)).first()
+    except Exception:
+        return None
+
+
+def create_default_profile(db: Session, user_id: int) -> None:
+    profile = UserProfile(user_id=user_id)
+    db.add(profile)
+    db.commit()
+
+
+def create_reset_session(user_id: int) -> str:
+    token = str(uuid.uuid4())
+    try:
+        redis_client.setex(f"reset_session:{token}", 900, str(user_id))
+    except Exception:
+        pass
+    return token
+
+
+def consume_reset_session(token: str) -> int | None:
+    key = f"reset_session:{token}"
+    try:
+        value = redis_client.get(key)
+        if value is None:
+            return None
+        redis_client.delete(key)
+        return int(value)
+    except Exception:
+        return None
