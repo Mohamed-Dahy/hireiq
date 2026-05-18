@@ -1,7 +1,7 @@
 """Create interview_questions and user_question_progress — Phase 2 Interview Bank
 
 Revision ID: 012
-Revises: 011
+Revises: 010
 Create Date: 2026-05-14
 """
 from typing import Sequence, Union
@@ -10,7 +10,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision: str = "012"
-down_revision: Union[str, None] = "011"
+down_revision: Union[str, None] = "010"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
