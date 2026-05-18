@@ -12,6 +12,7 @@ EventSource is still open when the structured event arrives.
 """
 
 import json
+import logging
 import os
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -19,11 +20,13 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from database import get_db
+from database import get_db, SessionLocal
 from models.user import CVSession
 from services.llm_analyzer import stream_analysis, analyze_structured
 from services.auth_service import decode_token
 from services.cv_parser import extract_text_from_pdf
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -59,23 +62,34 @@ def analyze(
         raise HTTPException(status_code=404, detail="CV file not found on disk")
 
     cv_text = extract_text_from_pdf(cv_path)
+    # Capture plain values now — the generator may outlive the request-scoped
+    # SQLAlchemy session, so we must not access `session.*` inside the generator.
+    session_id_val: int = session.id
+    jd_text_val: str = session.jd_text
 
     def event_stream():
         # 1. Stream narrative analysis text
-        for chunk in stream_analysis(cv_text=cv_text, jd_text=session.jd_text):
+        for chunk in stream_analysis(cv_text=cv_text, jd_text=jd_text_val):
             safe_chunk = chunk.replace("\n", "\\n")
             yield f"data: {safe_chunk}\n\n"
 
         # 2. Compute structured analysis
-        structured = analyze_structured(cv_text=cv_text, jd_text=session.jd_text)
+        structured = analyze_structured(cv_text=cv_text, jd_text=jd_text_val)
 
-        # 3. Persist to DB (skill_inventory, gap_report)
+        # 3. Persist using a fresh, independent session so the commit is not
+        #    affected by the request-scoped session's lifecycle inside the generator.
         try:
-            session.skill_inventory = json.dumps(structured.get("skill_inventory", []))
-            session.gap_report = json.dumps(structured.get("gap_report", []))
-            db.commit()
+            save_db = SessionLocal()
+            try:
+                row = save_db.query(CVSession).filter(CVSession.id == session_id_val).first()
+                if row:
+                    row.skill_inventory = json.dumps(structured.get("skill_inventory", []))
+                    row.gap_report = json.dumps(structured.get("gap_report", []))
+                    save_db.commit()
+            finally:
+                save_db.close()
         except Exception:
-            db.rollback()
+            logger.exception("Failed to persist analysis for session %s", session_id_val)
 
         # 4. Emit structured event BEFORE [DONE] — client closes on [DONE]
         structured_payload = json.dumps(structured)

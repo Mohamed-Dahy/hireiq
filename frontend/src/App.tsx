@@ -468,7 +468,13 @@ export default function App() {
         {page === 'results' && result && (
           <motion.div key="results" variants={pageVariants} initial="initial" animate="animate" exit="exit">
             <Suspense fallback={<PageLoader />}>
-              <Results result={result} onBack={() => setPage('upload')} onPractice={(qs) => goToPractice(qs, result.session_id)} onRoadmap={(sid) => { setRoadmapSessionId(sid); setPage('roadmap') }} />
+              <Results
+                result={result}
+                onBack={() => { setResult(null); setPage('upload') }}
+                onDiscard={() => { setResult(null); setPage('upload') }}
+                onPractice={(qs) => goToPractice(qs, result.session_id)}
+                onRoadmap={(sid) => { setRoadmapSessionId(sid); setPage('roadmap') }}
+              />
             </Suspense>
           </motion.div>
         )}

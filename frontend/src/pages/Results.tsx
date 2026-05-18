@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import {
   Download, Loader2, Map as MapIcon, Trash2,
-  CheckCircle2, Mic, TrendingUp, Brain, Target, Sparkles,
+  CheckCircle2, Mic, TrendingUp, Brain, Target, Sparkles, AlertTriangle,
 } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import ScoreGauge from '../components/ScoreGauge'
@@ -18,6 +18,7 @@ import { parseQuestions } from '../utils/parseQuestions'
 interface Props {
   result: CVUploadResponse
   onBack: () => void
+  onDiscard: () => void
   onPractice: (questions: string[]) => void
   onRoadmap: (sessionId: number) => void
 }
@@ -105,7 +106,7 @@ function ActionCard({ icon, title, desc, onClick, loading }: {
   )
 }
 
-export default function Results({ result, onBack, onPractice, onRoadmap }: Props) {
+export default function Results({ result, onBack, onDiscard, onPractice, onRoadmap }: Props) {
   const reduced = useReducedMotion()
   const toast = useToast()
   const [analysis, setAnalysis] = useState('')
@@ -113,6 +114,7 @@ export default function Results({ result, onBack, onPractice, onRoadmap }: Props
   const [structured, setStructured] = useState<StructuredAnalysis | null>(null)
   const [downloading, setDownloading] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [discardConfirm, setDiscardConfirm] = useState(false)
   const [discarding, setDiscarding] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('overview')
 
@@ -142,15 +144,21 @@ export default function Results({ result, onBack, onPractice, onRoadmap }: Props
     return () => es.close()
   }, [result.session_id])
 
+  const handleSave = () => {
+    setSaved(true)
+    toast.success('Session saved to your history')
+  }
+
   const handleDiscard = async () => {
     setDiscarding(true)
     try {
       await deleteSession(result.session_id)
       toast.success('Session discarded')
-      onBack()
+      onDiscard()
     } catch {
       toast.error('Could not discard session')
       setDiscarding(false)
+      setDiscardConfirm(false)
     }
   }
 
@@ -218,38 +226,92 @@ export default function Results({ result, onBack, onPractice, onRoadmap }: Props
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25 }}
-            className="flex items-center justify-between bg-primary-50 dark:bg-primary-950/20 border border-primary-200 dark:border-primary-800 rounded-xl px-4 py-3.5 gap-4 flex-wrap"
+            className={`rounded-xl overflow-hidden border ${
+              discardConfirm
+                ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20'
+                : 'border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-950/20'
+            }`}
           >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center shrink-0">
-                <Sparkles size={15} className="text-primary-600 dark:text-primary-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Analysis ready</p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">Save this session to your history, or discard it.</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => setSaved(true)}
-                className="flex items-center gap-1.5 text-sm font-medium bg-primary-600 hover:bg-primary-500 text-white px-4 py-1.5 rounded-lg transition-colors cursor-pointer"
-              >
-                <CheckCircle2 size={13} strokeWidth={2.5} /> Save
-              </button>
-              <button
-                type="button"
-                onClick={handleDiscard}
-                disabled={discarding}
-                className="flex items-center gap-1.5 text-sm font-medium text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 bg-white dark:bg-zinc-900 hover:bg-red-50 dark:hover:bg-red-950/30 px-4 py-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-              >
-                {discarding
-                  ? <Loader2 size={13} strokeWidth={2} className="animate-spin" />
-                  : <Trash2 size={13} strokeWidth={1.5} />
-                }
-                {discarding ? 'Discarding…' : 'Discard'}
-              </button>
-            </div>
+            <AnimatePresence mode="wait">
+              {!discardConfirm ? (
+                /* Step 1 — prompt */
+                <motion.div
+                  key="prompt"
+                  initial={{ opacity: 0, x: 12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -12 }}
+                  transition={{ duration: 0.18 }}
+                  className="flex items-center justify-between px-4 py-3.5 gap-4 flex-wrap"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center shrink-0">
+                      <Sparkles size={15} className="text-primary-600 dark:text-primary-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Analysis ready</p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">Save this session to your history, or discard it.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      className="flex items-center gap-1.5 text-sm font-medium bg-primary-600 hover:bg-primary-500 text-white px-4 py-1.5 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <CheckCircle2 size={13} strokeWidth={2.5} /> Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDiscardConfirm(true)}
+                      className="flex items-center gap-1.5 text-sm font-medium text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-red-300 dark:hover:border-red-700 hover:text-red-600 dark:hover:text-red-400 px-4 py-1.5 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <Trash2 size={13} strokeWidth={1.5} /> Discard
+                    </button>
+                  </div>
+                </motion.div>
+              ) : (
+                /* Step 2 — confirm delete */
+                <motion.div
+                  key="confirm"
+                  initial={{ opacity: 0, x: 12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -12 }}
+                  transition={{ duration: 0.18 }}
+                  className="flex items-center justify-between px-4 py-3.5 gap-4 flex-wrap"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/50 flex items-center justify-center shrink-0">
+                      <AlertTriangle size={15} className="text-red-600 dark:text-red-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Delete this session?</p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">All analysis data will be permanently deleted. This cannot be undone.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setDiscardConfirm(false)}
+                      disabled={discarding}
+                      className="text-sm font-medium text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-zinc-400 dark:hover:border-zinc-500 px-4 py-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDiscard}
+                      disabled={discarding}
+                      className="flex items-center gap-1.5 text-sm font-medium bg-red-600 hover:bg-red-500 text-white px-4 py-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {discarding
+                        ? <><Loader2 size={13} strokeWidth={2} className="animate-spin" /> Deleting…</>
+                        : <><Trash2 size={13} strokeWidth={1.5} /> Yes, delete</>
+                      }
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
