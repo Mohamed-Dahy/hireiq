@@ -335,22 +335,22 @@ description: "Task list for HireIQ Production SaaS Launch — Revised Phase Orde
 
 > **Write these FIRST — confirm they FAIL before implementing**
 
-- [ ] T136 [P] [US10] Unit tests for analytics service in `Backend/tests/unit/test_analytics_service.py`: user count aggregation, MRR calculation, conversion rate, churn rate, plan distribution
-- [ ] T137 [P] [US10] Integration tests for admin panel in `Backend/tests/integration/test_admin.py`: login with valid secret succeeds, login with wrong secret fails, regular user token rejected on all /admin/* routes, metrics endpoint returns expected shape
+- [X] T136 [P] [US10] Unit tests for analytics service in `Backend/tests/unit/test_analytics_service.py`: user count aggregation, MRR calculation, conversion rate, churn rate, plan distribution
+- [X] T137 [P] [US10] Integration tests for admin panel in `Backend/tests/integration/test_admin.py`: login with valid secret succeeds, login with wrong secret fails, regular user token rejected on all /admin/* routes, metrics endpoint returns expected shape
 
 ### Implementation for User Story 10
 
-- [ ] T138 [P] [US10] Add `ADMIN_SECRET` and `ADMIN_JWT_EXPIRE_MINUTES` to `Backend/app/config.py` Settings; add to `Backend/.env.example`
-- [ ] T139 [US10] Create `Backend/services/analytics_service.py` — `get_user_metrics(db)` (total, new this month, DAU), `get_revenue_metrics(db)` (MRR, ARR, total payments), `get_conversion_metrics(db)` (free-to-paid rate, churn rate, avg days to convert), `get_feature_usage(db)` (CV uploads, interviews, jobs created — last 30 days), `get_plan_distribution(db)` (count per plan)
-- [ ] T140 [P] [US10] Add `AdminLoginRequest`, `AdminMetricsResponse`, `PlanDistributionItem`, `AuditLogEntry` schemas to `Backend/models/schemas.py`
-- [ ] T141 [US10] Create `Backend/services/admin_service.py` — `create_admin_token(secret)` (verifies against `settings.admin_secret`, issues short-lived admin JWT with role claim `"admin"`), `require_admin` FastAPI dependency (validates admin JWT role — rejects regular user tokens)
-- [ ] T142 [US10] Create `Backend/routers/admin.py` — `POST /admin/login` (public — issues admin token), `GET /admin/metrics` (all metrics in one payload), `GET /admin/users` (paginated user list: id, email masked, plan, joined, last_login), `GET /admin/audit-log` (recent 100 security events), `GET /admin/revenue` (monthly revenue chart data, last 12 months); all secured with `require_admin`
-- [ ] T143 [US10] Register `admin` router in `Backend/app/main.py`; add `/admin` proxy rule to `frontend/nginx.conf`; ensure CSP allows admin page assets
-- [ ] T144 [P] [US10] Create `frontend/src/pages/Admin.tsx` — gated behind admin token stored in sessionStorage (never localStorage); shows: key metrics row (users, MRR, conversion %), plan distribution pie chart, feature usage bar chart, monthly revenue line chart, recent audit log table; uses recharts for charts
-- [ ] T145 [P] [US10] Create `frontend/src/components/MetricCard.tsx` — reusable stat card (value, label, delta vs last period, trend icon)
-- [ ] T146 [US10] Add admin calls to `frontend/src/api.ts`: `adminLogin(secret)`, `getAdminMetrics()`, `getAdminUsers(page)`, `getAuditLog()`, `getRevenueChart()`; use separate axios instance with admin token header
-- [ ] T147 [US10] Add `/admin` route to frontend router; admin page is NOT linked from regular navigation — must know the URL; redirect to admin login if no admin token in sessionStorage
-- [ ] T148 [US10] Add `recharts` to `frontend/package.json`; verify all chart components render correctly with mock data before wiring to API
+- [X] T138 [P] [US10] Add `ADMIN_SECRET` and `ADMIN_JWT_EXPIRE_MINUTES` to `Backend/app/config.py` Settings; add to `Backend/.env.example`
+- [X] T139 [US10] Create `Backend/services/analytics_service.py` — `get_user_metrics(db)` (total, new this month, DAU), `get_revenue_metrics(db)` (MRR, ARR, total payments), `get_conversion_metrics(db)` (free-to-paid rate, churn rate, avg days to convert), `get_feature_usage(db)` (CV uploads, interviews, jobs created — last 30 days), `get_plan_distribution(db)` (count per plan)
+- [X] T140 [P] [US10] Add `AdminLoginRequest`, `AdminMetricsResponse`, `PlanDistributionItem`, `AuditLogEntry` schemas to `Backend/models/schemas.py`
+- [X] T141 [US10] Create `Backend/services/admin_service.py` — `create_admin_token(secret)` (verifies against `settings.admin_secret`, issues short-lived admin JWT with role claim `"admin"`), `require_admin` FastAPI dependency (validates admin JWT role — rejects regular user tokens)
+- [X] T142 [US10] Create `Backend/routers/admin.py` — `POST /admin/login` (public — issues admin token), `GET /admin/metrics` (all metrics in one payload), `GET /admin/users` (paginated user list: id, email masked, plan, joined, last_login), `GET /admin/audit-log` (recent 100 security events), `GET /admin/revenue` (monthly revenue chart data, last 12 months); all secured with `require_admin`
+- [X] T143 [US10] Register `admin` router in `Backend/app/main.py`; add `/admin` proxy rule to `frontend/nginx.conf`; ensure CSP allows admin page assets
+- [X] T144 [P] [US10] Create `frontend/src/pages/Admin.tsx` — gated behind admin token stored in sessionStorage (never localStorage); shows: key metrics row (users, MRR, conversion %), plan distribution pie chart, feature usage bar chart, monthly revenue line chart, recent audit log table; uses recharts for charts
+- [X] T145 [P] [US10] Create `frontend/src/components/MetricCard.tsx` — reusable stat card (value, label, delta vs last period, trend icon)
+- [X] T146 [US10] Add admin calls to `frontend/src/api.ts`: `adminLogin(secret)`, `getAdminMetrics()`, `getAdminUsers(page)`, `getAuditLog()`, `getRevenueChart()`; use separate axios instance with admin token header
+- [X] T147 [US10] Add `/admin` route to frontend router; admin page is NOT linked from regular navigation — must know the URL; redirect to admin login if no admin token in sessionStorage
+- [X] T148 [US10] Add `recharts` to `frontend/package.json`; verify all chart components render correctly with mock data before wiring to API
 
 **Checkpoint**: Admin login and metrics work. T136–T137 pass. Regular users cannot access /admin/* routes.
 

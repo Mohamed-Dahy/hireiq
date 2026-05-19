@@ -614,3 +614,43 @@ class RoadmapResponse(BaseModel):
     career_insight: CareerInsight
     quick_wins: list[QuickWin]
     created_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Phase 10: Admin BI Dashboard
+# ---------------------------------------------------------------------------
+
+class AdminUserItem(BaseModel):
+    id: int
+    email: str
+    username: str
+    tier: str
+    is_admin: bool
+    email_verified: bool
+    created_at: Optional[str]
+    session_count: int
+    locked_until: Optional[str]
+
+
+class AdminUsersResponse(BaseModel):
+    users: list[AdminUserItem]
+
+
+class TierDistributionItem(BaseModel):
+    tier: str
+    count: int
+
+
+class TrendPoint(BaseModel):
+    date: str
+    count: int
+
+
+class AdminMetricsResponse(BaseModel):
+    users: dict
+    cv_sessions: dict
+    interviews: dict
+    jobs: dict
+    roadmaps: dict
+    referrals: dict
+    interview_bank: dict

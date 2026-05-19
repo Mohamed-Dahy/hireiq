@@ -652,3 +652,64 @@ export const markQuestionPracticed = (questionId: number, practiced: boolean) =>
 
 export const getInterviewProgress = (role: string, level: string) =>
   api.get<BankProgressResponse>('/interview-bank/progress', { params: { role, level } })
+
+// ── Phase 10: Admin BI Dashboard ─────────────────────────────────────────────
+
+export interface AdminUserItem {
+  id: number
+  email: string
+  username: string
+  tier: string
+  is_admin: boolean
+  email_verified: boolean
+  created_at: string | null
+  session_count: number
+  locked_until: string | null
+}
+
+export interface AdminTrendPoint {
+  date: string
+  count: number
+}
+
+export interface AdminMetrics {
+  users: {
+    total: number
+    new_this_week: number
+    new_this_month: number
+    free: number
+    paid: number
+    admins: number
+    tier_distribution: { tier: string; count: number }[]
+    signup_trend: AdminTrendPoint[]
+  }
+  cv_sessions: {
+    total: number
+    this_week: number
+    avg_match_score: number | null
+    trend: AdminTrendPoint[]
+  }
+  interviews: { total: number }
+  jobs: { total: number; active: number; by_status: Record<string, number> }
+  roadmaps: { total: number; this_week: number }
+  referrals: { total: number; converted: number; conversion_rate: number }
+  interview_bank: { total_questions: number }
+}
+
+export const getAdminMetrics = () =>
+  api.get<AdminMetrics>('/admin/metrics')
+
+export const getAdminUsers = (skip = 0, limit = 50) =>
+  api.get<{ users: AdminUserItem[] }>('/admin/users', { params: { skip, limit } })
+
+export const setUserTier = (userId: number, tier: string) =>
+  api.patch(`/admin/users/${userId}/tier`, null, { params: { tier } })
+
+export const toggleUserAdmin = (userId: number, isAdmin: boolean) =>
+  api.patch(`/admin/users/${userId}/admin`, null, { params: { is_admin: isAdmin } })
+
+export const unlockUser = (userId: number) =>
+  api.patch(`/admin/users/${userId}/unlock`)
+
+export const adminDeleteUser = (userId: number) =>
+  api.delete(`/admin/users/${userId}`)

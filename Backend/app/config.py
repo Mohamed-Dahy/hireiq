@@ -59,6 +59,10 @@ class Settings(BaseSettings):
     llm_model: str = "llama-3.3-70b-versatile"
     groq_price_per_1k_tokens: float = 0.0006
 
+    # --- Admin ---
+    admin_email: str = "admin@hireiq.com"
+    admin_jwt_expire_minutes: int = 120
+
     # --- Logging ---
     log_format: str = "text"
 
