@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   CloudUpload, FileText, X, Sparkles, Loader2,
   Target, Brain, Map as MapIcon, Mic, Download, CheckCircle2,
+  AlertTriangle, Clock,
 } from 'lucide-react'
 import { uploadCV, getProfile } from '../api'
 import type { CVUploadResponse } from '../api'
@@ -185,12 +186,25 @@ export default function Upload({ onDone, onViewLastSession }: Props) {
   const [dragging, setDragging] = useState(false)
   const [storedCvFilename, setStoredCvFilename] = useState<string | null>(null)
   const [usingStoredCv, setUsingStoredCv] = useState(false)
+  const [quotaExceeded, setQuotaExceeded] = useState(false)
+  const [quotaResetsAt, setQuotaResetsAt] = useState<string | null>(null)
+  const [quotaLimit, setQuotaLimit] = useState<number>(2)
+  const [quotaUsed, setQuotaUsed] = useState<number>(0)
 
   useEffect(() => {
     getProfile()
       .then((res) => {
-        if (res.data.has_stored_cv && res.data.stored_cv_filename) {
-          setStoredCvFilename(res.data.stored_cv_filename)
+        const d = res.data as any
+        if (d.has_stored_cv && d.stored_cv_filename) {
+          setStoredCvFilename(d.stored_cv_filename)
+        }
+        const limit: number = d.free_tier_analysis_limit ?? 2
+        const used: number = d.analyses_in_window ?? 0
+        setQuotaLimit(limit)
+        setQuotaUsed(used)
+        if (d.tier === 'free' && used >= limit) {
+          setQuotaExceeded(true)
+          setQuotaResetsAt(d.window_resets_at ?? null)
         }
       })
       .catch(() => {/* not logged in or no profile — ignore */})
@@ -220,9 +234,17 @@ export default function Upload({ onDone, onViewLastSession }: Props) {
         onDone(res.data)
       }
     } catch (err: any) {
-      const detail = err.response?.data?.detail
-      if (Array.isArray(detail)) setError(detail.map((d: any) => d.msg).join(', '))
-      else setError(detail || 'Upload failed')
+      if (err.response?.status === 429) {
+        const detail = err.response?.data?.detail ?? {}
+        setQuotaExceeded(true)
+        setQuotaResetsAt(detail.window_resets_at ?? detail.resets_at ?? null)
+        if (detail.limit) setQuotaLimit(detail.limit)
+        if (detail.analyses_used) setQuotaUsed(detail.analyses_used)
+      } else {
+        const detail = err.response?.data?.detail
+        if (Array.isArray(detail)) setError(detail.map((d: any) => d.msg).join(', '))
+        else setError(typeof detail === 'string' ? detail : 'Upload failed')
+      }
     } finally {
       setLoading(false)
     }
@@ -259,6 +281,42 @@ export default function Upload({ onDone, onViewLastSession }: Props) {
           </button>
         </motion.div>
       )}
+
+      {/* Quota exceeded banner */}
+      <AnimatePresence>
+        {quotaExceeded && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className="mb-6 rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 px-5 py-4"
+          >
+            <div className="flex items-start gap-3">
+              <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" strokeWidth={1.5} />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                  Free analysis limit reached ({quotaUsed}/{quotaLimit})
+                </p>
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                  You've used all your free CV analyses for this period.
+                  {quotaResetsAt && (
+                    <>
+                      {' '}Your quota resets on{' '}
+                      <span className="font-medium">
+                        {new Date(quotaResetsAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>.
+                    </>
+                  )}
+                </p>
+                <div className="flex items-center gap-3 mt-3">
+                  <Clock size={13} className="text-amber-500 shrink-0" strokeWidth={1.5} />
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    Upgrade to a paid plan for unlimited daily analyses.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-5 lg:gap-10">
@@ -475,7 +533,7 @@ export default function Upload({ onDone, onViewLastSession }: Props) {
             <div className="pt-1">
               <button
                 type="submit"
-                disabled={loading || (!file && !usingStoredCv) || !jd.trim()}
+                disabled={loading || (!file && !usingStoredCv) || !jd.trim() || quotaExceeded}
                 className="w-full bg-primary-600 hover:bg-primary-500 text-white py-3 rounded-xl text-sm font-medium disabled:opacity-40 transition-colors cursor-pointer flex items-center justify-center gap-2"
               >
                 {loading ? (

@@ -13,11 +13,12 @@ from typing import Optional
 
 import httpx
 import psutil
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 from database import get_db
+from limiter import limiter
 from models.content import InterviewQuestion
 from models.jobs import JobApplication
 from models.roadmap import CareerRoadmap
@@ -26,6 +27,7 @@ from models.user import CVSession, InterviewResult, User
 from services.admin_service import create_admin_token, require_admin, verify_admin_credentials
 from services.analytics_service import get_all_users, get_platform_metrics
 from services.cache import redis_client
+from services import token_tracker
 
 router = APIRouter()
 
@@ -40,7 +42,8 @@ _TIER_PRICE = {"free": 0, "pro": 29, "enterprise": 99}
 # ---------------------------------------------------------------------------
 
 @router.post("/login", response_model=AdminTokenResponse)
-def admin_login(body: AdminLoginRequest):
+@limiter.limit("5/15minute")
+def admin_login(request: Request, body: AdminLoginRequest):
     if not verify_admin_credentials(body.email, body.password):
         raise HTTPException(status_code=401, detail="Invalid admin credentials")
     return {"access_token": create_admin_token()}
@@ -288,6 +291,28 @@ def delete_question(
     db.delete(q)
     db.commit()
     return {"deleted": question_id}
+
+
+# ---------------------------------------------------------------------------
+# Token management
+# ---------------------------------------------------------------------------
+
+@router.get("/tokens/summary")
+def token_summary(
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    return token_tracker.get_admin_summary(db)
+
+
+@router.get("/tokens/users")
+def token_user_breakdown(
+    for_date: Optional[date] = Query(None),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    return {"users": token_tracker.get_user_breakdown(db, for_date, limit), "date": (for_date or datetime.utcnow().date()).isoformat()}
 
 
 # ---------------------------------------------------------------------------

@@ -17,11 +17,11 @@ import {
 import {
   adminLogin, getAdminMetrics, getAdminUsers, setUserTier, unlockUser,
   verifyUserEmail, adminDeleteUser, getAdminQuestions, adminDeleteQuestion,
-  getAdminHealth, getAdminUserUsage,
+  getAdminHealth, getAdminUserUsage, getAdminTokenSummary, getAdminUserBreakdown,
 } from '../api'
 import type {
   AdminMetrics, AdminUserItem, AdminQuestion, AdminHealthResponse,
-  AdminUserUsage, AdminUserFilters,
+  AdminUserUsage, AdminUserFilters, AdminTokenSummary, AdminTokenUserRow,
 } from '../api'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -130,12 +130,23 @@ type FullMetrics = AdminMetrics & {
 
 function MetricsSection() {
   const [metrics, setMetrics] = useState<FullMetrics | null>(null)
+  const [tokenSummary, setTokenSummary] = useState<AdminTokenSummary | null>(null)
+  const [tokenUsers, setTokenUsers] = useState<AdminTokenUserRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true); setError('')
-    try { setMetrics((await getAdminMetrics()).data as FullMetrics) }
+    try {
+      const [metricsRes, tokenRes, tokenUsersRes] = await Promise.all([
+        getAdminMetrics(),
+        getAdminTokenSummary().catch(() => null),
+        getAdminUserBreakdown(undefined, 10).catch(() => null),
+      ])
+      setMetrics(metricsRes.data as FullMetrics)
+      if (tokenRes) setTokenSummary(tokenRes.data)
+      if (tokenUsersRes) setTokenUsers(tokenUsersRes.data.users)
+    }
     catch { setError('Failed to load metrics.') }
     finally { setLoading(false) }
   }, [])
@@ -158,6 +169,52 @@ function MetricsSection() {
         <StatCard label="Pro Users" value={fmt(billing.pro_users)} sub={`$${billing.pro_users * 29}/mo`} />
         <StatCard label="Enterprise Users" value={fmt(billing.enterprise_users)} sub={`$${billing.enterprise_users * 99}/mo`} />
       </div>
+
+      {/* Token usage row */}
+      {tokenSummary && (
+        <div>
+          <h3 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mb-3">AI Token Usage (Today)</h3>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard label="Tokens Today" value={fmt(tokenSummary.tokens_today)} sub={`via ${tokenSummary.provider}`} />
+            <StatCard label="Analyses Today" value={fmt(tokenSummary.analyses_today)} />
+            <StatCard label="Est. Monthly Cost" value={`$${tokenSummary.est_monthly_cost_usd.toFixed(2)}`} sub={`$${tokenSummary.price_per_1k_tokens}/1k tokens`} accent />
+            <StatCard label="Model" value={tokenSummary.model.split('-').slice(0, 2).join('-')} sub={tokenSummary.model} />
+          </div>
+        </div>
+      )}
+
+      {/* Top token users table */}
+      {tokenUsers.length > 0 && (
+        <div>
+          <h3 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mb-3">Top Token Consumers (Today)</h3>
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-zinc-100 dark:border-zinc-800 text-xs text-zinc-500">
+                  <th className="text-left px-4 py-2.5 font-medium">User</th>
+                  <th className="text-left px-4 py-2.5 font-medium">Tier</th>
+                  <th className="text-right px-4 py-2.5 font-medium">Tokens</th>
+                  <th className="text-right px-4 py-2.5 font-medium">Ops</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tokenUsers.map((u) => (
+                  <tr key={u.user_id} className="border-b border-zinc-50 dark:border-zinc-800/60 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                    <td className="px-4 py-2.5 text-zinc-800 dark:text-zinc-200">{u.username ?? u.email ?? `#${u.user_id}`}</td>
+                    <td className="px-4 py-2.5">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.tier === 'free' ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300' : 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300'}`}>
+                        {u.tier}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 text-right text-zinc-600 dark:text-zinc-400 font-mono">{fmt(u.tokens_used)}</td>
+                    <td className="px-4 py-2.5 text-right text-zinc-500">{u.operations}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Platform row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

@@ -81,6 +81,7 @@ def get_extended_profile(db: Session, user: User) -> dict:
         "has_stored_cv": bool(profile and profile.stored_cv_path),
         "analyses_in_window": analyses_in_window,
         "window_resets_at": window_resets_at,
+        "free_tier_analysis_limit": settings.free_tier_analysis_limit,
     }
 
 

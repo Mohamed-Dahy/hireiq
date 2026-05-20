@@ -14,6 +14,7 @@ EventSource is still open when the structured event arrives.
 import json
 import logging
 import os
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -21,10 +22,11 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from database import get_db, SessionLocal
-from models.user import CVSession
+from models.user import CVSession, User
 from services.llm_analyzer import stream_analysis, analyze_structured
-from services.auth_service import decode_token
+from services.auth_service import decode_token, is_jti_blacklisted
 from services.cv_parser import extract_text_from_pdf
+from services import token_tracker
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +51,33 @@ def analyze(
     payload = decode_token(token)
     if payload.get("type") != "access":
         raise HTTPException(status_code=401, detail="Invalid token type")
-    user_id = int(payload.get("sub", 0))
+
+    # Honour JTI blacklist (populated on logout) — EventSource can't use the
+    # standard Bearer dependency, so we must replicate its checks manually.
+    jti = payload.get("jti")
+    if jti and is_jti_blacklisted(jti):
+        raise HTTPException(status_code=401, detail="Token has been revoked")
+
+    user_id_str = payload.get("sub")
+    if not user_id_str:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    user_id = int(user_id_str)
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    # Honour sessions_revoked_at (set on password reset).
+    if user.sessions_revoked_at:
+        iat = payload.get("iat")
+        if iat is not None and datetime.utcfromtimestamp(int(iat)) < user.sessions_revoked_at:
+            raise HTTPException(status_code=401, detail="Token revoked — please log in again")
+
+    # Quota check BEFORE returning the streaming response
+    if user.tier == "free":
+        token_tracker.check_free_tier_quota(db, user)
+    elif user.tier in ("pro", "enterprise"):
+        token_tracker.check_paid_tier_quota(db, user)
 
     session = db.query(CVSession).filter(CVSession.id == session_id).first()
     if not session:
@@ -63,9 +91,13 @@ def analyze(
 
     cv_text = extract_text_from_pdf(cv_path)
     # Capture plain values now — the generator may outlive the request-scoped
-    # SQLAlchemy session, so we must not access `session.*` inside the generator.
+    # SQLAlchemy session, so we must not access `session.*` or `user.*` inside
+    # the generator.
     session_id_val: int = session.id
     jd_text_val: str = session.jd_text
+    user_id_val: int = user.id
+    user_tier_val: str = user.tier
+    estimated_tokens: int = len(cv_text + jd_text_val) // 4
 
     def event_stream():
         # 1. Stream narrative analysis text
@@ -86,6 +118,10 @@ def analyze(
                     row.skill_inventory = json.dumps(structured.get("skill_inventory", []))
                     row.gap_report = json.dumps(structured.get("gap_report", []))
                     save_db.commit()
+                # Log token usage in the same independent session
+                token_tracker.log_token_usage(
+                    save_db, user_id_val, estimated_tokens, "cv_analysis", user_tier_val
+                )
             finally:
                 save_db.close()
         except Exception:

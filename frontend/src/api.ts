@@ -781,3 +781,38 @@ export const adminDeleteQuestion = (questionId: number) =>
 
 export const getAdminHealth = () =>
   adminApi.get<AdminHealthResponse>('/admin/health')
+
+// ── Phase 12: Token Management ────────────────────────────────────────────────
+
+export interface AdminTokenSummary {
+  tokens_today: number
+  analyses_today: number
+  active_users_by_tier: Record<string, number>
+  est_monthly_cost_usd: number
+  provider: string
+  model: string
+  price_per_1k_tokens: number
+  date: string
+}
+
+export interface AdminTokenUserRow {
+  user_id: number
+  email: string | null
+  username: string | null
+  tier: string
+  tokens_used: number
+  operations: number
+}
+
+export interface AdminTokenUserBreakdown {
+  users: AdminTokenUserRow[]
+  date: string
+}
+
+export const getAdminTokenSummary = () =>
+  adminApi.get<AdminTokenSummary>('/admin/tokens/summary')
+
+export const getAdminUserBreakdown = (forDate?: string, limit = 50) =>
+  adminApi.get<AdminTokenUserBreakdown>('/admin/tokens/users', {
+    params: { for_date: forDate, limit },
+  })
