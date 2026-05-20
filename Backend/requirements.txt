@@ -31,3 +31,4 @@ fakeredis>=2.20
 email-validator==2.3.0
 loguru>=0.7
 resend>=2
+psutil>=5.9

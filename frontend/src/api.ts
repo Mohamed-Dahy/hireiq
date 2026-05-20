@@ -654,6 +654,19 @@ export const getInterviewProgress = (role: string, level: string) =>
   api.get<BankProgressResponse>('/interview-bank/progress', { params: { role, level } })
 
 // ── Phase 10: Admin BI Dashboard ─────────────────────────────────────────────
+// Admin uses a separate axios instance — reads from sessionStorage, never localStorage.
+// This avoids polluting or being polluted by the user auth interceptor.
+
+const adminApi = axios.create({
+  baseURL: '/',
+  headers: { 'X-Requested-With': 'XMLHttpRequest' },
+})
+
+adminApi.interceptors.request.use((config) => {
+  const token = sessionStorage.getItem('admin_token')
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
 
 export interface AdminUserItem {
   id: number
@@ -696,20 +709,75 @@ export interface AdminMetrics {
   interview_bank: { total_questions: number }
 }
 
-export const getAdminMetrics = () =>
-  api.get<AdminMetrics>('/admin/metrics')
+export interface AdminQuestion {
+  id: number
+  role: string
+  level: string
+  category: string
+  question_text: string
+}
 
-export const getAdminUsers = (skip = 0, limit = 50) =>
-  api.get<{ users: AdminUserItem[] }>('/admin/users', { params: { skip, limit } })
+export interface AdminHealthResponse {
+  uptime_seconds: number
+  python_version: string
+  os: string
+  services: { postgres: { ok: boolean }; redis: { ok: boolean }; chromadb: { ok: boolean } }
+  cpu_percent: number
+  memory: { total_mb: number; used_mb: number; percent: number }
+}
+
+export interface AdminUserUsage {
+  user_id: number
+  email: string
+  username: string
+  tier: string
+  cv_sessions: number
+  avg_cv_score: number | null
+  interviews: number
+  job_applications: number
+  roadmaps: number
+  last_active: string | null
+  joined: string | null
+}
+
+export const adminLogin = (email: string, password: string) =>
+  adminApi.post<{ access_token: string; token_type: string }>('/admin/login', { email, password })
+
+export interface AdminUserFilters {
+  tier?: string
+  status?: string
+  joined_from?: string
+  joined_to?: string
+  skip?: number
+  limit?: number
+}
+
+export const getAdminMetrics = () =>
+  adminApi.get<AdminMetrics & { billing: { mrr_estimate_usd: number; pro_users: number; enterprise_users: number }; dau: number }>('/admin/metrics')
+
+export const getAdminUsers = (filters: AdminUserFilters = {}) =>
+  adminApi.get<{ total: number; users: AdminUserItem[] }>('/admin/users', { params: filters })
 
 export const setUserTier = (userId: number, tier: string) =>
-  api.patch(`/admin/users/${userId}/tier`, null, { params: { tier } })
-
-export const toggleUserAdmin = (userId: number, isAdmin: boolean) =>
-  api.patch(`/admin/users/${userId}/admin`, null, { params: { is_admin: isAdmin } })
+  adminApi.patch(`/admin/users/${userId}/tier`, null, { params: { tier } })
 
 export const unlockUser = (userId: number) =>
-  api.patch(`/admin/users/${userId}/unlock`)
+  adminApi.patch(`/admin/users/${userId}/unlock`)
+
+export const verifyUserEmail = (userId: number) =>
+  adminApi.patch(`/admin/users/${userId}/verify`)
 
 export const adminDeleteUser = (userId: number) =>
-  api.delete(`/admin/users/${userId}`)
+  adminApi.delete(`/admin/users/${userId}`)
+
+export const getAdminUserUsage = (userId: number) =>
+  adminApi.get<AdminUserUsage>(`/admin/usage/${userId}`)
+
+export const getAdminQuestions = (skip = 0, limit = 50) =>
+  adminApi.get<{ total: number; questions: AdminQuestion[] }>('/admin/content/questions', { params: { skip, limit } })
+
+export const adminDeleteQuestion = (questionId: number) =>
+  adminApi.delete(`/admin/content/questions/${questionId}`)
+
+export const getAdminHealth = () =>
+  adminApi.get<AdminHealthResponse>('/admin/health')

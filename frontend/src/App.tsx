@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, lazy, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Variants } from 'framer-motion'
-import { Layers, Menu, X, Loader2, ChevronDown, Map, BookOpen, Mic, Clock, Briefcase, Users, Share2, Zap, Shield } from 'lucide-react'
+import { Layers, Menu, X, Loader2, ChevronDown, Map, BookOpen, Mic, Clock, Briefcase, Users, Share2, Zap } from 'lucide-react'
 import Landing from './pages/Landing'
 import Auth from './pages/Auth'
 import VerifyOtp from './pages/VerifyOtp'
@@ -25,8 +25,8 @@ const CareerRoadmap = lazy(() => import('./pages/CareerRoadmap'))
 const Bank = lazy(() => import('./pages/Bank'))
 const Admin = lazy(() => import('./pages/Admin'))
 
-type Page = 'home' | 'upload' | 'results' | 'history' | 'detail' | 'interview' | 'profile' | 'jobs' | 'recruiter' | 'referrals' | 'roadmap' | 'bank' | 'admin'
-type View = 'landing' | 'auth' | 'app' | 'verify-otp'
+type Page = 'home' | 'upload' | 'results' | 'history' | 'detail' | 'interview' | 'profile' | 'jobs' | 'recruiter' | 'referrals' | 'roadmap' | 'bank'
+type View = 'landing' | 'auth' | 'app' | 'verify-otp' | 'admin'
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -36,6 +36,7 @@ const PageLoader = () => (
 
 function getInitialViewAndMode(): { view: View; authMode: 'register' | 'login' } {
   const path = window.location.pathname
+  if (path.startsWith('/admin')) return { view: 'admin', authMode: 'login' }
   if (path === '/verify-otp') return { view: 'verify-otp', authMode: 'register' }
   if (path === '/auth') return { view: 'auth', authMode: 'login' }
   if (path === '/referrals' && localStorage.getItem('access_token')) return { view: 'app', authMode: 'login' }
@@ -165,6 +166,7 @@ export default function App() {
 
   const openDetail = (sessionId: number) => { setDetailSessionId(sessionId); setPage('detail') }
 
+  if (view === 'admin') return <Suspense fallback={<PageLoader />}><Admin /></Suspense>
   if (view === 'verify-otp') return <VerifyOtp email={otpEmail} purpose={otpPurpose} onSuccess={handleOtpSuccess} onBack={() => setView('auth')} />
   if (view === 'landing') return <Landing onGetStarted={() => goToAuth('register')} onLogin={() => goToAuth('login')} dark={dark} onToggleDark={() => setDark(d => !d)} />
   if (view === 'auth') return <Auth defaultMode={authMode} onAuth={onAuth} onNeedVerifyOtp={goToVerifyOtp} onBack={() => setView('landing')} />
@@ -316,19 +318,6 @@ export default function App() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle dark={dark} onToggle={() => setDark(d => !d)} />
-          {profile?.is_admin && (
-            <button
-              onClick={() => goToPage('admin')}
-              className={`hidden md:flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg font-medium transition-colors cursor-pointer ${
-                page === 'admin'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/40'
-              }`}
-            >
-              <Shield size={12} strokeWidth={2} />
-              Admin
-            </button>
-          )}
           <div className="hidden md:block">
             <NavAvatar profile={profile} onClick={() => setPage('profile')} />
           </div>
@@ -450,17 +439,6 @@ export default function App() {
                 >
                   Profile
                 </button>
-                {profile?.is_admin && (
-                  <button
-                    onClick={() => goToPage('admin')}
-                    className={`flex items-center gap-2 text-left px-3 py-2.5 rounded-lg text-sm transition-colors cursor-pointer ${
-                      page === 'admin' ? 'bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 font-medium' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
-                    }`}
-                  >
-                    <Shield size={14} strokeWidth={1.75} className="shrink-0 text-primary-500" />
-                    Admin Panel
-                  </button>
-                )}
               </nav>
               <div className="p-3 border-t border-zinc-200 dark:border-zinc-800 shrink-0">
                 <button
@@ -569,13 +547,6 @@ export default function App() {
           <motion.div key="bank" variants={pageVariants} initial="initial" animate="animate" exit="exit">
             <Suspense fallback={<PageLoader />}>
               <Bank />
-            </Suspense>
-          </motion.div>
-        )}
-        {page === 'admin' && (
-          <motion.div key="admin" variants={pageVariants} initial="initial" animate="animate" exit="exit">
-            <Suspense fallback={<PageLoader />}>
-              <Admin />
             </Suspense>
           </motion.div>
         )}

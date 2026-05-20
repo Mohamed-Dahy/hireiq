@@ -61,6 +61,7 @@ class Settings(BaseSettings):
 
     # --- Admin ---
     admin_email: str = "admin@hireiq.com"
+    admin_password: str = "admin_hireiq"
     admin_jwt_expire_minutes: int = 120
 
     # --- Logging ---

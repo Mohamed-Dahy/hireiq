@@ -620,6 +620,16 @@ class RoadmapResponse(BaseModel):
 # Phase 10: Admin BI Dashboard
 # ---------------------------------------------------------------------------
 
+class AdminLoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class AdminTokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
 class AdminUserItem(BaseModel):
     id: int
     email: str
