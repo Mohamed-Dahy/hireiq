@@ -534,10 +534,14 @@ class RecruiterCandidateResponse(BaseModel):
 
 
 class RecruiterCandidateUpdate(BaseModel):
-    rank:    Optional[int] = None
-    status:  Optional[str] = None
-    notes:   Optional[str] = None
-    starred: Optional[bool] = None
+    rank:             Optional[int] = None
+    status:           Optional[str] = None
+    notes:            Optional[str] = None
+    starred:          Optional[bool] = None
+    candidate_name:   Optional[str] = None
+    candidate_email:  Optional[str] = None
+    candidate_phone:  Optional[str] = None
+    applied_position: Optional[str] = None
 
 
 class RecruiterCandidateListResponse(BaseModel):

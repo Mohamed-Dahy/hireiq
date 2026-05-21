@@ -262,6 +262,14 @@ def update_candidate(
         candidate.notes = payload.notes
     if payload.starred is not None:
         candidate.starred = payload.starred
+    if payload.candidate_name is not None:
+        candidate.candidate_name = payload.candidate_name.strip() or candidate.candidate_name
+    if payload.candidate_email is not None:
+        candidate.candidate_email = payload.candidate_email.strip() or None
+    if payload.candidate_phone is not None:
+        candidate.candidate_phone = payload.candidate_phone.strip() or None
+    if payload.applied_position is not None:
+        candidate.applied_position = payload.applied_position.strip() or None
 
     db.commit()
     db.refresh(candidate)

@@ -493,7 +493,16 @@ export const updateCandidateRank = (listId: number, candidateId: number, rank: n
 export const updateCandidate = (
   listId: number,
   candidateId: number,
-  patch: { rank?: number; status?: string; notes?: string | null; starred?: boolean },
+  patch: {
+    rank?: number
+    status?: string
+    notes?: string | null
+    starred?: boolean
+    candidate_name?: string
+    candidate_email?: string | null
+    candidate_phone?: string | null
+    applied_position?: string | null
+  },
 ) => api.patch<RecruiterCandidate>(`/recruiter/lists/${listId}/candidates/${candidateId}`, patch)
 
 export const exportRecruiterList = (listId: number) =>
