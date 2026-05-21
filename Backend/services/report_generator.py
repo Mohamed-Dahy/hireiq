@@ -420,21 +420,29 @@ def generate_recruiter_report(recruiter_list, candidates: list) -> bytes:
     pdf.set_font("Helvetica", "B", 9)
     pdf.set_fill_color(237, 233, 254)
     pdf.set_text_color(88, 28, 135)
-    pdf.cell(col_rank,  7, "Rank",    border=1, fill=True)
-    pdf.cell(col_cv,    7, "CV File", border=1, fill=True)
-    pdf.cell(col_score, 7, "Score %", border=1, fill=True)
+    pdf.cell(col_rank,  7, "Rank",      border=1, fill=True)
+    pdf.cell(col_cv,    7, "Candidate", border=1, fill=True)
+    pdf.cell(col_score, 7, "Score %",   border=1, fill=True)
     pdf.cell(col_skills, 7, "Top Skills", border=1, fill=True, ln=True)
 
     # Table rows
     for i, candidate in enumerate(candidates, 1):
         rank_label = str(candidate.rank) if candidate.rank is not None else str(i)
-        cv_name    = _safe(candidate.session.cv_filename or "-")[:35]
-        score      = candidate.session.match_score
+        # Prefer standalone name; fall back to linked session filename
+        if candidate.candidate_name:
+            display = candidate.candidate_name
+        elif candidate.session and candidate.session.cv_filename:
+            display = candidate.session.cv_filename
+        else:
+            display = "-"
+        cv_name = _safe(display)[:35]
+
+        score = candidate.session.match_score if candidate.session else None
         score_str  = f"{score:.1f}" if score is not None else "-"
 
         # Extract top 3 hard skills from skill_inventory JSON
         skills_str = "-"
-        inv = candidate.session.skill_inventory
+        inv = candidate.session.skill_inventory if candidate.session else None
         if inv and isinstance(inv, dict):
             hard = inv.get("hard", [])
             if hard:

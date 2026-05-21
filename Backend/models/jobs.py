@@ -104,8 +104,19 @@ class RecruiterCandidate(Base):
 
     id                = Column(Integer, primary_key=True, index=True)
     recruiter_list_id = Column(Integer, ForeignKey("recruiter_lists.id"), nullable=False, index=True)
-    session_id        = Column(Integer, ForeignKey("cv_sessions.id"), nullable=False)
+    session_id        = Column(Integer, ForeignKey("cv_sessions.id"), nullable=True)
+
+    # Standalone candidate identity (filled when not linked to a CV session)
+    candidate_name    = Column(String(200), nullable=True)
+    candidate_email   = Column(String(200), nullable=True)
+    candidate_phone   = Column(String(50),  nullable=True)
+    applied_position  = Column(String(200), nullable=True)
+    cv_file_path      = Column(String(500), nullable=True)
+
     rank              = Column(Integer, nullable=True)
+    status            = Column(String(20), nullable=False, default="new")
+    notes             = Column(Text, nullable=True)
+    starred           = Column(Boolean, nullable=False, default=False)
     created_at        = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     recruiter_list = relationship("RecruiterList", back_populates="candidates")

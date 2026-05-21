@@ -24,6 +24,13 @@ DIFFICULTY_MAP = {
     "hard": "senior",
 }
 
+# Emoji → difficulty level (dataset_Datascience.csv uses these in question text)
+EMOJI_LEVEL_MAP = {
+    "👶": "junior",
+    "⭐": "mid",
+    "🤔": "senior",
+}
+
 CSV_FILE_CONFIG = {
     "Software Questions.csv": {
         "role": "Software Engineer",
@@ -33,7 +40,25 @@ CSV_FILE_CONFIG = {
         "category_col": "Category",
         "difficulty_col": "Difficulty",
         "encoding": "cp1252",
-    }
+    },
+    "DataScienceBasics_QandA - Sheet1.csv": {
+        "role": "Data Scientist",
+        "source": "ds_basics_csv",
+        "question_col": "Question",
+        "answer_col": "Answer",
+        "fixed_category": "ds_fundamentals",
+        "fixed_level": "junior",
+        "encoding": "utf-8-sig",
+    },
+    "dataset_Datascience.csv": {
+        "role": "Data Scientist",
+        "source": "ds_kaggle_csv",
+        "question_col": "question",
+        "answer_col": "answer",
+        "fixed_category": "data_science",
+        "emoji_level": True,
+        "encoding": "utf-8-sig",
+    },
 }
 
 JSON_FILE_CONFIG = {
@@ -63,6 +88,15 @@ def infer_level(difficulty: str) -> str:
     return DIFFICULTY_MAP.get(difficulty.strip().lower(), "mid")
 
 
+def extract_emoji_level(question_text: str) -> tuple[str, str]:
+    """Strip trailing emoji from question text and return (clean_text, level)."""
+    for emoji, level in EMOJI_LEVEL_MAP.items():
+        if emoji in question_text:
+            clean = question_text.replace(emoji, "").strip()
+            return clean, level
+    return question_text, "mid"
+
+
 def process_csv(filepath: Path, config: dict) -> list[dict]:
     rows = []
     with open(filepath, encoding=config.get("encoding", "utf-8-sig"), errors="replace") as f:
@@ -72,12 +106,27 @@ def process_csv(filepath: Path, config: dict) -> list[dict]:
             a = (row.get(config["answer_col"]) or "").strip()
             if not q or not a:
                 continue
-            cat_raw = (row.get(config.get("category_col", ""), "") or "general_programming").strip()
-            diff_raw = (row.get(config.get("difficulty_col", ""), "") or "medium").strip()
+
+            # Level determination
+            if config.get("emoji_level"):
+                q, level = extract_emoji_level(q)
+            elif config.get("fixed_level"):
+                level = config["fixed_level"]
+            else:
+                diff_raw = (row.get(config.get("difficulty_col", ""), "") or "medium").strip()
+                level = infer_level(diff_raw)
+
+            # Category determination
+            if config.get("fixed_category"):
+                category = config["fixed_category"]
+            else:
+                cat_raw = (row.get(config.get("category_col", ""), "") or "general_programming").strip()
+                category = truncate_category(cat_raw)
+
             rows.append({
                 "role": config["role"],
-                "level": infer_level(diff_raw),
-                "category": truncate_category(cat_raw),
+                "level": level,
+                "category": category,
                 "question_text": q,
                 "model_answer": a,
                 "source": config["source"],

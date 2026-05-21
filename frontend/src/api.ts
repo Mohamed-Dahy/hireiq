@@ -433,9 +433,18 @@ export interface RecruiterList {
 
 export interface RecruiterCandidate {
   id: number
-  session_id: number
+  session_id: number | null
   rank: number | null
-  cv_filename: string
+  status: string
+  notes: string | null
+  starred: boolean
+  candidate_name: string | null
+  candidate_email: string | null
+  candidate_phone: string | null
+  applied_position: string | null
+  cv_file_path: string | null
+  display_name: string
+  cv_filename: string | null
   jd_snippet: string | null
   match_score: number | null
   skill_inventory: unknown
@@ -460,14 +469,32 @@ export const deleteRecruiterList = (listId: number) =>
 export const getRecruiterCandidates = (listId: number) =>
   api.get<RecruiterCandidateListResponse>(`/recruiter/lists/${listId}/candidates`)
 
-export const addRecruiterCandidate = (listId: number, sessionId: number) =>
-  api.post<RecruiterCandidate>(`/recruiter/lists/${listId}/candidates`, { session_id: sessionId })
+export const addRecruiterCandidate = (
+  listId: number,
+  data: { candidate_name: string; candidate_email?: string; candidate_phone?: string; applied_position?: string; cv_file?: File | null },
+) => {
+  const form = new FormData()
+  form.append('candidate_name', data.candidate_name)
+  if (data.candidate_email) form.append('candidate_email', data.candidate_email)
+  if (data.candidate_phone) form.append('candidate_phone', data.candidate_phone)
+  if (data.applied_position) form.append('applied_position', data.applied_position)
+  if (data.cv_file) form.append('cv_file', data.cv_file)
+  return api.post<RecruiterCandidate>(`/recruiter/lists/${listId}/candidates`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
 
 export const removeRecruiterCandidate = (listId: number, candidateId: number) =>
   api.delete(`/recruiter/lists/${listId}/candidates/${candidateId}`)
 
 export const updateCandidateRank = (listId: number, candidateId: number, rank: number) =>
   api.patch<RecruiterCandidate>(`/recruiter/lists/${listId}/candidates/${candidateId}`, { rank })
+
+export const updateCandidate = (
+  listId: number,
+  candidateId: number,
+  patch: { rank?: number; status?: string; notes?: string | null; starred?: boolean },
+) => api.patch<RecruiterCandidate>(`/recruiter/lists/${listId}/candidates/${candidateId}`, patch)
 
 export const exportRecruiterList = (listId: number) =>
   api.get<ArrayBuffer>(`/recruiter/lists/${listId}/export`, { responseType: 'arraybuffer' })

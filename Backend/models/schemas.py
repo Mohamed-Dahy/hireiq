@@ -507,17 +507,26 @@ class RecruiterListResponse(BaseModel):
     created_at:      datetime
 
 
-class AddCandidateRequest(BaseModel):
-    session_id: int
-
-
 class RecruiterCandidateResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id:               int
-    session_id:       int
+    session_id:       Optional[int]
     rank:             Optional[int]
-    cv_filename:      str
+    status:           str
+    notes:            Optional[str]
+    starred:          bool
+
+    # Standalone candidate identity
+    candidate_name:   Optional[str]
+    candidate_email:  Optional[str]
+    candidate_phone:  Optional[str]
+    applied_position: Optional[str]
+    cv_file_path:     Optional[str]
+    display_name:     str
+
+    # From linked CV session (None for standalone)
+    cv_filename:      Optional[str]
     jd_snippet:       Optional[str]
     match_score:      Optional[float]
     skill_inventory:  Optional[Any]
@@ -525,7 +534,10 @@ class RecruiterCandidateResponse(BaseModel):
 
 
 class RecruiterCandidateUpdate(BaseModel):
-    rank: Optional[int] = None
+    rank:    Optional[int] = None
+    status:  Optional[str] = None
+    notes:   Optional[str] = None
+    starred: Optional[bool] = None
 
 
 class RecruiterCandidateListResponse(BaseModel):
