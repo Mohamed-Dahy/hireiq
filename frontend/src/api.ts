@@ -205,6 +205,7 @@ export interface CVSession {
   match_score: number | null
   created_at: string
   has_gap_report: boolean
+  has_interview_questions: boolean
   jd_snippet: string | null
 }
 
@@ -221,6 +222,7 @@ export interface InterviewResult {
 
 export interface CVSessionDetail extends CVSession {
   interview_results: InterviewResult[]
+  ai_interview_questions: string[]
 }
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
@@ -273,6 +275,9 @@ export const startAnalysisStream = (sessionId: number): EventSource =>
 
 export const getEnhancedAnalysis = (sessionId: number) =>
   api.get<StructuredAnalysis>(`/cv/${sessionId}/analysis`)
+
+export const saveInterviewQuestions = (sessionId: number, questions: string[]) =>
+  api.patch<{ saved: number }>(`/cv/${sessionId}/save-questions`, { questions })
 
 // ── Phase 6: ATS Job Tracker ─────────────────────────────────────────────────
 

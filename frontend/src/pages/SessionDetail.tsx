@@ -175,8 +175,11 @@ export default function SessionDetail({ sessionId, onBack, onPractice }: Props) 
   }
 
   const analysisQuestions = parseQuestions(analysis)
+  const storedQuestions = detail?.ai_interview_questions ?? []
   const pastQuestions = detail?.interview_results.map((r) => r.question) ?? []
-  const practiceQuestions = analysisQuestions.length > 0 ? analysisQuestions : pastQuestions
+  const practiceQuestions = analysisQuestions.length > 0 ? analysisQuestions
+    : storedQuestions.length > 0 ? storedQuestions
+    : pastQuestions
 
   if (loading) {
     return (
@@ -322,6 +325,26 @@ export default function SessionDetail({ sessionId, onBack, onPractice }: Props) 
         </motion.div>
       )}
 
+      {/* Stored interview questions (available without re-analyzing) */}
+      {!analysisStarted && storedQuestions.length > 0 && (
+        <motion.div variants={fadeUp} initial="hidden" animate="show">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Interview Questions</h3>
+            <button
+              onClick={() => onPractice(storedQuestions)}
+              className="text-xs bg-primary-600 hover:bg-primary-500 text-white px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer"
+            >
+              Practice all →
+            </button>
+          </div>
+          <div className="space-y-3">
+            {storedQuestions.map((q, i) => (
+              <QuestionCard key={i} question={q} index={i} />
+            ))}
+          </div>
+        </motion.div>
+      )}
+
       {/* Interview results */}
       <motion.div variants={fadeUp} initial="hidden" animate="show">
         <div className="flex items-center justify-between mb-3">
@@ -332,7 +355,9 @@ export default function SessionDetail({ sessionId, onBack, onPractice }: Props) 
         {detail.interview_results.length === 0 ? (
           <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-xl p-5 text-sm text-zinc-400 text-center">
             No interview answers recorded for this session yet.
-            {practiceQuestions.length === 0 && (
+            {practiceQuestions.length > 0 ? (
+              <p className="mt-1">Use "Practice all" above to start a mock interview.</p>
+            ) : (
               <p className="mt-1">Run an analysis first to generate questions.</p>
             )}
           </div>

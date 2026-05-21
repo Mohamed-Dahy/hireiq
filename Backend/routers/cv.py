@@ -18,7 +18,7 @@ from app.config import settings
 from database import get_db
 from limiter import limiter
 from models.user import CVSession, InterviewResult, User
-from models.schemas import CVUploadResponse, CVSessionResponse, CVSessionDetailResponse, EnhancedAnalysisResponse
+from models.schemas import CVUploadResponse, CVSessionResponse, CVSessionDetailResponse, EnhancedAnalysisResponse, SaveQuestionsRequest
 from services.cv_parser import parse_cv
 from services.rag_scorer import store_embeddings, compute_match_score, delete_embeddings
 from services.cache import get_cached_score, set_cached_score, clear_cached_score
@@ -275,6 +275,27 @@ def get_analysis(
         "gap_report": json.loads(session.gap_report) if session.gap_report else [],
         "study_roadmap": json.loads(session.study_roadmap) if session.study_roadmap else [],
     }
+
+
+@router.patch("/{session_id}/save-questions", response_model=dict)
+def save_interview_questions(
+    session_id: int,
+    body: SaveQuestionsRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Store AI-generated interview questions on the session for later practice."""
+    session = db.query(CVSession).filter(CVSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Not found")
+    require_ownership(session.user_id, current_user.id)
+
+    if not body.questions:
+        raise HTTPException(status_code=422, detail="questions list must not be empty")
+
+    session.ai_interview_questions = json.dumps(body.questions)
+    db.commit()
+    return {"saved": len(body.questions)}
 
 
 @router.delete("/{session_id}", status_code=204)

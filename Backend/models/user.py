@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import declarative_base, relationship
@@ -39,10 +40,13 @@ class CVSession(Base):
     created_at       = Column(DateTime, default=datetime.utcnow)
 
     # Phase 5: structured analysis (stored as JSON text)
-    skill_inventory  = Column(Text, nullable=True)
-    gap_report       = Column(Text, nullable=True)
-    study_roadmap    = Column(Text, nullable=True)
-    is_linkedin      = Column(Boolean, default=False, nullable=False)
+    skill_inventory          = Column(Text, nullable=True)
+    gap_report               = Column(Text, nullable=True)
+    study_roadmap            = Column(Text, nullable=True)
+    is_linkedin              = Column(Boolean, default=False, nullable=False)
+
+    # AI-generated interview questions (JSON array of strings)
+    ai_interview_questions   = Column(Text, nullable=True)
 
     user             = relationship("User", back_populates="sessions")
     interview_results = relationship("InterviewResult", back_populates="session")
@@ -52,11 +56,38 @@ class CVSession(Base):
         return bool(self.gap_report)
 
     @property
+    def has_interview_questions(self) -> bool:
+        return bool(self.ai_interview_questions)
+
+    @property
     def jd_snippet(self) -> str | None:
         if not self.jd_text:
             return None
         text = self.jd_text.strip()
-        return text[:80] + ('…' if len(text) > 80 else '')
+        lines = [l.strip() for l in text.split('\n')]
+
+        # Scan up to 15 lines for an explicit title label
+        for line in lines[:15]:
+            if not line or len(line) < 4:
+                continue
+            m = re.match(
+                r'(?:job\s+title|position|role|title)\s*[:—\-]\s*(.{3,80})',
+                line, re.IGNORECASE,
+            )
+            if m:
+                return m.group(1).strip()[:80]
+
+        # Fall back to first meaningful line (not a URL, not an all-caps header)
+        for line in lines[:8]:
+            if not line or len(line) < 5:
+                continue
+            if line.startswith('http'):
+                continue
+            if line.upper() == line and len(line) < 35:
+                continue  # skip all-caps section headers like "JOB DESCRIPTION"
+            return line[:80]
+
+        return text[:80]
 
 
 class InterviewResult(Base):

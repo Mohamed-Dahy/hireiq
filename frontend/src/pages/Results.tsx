@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import {
   Download, Loader2, Map as MapIcon, Trash2,
@@ -12,7 +12,7 @@ import SkillsInventory from '../components/SkillsInventory'
 import SkillGapChart from '../components/SkillGapChart'
 import { useToast } from '../components/Toast'
 import type { CVUploadResponse, StructuredAnalysis } from '../api'
-import { deleteSession } from '../api'
+import { deleteSession, saveInterviewQuestions } from '../api'
 import { parseQuestions } from '../utils/parseQuestions'
 
 interface Props {
@@ -118,6 +118,7 @@ export default function Results({ result, onBack, onDiscard, onPractice, onRoadm
   const [discarding, setDiscarding] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('overview')
 
+  const analysisTextRef = useRef('')
   const questions = parseQuestions(analysis)
   const tier = getScoreTier(result.match_score)
 
@@ -131,14 +132,25 @@ export default function Results({ result, onBack, onDiscard, onPractice, onRoadm
   }, [result.match_score, reduced])
 
   useEffect(() => {
+    analysisTextRef.current = ''
     const token = localStorage.getItem('access_token')
     const es = new EventSource(`/analyze?session_id=${result.session_id}&token=${token}`)
     es.addEventListener('structured', (e: MessageEvent) => {
       try { setStructured(JSON.parse(e.data) as StructuredAnalysis) } catch {}
     })
     es.onmessage = (e) => {
-      if (e.data === '[DONE]') { setStreaming(false); es.close(); return }
-      setAnalysis((prev) => prev + e.data.replace(/\\n/g, '\n'))
+      if (e.data === '[DONE]') {
+        setStreaming(false)
+        es.close()
+        const qs = parseQuestions(analysisTextRef.current)
+        if (qs.length > 0) {
+          saveInterviewQuestions(result.session_id, qs).catch(() => {})
+        }
+        return
+      }
+      const chunk = e.data.replace(/\\n/g, '\n')
+      analysisTextRef.current += chunk
+      setAnalysis((prev) => prev + chunk)
     }
     es.onerror = () => { setStreaming(false); es.close() }
     return () => es.close()

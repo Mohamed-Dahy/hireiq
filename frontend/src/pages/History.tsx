@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Search, FileText, Trash2, ChevronRight } from 'lucide-react'
+import { Search, FileText, Trash2, ChevronRight, Mic } from 'lucide-react'
 import { getSessions, deleteSession } from '../api'
 import type { CVSession } from '../api'
 import { getSessionLabel } from '../utils/sessionLabel'
@@ -179,6 +179,17 @@ export default function History({ onSelect }: Props) {
                 <span className={`text-xs font-medium px-2 py-0.5 rounded ${scoreClass(s.match_score)}`}>
                   {s.match_score != null ? `${s.match_score}%` : '—'}
                 </span>
+
+                {s.has_interview_questions && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onSelect(s.id) }}
+                    aria-label="Practice interview"
+                    title="Practice interview questions"
+                    className="w-7 h-7 rounded-md flex items-center justify-center text-accent-500 hover:bg-accent-50 dark:hover:bg-accent-950/50 transition-all cursor-pointer"
+                  >
+                    <Mic size={13} strokeWidth={1.5} />
+                  </button>
+                )}
 
                 <button
                   onClick={(e) => { e.stopPropagation(); setPendingDelete(s) }}

@@ -5,6 +5,7 @@ Pydantic models that define what the API accepts (requests)
 and what it returns (responses). No raw dicts ever leave the API.
 """
 
+import json
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator, model_validator
 from typing import Any, Optional
 from datetime import date, datetime
@@ -135,6 +136,7 @@ class CVSessionResponse(BaseModel):
     created_at: datetime
     has_gap_report: bool
     jd_snippet: Optional[str]
+    has_interview_questions: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -172,6 +174,22 @@ class CVSessionDetailResponse(BaseModel):
     match_score: Optional[float]
     created_at: datetime
     interview_results: list[InterviewResultResponse]
+    ai_interview_questions: list[str] = []
+
+    @field_validator("ai_interview_questions", mode="before")
+    @classmethod
+    def parse_questions_json(cls, v: Any) -> list[str]:
+        if isinstance(v, str):
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return [str(q) for q in parsed]
+            except (json.JSONDecodeError, TypeError):
+                pass
+            return []
+        if isinstance(v, list):
+            return v
+        return []
 
 
 # ---------------------------------------------------------------------------
@@ -180,6 +198,10 @@ class CVSessionDetailResponse(BaseModel):
 
 class AnalysisRequest(BaseModel):
     session_id: int
+
+
+class SaveQuestionsRequest(BaseModel):
+    questions: list[str]
 
 
 # The response for analysis is streamed via SSE, not a single JSON blob,
