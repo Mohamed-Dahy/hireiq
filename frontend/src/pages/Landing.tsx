@@ -41,7 +41,7 @@ const stats = [
   { value: '< 2s',  label: 'Match score latency' },
   { value: '6+',    label: 'AI signals combined' },
   { value: '100%',  label: 'Free tier available' },
-  { value: '4.8★',  label: 'Avg user rating' },
+  { value: '3 min', label: 'Avg time to insights' },
 ]
 
 const fade = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { duration: 0.4 } } }

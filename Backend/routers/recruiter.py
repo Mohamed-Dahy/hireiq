@@ -207,9 +207,11 @@ async def add_candidate(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="CV must be a PDF, DOC, or DOCX file.",
             )
+        content = await cv_file.read()
+        if len(content) > 10 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="CV file too large. Maximum size is 10 MB.")
         safe_name = f"{uuid.uuid4().hex}{ext}"
         saved_path = os.path.join(_UPLOAD_DIR, safe_name)
-        content = await cv_file.read()
         with open(saved_path, "wb") as f:
             f.write(content)
 

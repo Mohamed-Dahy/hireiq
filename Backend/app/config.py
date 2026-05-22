@@ -60,8 +60,8 @@ class Settings(BaseSettings):
     groq_price_per_1k_tokens: float = 0.0006
 
     # --- Admin ---
-    admin_email: str = "admin@hireiq.com"
-    admin_password: str = "admin_hireiq"
+    admin_email: str = ""
+    admin_password: str = ""
     admin_jwt_expire_minutes: int = 120
 
     # --- Logging ---

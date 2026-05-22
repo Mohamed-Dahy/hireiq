@@ -1,3 +1,4 @@
+import os
 import uuid
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,10 +17,15 @@ configure_logging()
 
 security = HTTPBearer()
 
+_debug = os.getenv("DEBUG", "false").lower() == "true"
+
 app = FastAPI(
     title="HireIQ API",
     version="1.0.0",
     description="AI-powered CV screener and interview coach",
+    docs_url="/docs" if _debug else None,
+    redoc_url="/redoc" if _debug else None,
+    openapi_url="/openapi.json" if _debug else None,
 )
 
 app.state.limiter = limiter
@@ -35,8 +41,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
 )
 
 
