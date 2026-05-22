@@ -217,25 +217,53 @@ def download_report(
         for r in interview_rows
     ]
 
-    # Re-parse CV to get skills, then run LLM analysis (non-streaming)
-    cv_path = os.path.join(settings.upload_dir, session.cv_filename)
-    skills: list[str] = []
-    analysis_text = ""
+    # Use stored structured analysis (avoids re-running the LLM every download)
+    skill_inventory: list[dict] = []
+    gap_report_data: list[dict] = []
 
-    if os.path.exists(cv_path):
-        parsed = parse_cv(cv_path)
-        skills = parsed.get("skills", [])
-        cv_text = parsed["raw_text"]
+    if session.skill_inventory:
         try:
-            analysis_text = run_analysis(cv_text=cv_text, jd_text=session.jd_text)
+            skill_inventory = json.loads(session.skill_inventory)
         except Exception:
-            analysis_text = ""
+            pass
+    if session.gap_report:
+        try:
+            gap_report_data = json.loads(session.gap_report)
+        except Exception:
+            pass
+
+    # If analysis was never run, compute it now and persist for future downloads
+    if not skill_inventory:
+        cv_path = os.path.join(settings.upload_dir, session.cv_filename)
+        if os.path.exists(cv_path):
+            try:
+                from services.llm_analyzer import analyze_structured
+                cv_text = parse_cv(cv_path)["raw_text"]
+                structured = analyze_structured(cv_text, session.jd_text)
+                skill_inventory = structured.get("skill_inventory", [])
+                gap_report_data = structured.get("gap_report", [])
+                session.skill_inventory = json.dumps(skill_inventory)
+                session.gap_report = json.dumps(gap_report_data)
+                db.commit()
+            except Exception:
+                pass
+
+    ai_qs: list[str] = []
+    if session.ai_interview_questions:
+        try:
+            ai_qs = json.loads(session.ai_interview_questions)
+        except Exception:
+            pass
 
     pdf_bytes = generate_report(
         cv_filename=session.cv_filename,
+        original_cv_filename=session.original_cv_filename,
+        jd_snippet=session.jd_snippet,
         match_score=session.match_score or 0.0,
-        skills=skills,
-        analysis_text=analysis_text,
+        candidate_level=None,
+        skill_inventory=skill_inventory,
+        gap_report=gap_report_data,
+        ai_interview_questions=ai_qs,
         interview_results=interview_dicts,
     )
 
