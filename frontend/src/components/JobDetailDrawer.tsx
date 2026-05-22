@@ -5,7 +5,7 @@ import type {
 } from '../api'
 import {
   getActivities, getContacts, logActivity, addContact,
-  deleteContact, transitionStatus, analyzeJob,
+  deleteContact, transitionStatus, analyzeJob, getJobPrep,
 } from '../api'
 import ApplicationTimeline from './ApplicationTimeline'
 import AddEditJobModal from './AddEditJobModal'
@@ -36,6 +36,7 @@ export default function JobDetailDrawer({ job, onClose, onUpdated, onNavigateToR
   const [contacts, setContacts] = useState<ContactResponse[]>([])
   const [prepQuestions, setPrepQuestions] = useState<{ question: string; model_answer: string }[]>([])
   const [analyzing, setAnalyzing] = useState(false)
+  const [analyzeError, setAnalyzeError] = useState('')
   const [showEdit, setShowEdit] = useState(false)
 
   const [actType, setActType] = useState('email_sent')
@@ -93,9 +94,14 @@ export default function JobDetailDrawer({ job, onClose, onUpdated, onNavigateToR
 
   const runAnalysis = async () => {
     setAnalyzing(true)
+    setAnalyzeError('')
     try {
-      const res = await analyzeJob(job.id)
-      onUpdated({ ...job, match_score: res.data.match_score, ai_gap_summary: res.data.ai_gap_summary })
+      const analysisRes = await analyzeJob(job.id)
+      const prepRes = await getJobPrep(job.id)
+      setPrepQuestions(prepRes.data.questions ?? [])
+      onUpdated({ ...job, match_score: analysisRes.data.match_score, ai_gap_summary: analysisRes.data.ai_gap_summary })
+    } catch (err: any) {
+      setAnalyzeError(err?.response?.data?.detail ?? 'Analysis failed. Make sure the job has a description.')
     } finally {
       setAnalyzing(false)
     }
@@ -322,6 +328,9 @@ export default function JobDetailDrawer({ job, onClose, onUpdated, onNavigateToR
                     <Map size={13} strokeWidth={1.75} />
                     Generate Career Roadmap for this role
                   </button>
+                )}
+                {analyzeError && (
+                  <p className="text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-950/30 rounded-lg px-3 py-2">{analyzeError}</p>
                 )}
                 <button
                   onClick={runAnalysis}

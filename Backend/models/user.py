@@ -48,6 +48,9 @@ class CVSession(Base):
     # AI-generated interview questions (JSON array of strings)
     ai_interview_questions   = Column(Text, nullable=True)
 
+    # Original filename supplied by the user at upload time
+    original_cv_filename     = Column(String(500), nullable=True)
+
     user             = relationship("User", back_populates="sessions")
     interview_results = relationship("InterviewResult", back_populates="session")
 

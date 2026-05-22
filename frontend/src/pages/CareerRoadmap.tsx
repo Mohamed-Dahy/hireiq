@@ -380,10 +380,8 @@ export default function CareerRoadmap({ initialSessionId, onNavigateToUpload }: 
     if (s?.jd_snippet) setTargetRole(extractRoleFromJdSnippet(s.jd_snippet))
   }
 
-  const selectedSession = sessions.find(s => s.id === selectedSessionId) ?? null
-
   const canGenerate = mode === 'cv'
-    ? selectedSessionId !== null && targetRole.trim().length > 0
+    ? selectedSessionId !== null
     : targetRole.trim().length > 0
 
   const handleGenerate = async () => {
@@ -393,9 +391,10 @@ export default function CareerRoadmap({ initialSessionId, onNavigateToUpload }: 
     try {
       const sessionId = mode === 'cv' ? selectedSessionId : null
       const desc = mode === 'role' ? roleDescription.trim() : undefined
-      const res = await generateRoadmap(sessionId, targetRole.trim(), desc)
+      const role = mode === 'cv' ? (targetRole.trim() || 'Career Development') : targetRole.trim()
+      const res = await generateRoadmap(sessionId, role, desc)
       setSelectedRoadmap(res.data)
-      setTargetRole('')
+      if (mode === 'role') setTargetRole('')
       setRoleDescription('')
       const rms = await listRoadmaps()
       setRoadmaps(rms.data)
@@ -559,30 +558,16 @@ export default function CareerRoadmap({ initialSessionId, onNavigateToUpload }: 
             </div>
           )}
 
-          {/* Target role + generate */}
-          {sessions.length > 0 && (
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">
-                  Target Role
-                  {selectedSession?.jd_snippet && (
-                    <span className="ml-2 text-zinc-400 font-normal">(auto-filled from session)</span>
-                  )}
-                </label>
-                <input
-                  type="text"
-                  value={targetRole}
-                  onChange={(e) => setTargetRole(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
-                  placeholder="e.g. Senior Data Engineer, Full-Stack Developer…"
-                  className="w-full px-3 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder:text-zinc-400"
-                />
-              </div>
-
-              {!selectedSessionId && (
-                <p className="text-xs text-zinc-400">Select a session above to continue</p>
+          {/* Generate section — appears once a session is selected */}
+          {sessions.length > 0 && selectedSessionId !== null && (
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 space-y-3">
+              {targetRole && (
+                <div className="flex items-center gap-2">
+                  <Target size={13} strokeWidth={1.5} className="text-primary-500 shrink-0" />
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400">Target role:</span>
+                  <span className="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">{targetRole}</span>
+                </div>
               )}
-
               <button
                 onClick={handleGenerate}
                 disabled={generating || !canGenerate}
@@ -759,7 +744,7 @@ export default function CareerRoadmap({ initialSessionId, onNavigateToUpload }: 
           <Map size={32} strokeWidth={1.5} className="mx-auto mb-3 text-zinc-300 dark:text-zinc-600" />
           <p>
             {mode === 'cv'
-              ? 'Select a CV session and confirm the target role to generate your roadmap'
+              ? 'Select a CV session above to generate your personalised roadmap'
               : 'Enter a target role to generate your personalised roadmap'}
           </p>
         </div>

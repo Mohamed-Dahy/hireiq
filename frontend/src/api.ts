@@ -202,6 +202,7 @@ export interface StructuredAnalysis {
 export interface CVSession {
   id: number
   cv_filename: string
+  original_cv_filename: string | null
   match_score: number | null
   created_at: string
   has_gap_report: boolean

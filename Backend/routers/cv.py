@@ -83,6 +83,7 @@ async def upload_cv(
     session = CVSession(
         user_id=current_user.id,
         cv_filename=uuid_name,
+        original_cv_filename=cv_file.filename or None,
         jd_text=jd_text,
         match_score=score,
         is_linkedin=linkedin,
@@ -137,6 +138,7 @@ async def use_stored_cv(
     session = CVSession(
         user_id=current_user.id,
         cv_filename=uuid_name,
+        original_cv_filename=profile.stored_cv_filename or None,
         jd_text=jd_text,
         match_score=score,
         is_linkedin=is_linkedin_pdf(cv_bytes),

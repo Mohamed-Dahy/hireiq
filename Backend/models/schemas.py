@@ -132,6 +132,7 @@ class CVSessionResponse(BaseModel):
 
     id: int
     cv_filename: str
+    original_cv_filename: Optional[str] = None
     match_score: Optional[float]
     created_at: datetime
     has_gap_report: bool
@@ -171,6 +172,7 @@ class CVSessionDetailResponse(BaseModel):
 
     id: int
     cv_filename: str
+    original_cv_filename: Optional[str] = None
     match_score: Optional[float]
     created_at: datetime
     interview_results: list[InterviewResultResponse]
