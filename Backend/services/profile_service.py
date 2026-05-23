@@ -6,7 +6,7 @@ username updates, stored CV upload/deletion, and password change via OTP.
 """
 
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import HTTPException, UploadFile
@@ -39,7 +39,7 @@ def get_extended_profile(db: Session, user: User) -> dict:
         .scalar() or 0
     )
 
-    window_start = datetime.utcnow() - timedelta(days=settings.free_tier_window_days)
+    window_start = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=settings.free_tier_window_days)
     analyses_in_window = sum(1 for s in sessions if s.created_at >= window_start)
 
     window_resets_at: Optional[datetime] = None
@@ -51,7 +51,7 @@ def get_extended_profile(db: Session, user: User) -> dict:
         if oldest_in_window:
             window_resets_at = oldest_in_window + timedelta(days=settings.free_tier_window_days)
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     month_start = datetime(now.year, now.month, 1)
     sessions_this_month = sum(1 for s in sessions if s.created_at >= month_start)
 
@@ -120,7 +120,7 @@ def update_profile(db: Session, user: User, data: ProfileUpdateRequest) -> None:
     if data.portfolio_url is not None:
         profile.portfolio_url = data.portfolio_url or None
 
-    profile.updated_at = datetime.utcnow()
+    profile.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
 
 
@@ -147,7 +147,7 @@ async def save_stored_cv(db: Session, user: User, file: UploadFile) -> str:
 
     profile.stored_cv_path = cv_path
     profile.stored_cv_filename = file.filename or "cv.pdf"
-    profile.updated_at = datetime.utcnow()
+    profile.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
 
     return profile.stored_cv_filename
@@ -166,5 +166,5 @@ def delete_stored_cv(db: Session, user: User) -> None:
 
     profile.stored_cv_path = None
     profile.stored_cv_filename = None
-    profile.updated_at = datetime.utcnow()
+    profile.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()

@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from sqlalchemy import (
     Boolean, Column, Date, DateTime, Float,
     ForeignKey, Integer, String, Text,
@@ -6,6 +6,10 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from models.user import Base
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class JobApplication(Base):
@@ -25,7 +29,7 @@ class JobApplication(Base):
 
     # Pipeline stage
     status           = Column(String(30), nullable=False, default="saved", index=True)
-    stage_entered_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    stage_entered_at = Column(DateTime, nullable=False, default=_utcnow)
 
     # Metadata
     source           = Column(String(50), nullable=True)   # linkedin/indeed/referral/…
@@ -46,8 +50,8 @@ class JobApplication(Base):
 
     # Soft-delete
     is_archived      = Column(Boolean, nullable=False, default=False)
-    created_at       = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at       = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at       = Column(DateTime, nullable=False, default=_utcnow)
+    updated_at       = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
 
     activities = relationship("ApplicationActivity", back_populates="job", cascade="all, delete-orphan")
     contacts   = relationship("ApplicationContact",  back_populates="job", cascade="all, delete-orphan")
@@ -63,7 +67,7 @@ class ApplicationActivity(Base):
     event_type         = Column(String(50), nullable=False)
     event_date         = Column(Date, nullable=False, default=date.today)
     notes              = Column(Text, nullable=True)
-    created_at         = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at         = Column(DateTime, nullable=False, default=_utcnow)
 
     job = relationship("JobApplication", back_populates="activities")
 
@@ -80,7 +84,7 @@ class ApplicationContact(Base):
     phone              = Column(String(50), nullable=True)
     linkedin_url       = Column(Text, nullable=True)
     notes              = Column(Text, nullable=True)
-    created_at         = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at         = Column(DateTime, nullable=False, default=_utcnow)
 
     job = relationship("JobApplication", back_populates="contacts")
 
@@ -92,7 +96,7 @@ class RecruiterList(Base):
     user_id    = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     name       = Column(String(100), nullable=False)
     job_title  = Column(String(200), nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=_utcnow)
 
     candidates = relationship(
         "RecruiterCandidate", back_populates="recruiter_list", cascade="all, delete-orphan"
@@ -117,7 +121,7 @@ class RecruiterCandidate(Base):
     status            = Column(String(20), nullable=False, default="new")
     notes             = Column(Text, nullable=True)
     starred           = Column(Boolean, nullable=False, default=False)
-    created_at        = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at        = Column(DateTime, nullable=False, default=_utcnow)
 
     recruiter_list = relationship("RecruiterList", back_populates="candidates")
     session        = relationship("CVSession")

@@ -7,7 +7,7 @@ Free tier : max 2 CV analyses per rolling 10-day window (CVSession count).
 Paid tier : max 10,000 tokens per calendar day (TokenUsageLog sum).
 """
 
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from typing import Optional
 
 from fastapi import HTTPException
@@ -25,7 +25,7 @@ from models.user import CVSession, User
 
 def check_free_tier_quota(db: Session, user: User) -> None:
     """Raise HTTP 429 if the user has exhausted their free-tier analysis quota."""
-    window_start = datetime.utcnow() - timedelta(days=settings.free_tier_window_days)
+    window_start = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=settings.free_tier_window_days)
     sessions_in_window = (
         db.query(CVSession)
         .filter(CVSession.user_id == user.id, CVSession.created_at >= window_start)
@@ -62,7 +62,7 @@ def check_paid_tier_quota(db: Session, user: User) -> None:
     user can both pass before either logs usage. Fixing it requires an atomic
     Redis INCRBY counter (queued as a follow-up).
     """
-    today = datetime.utcnow().date()
+    today = datetime.now(timezone.utc).replace(tzinfo=None).date()
     tokens_today = (
         db.query(func.sum(TokenUsageLog.tokens_used))
         .filter(TokenUsageLog.user_id == user.id, TokenUsageLog.date == today)
@@ -76,7 +76,7 @@ def check_paid_tier_quota(db: Session, user: User) -> None:
                 "message": "You've reached your daily token budget.",
                 "tokens_used_today": tokens_today,
                 "daily_limit": settings.paid_tier_daily_token_limit,
-                "resets_at": (datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)).isoformat(),
+                "resets_at": (datetime.now(timezone.utc).replace(tzinfo=None).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)).isoformat(),
             },
         )
 
@@ -95,7 +95,7 @@ def log_token_usage(
     """Insert a TokenUsageLog row for the given operation."""
     row = TokenUsageLog(
         user_id=user_id,
-        date=datetime.utcnow().date(),
+        date=datetime.now(timezone.utc).replace(tzinfo=None).date(),
         tokens_used=tokens_used,
         operation_type=operation_type,
         tier=tier,
@@ -110,7 +110,7 @@ def log_token_usage(
 
 def get_admin_summary(db: Session) -> dict:
     """Return an aggregate token usage summary for the admin dashboard."""
-    today = datetime.utcnow().date()
+    today = datetime.now(timezone.utc).replace(tzinfo=None).date()
 
     tokens_today: int = (
         db.query(func.sum(TokenUsageLog.tokens_used))
@@ -160,7 +160,7 @@ def get_user_breakdown(
 ) -> list:
     """Return per-user token usage for a given date, sorted descending."""
     if for_date is None:
-        for_date = datetime.utcnow().date()
+        for_date = datetime.now(timezone.utc).replace(tzinfo=None).date()
 
     rows = (
         db.query(

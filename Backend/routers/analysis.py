@@ -14,9 +14,9 @@ EventSource is still open when the structured event arrives.
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -27,6 +27,7 @@ from services.llm_analyzer import stream_analysis, analyze_structured
 from services.auth_service import decode_token, is_jti_blacklisted
 from services.cv_parser import extract_text_from_pdf
 from services import token_tracker
+from limiter import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,9 @@ router = APIRouter()
 
 
 @router.get("")
+@limiter.limit("3/minute")
 def analyze(
+    request: Request,
     session_id: int = Query(...),
     token: str = Query(...),
     db: Session = Depends(get_db),
@@ -70,7 +73,7 @@ def analyze(
     # Honour sessions_revoked_at (set on password reset).
     if user.sessions_revoked_at:
         iat = payload.get("iat")
-        if iat is not None and datetime.utcfromtimestamp(int(iat)) < user.sessions_revoked_at:
+        if iat is not None and datetime.fromtimestamp(int(iat), tz=timezone.utc).replace(tzinfo=None) < user.sessions_revoked_at:
             raise HTTPException(status_code=401, detail="Token revoked — please log in again")
 
     # Quota check BEFORE returning the streaming response

@@ -119,11 +119,14 @@ def test_client(test_db: Session):
     the CSRF middleware without needing to repeat the header in every test.
     """
     from app.main import app
+    import routers.analysis as _analysis_mod
 
     def _override_get_db():
         yield test_db
 
     app.dependency_overrides[get_db] = _override_get_db
+    _orig_session_local = _analysis_mod.SessionLocal
+    _analysis_mod.SessionLocal = _TestSession
     with TestClient(
         app,
         raise_server_exceptions=True,
@@ -131,6 +134,7 @@ def test_client(test_db: Session):
     ) as client:
         yield client
     app.dependency_overrides.clear()
+    _analysis_mod.SessionLocal = _orig_session_local
 
 
 @pytest.fixture()

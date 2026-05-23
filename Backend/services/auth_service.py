@@ -6,7 +6,7 @@ and email verification / password reset token management.
 """
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import bcrypt
 from jose import JWTError, jwt
@@ -50,7 +50,7 @@ def _new_jti() -> str:
 
 def create_access_token(user_id: int) -> str:
     jti = _new_jti()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     payload = {
         "sub": str(user_id),
         "jti": jti,
@@ -63,7 +63,7 @@ def create_access_token(user_id: int) -> str:
 
 def create_refresh_token(user_id: int) -> str:
     jti = _new_jti()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     payload = {
         "sub": str(user_id),
         "jti": jti,
@@ -114,7 +114,7 @@ def is_jti_blacklisted(jti: str) -> bool:
 # ---------------------------------------------------------------------------
 
 def check_account_locked(user: User) -> None:
-    if user.locked_until and user.locked_until > datetime.utcnow():
+    if user.locked_until and user.locked_until > datetime.now(timezone.utc).replace(tzinfo=None):
         raise HTTPException(
             status_code=status.HTTP_423_LOCKED,
             detail=f"Account locked until {user.locked_until.isoformat()}",
@@ -124,7 +124,7 @@ def check_account_locked(user: User) -> None:
 def record_failed_login(db: Session, user: User) -> None:
     user.failed_login_count = (user.failed_login_count or 0) + 1
     if user.failed_login_count >= MAX_FAILED_LOGINS:
-        user.locked_until = datetime.utcnow() + timedelta(minutes=LOCKOUT_MINUTES)
+        user.locked_until = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=LOCKOUT_MINUTES)
         logger.warning("Account {} locked after {} failed attempts", user.email, MAX_FAILED_LOGINS)
     db.commit()
 
@@ -203,7 +203,7 @@ def get_current_user(
     if user.sessions_revoked_at:
         iat = payload.get("iat")
         if iat is not None:
-            token_issued = datetime.utcfromtimestamp(int(iat))
+            token_issued = datetime.fromtimestamp(int(iat), tz=timezone.utc).replace(tzinfo=None)
             if token_issued < user.sessions_revoked_at:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,

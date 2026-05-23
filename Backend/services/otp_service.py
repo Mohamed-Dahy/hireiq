@@ -1,6 +1,6 @@
 import secrets
 import hmac as hmac_lib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from app.config import settings
 from models.user import OtpCode
@@ -21,7 +21,7 @@ def create_otp(db: Session, email: str, purpose: str, user_id: int | None = None
         OtpCode.email == email.lower(),
         OtpCode.purpose == purpose,
         OtpCode.used_at.is_(None),
-    ).update({"used_at": datetime.utcnow()})
+    ).update({"used_at": datetime.now(timezone.utc).replace(tzinfo=None)})
 
     code = generate_otp()
     record = OtpCode(
@@ -29,7 +29,7 @@ def create_otp(db: Session, email: str, purpose: str, user_id: int | None = None
         user_id=user_id,
         code_hmac=hmac_code(code, settings.otp_hmac_secret),
         purpose=purpose,
-        expires_at=datetime.utcnow() + timedelta(minutes=settings.otp_expiry_minutes),
+        expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=settings.otp_expiry_minutes),
     )
     db.add(record)
     db.commit()
@@ -49,7 +49,7 @@ def verify_otp(db: Session, email: str, code: str, purpose: str) -> tuple[bool, 
     )
     if record is None:
         return False, "invalid"
-    if record.expires_at < datetime.utcnow():
+    if record.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
         return False, "expired"
     if record.attempt_count >= settings.otp_max_attempts:
         return False, "locked"
@@ -58,11 +58,11 @@ def verify_otp(db: Session, email: str, code: str, purpose: str) -> tuple[bool, 
     if not hmac_lib.compare_digest(expected, record.code_hmac):
         record.attempt_count += 1
         if record.attempt_count >= settings.otp_max_attempts:
-            record.used_at = datetime.utcnow()
+            record.used_at = datetime.now(timezone.utc).replace(tzinfo=None)
         db.commit()
         return False, "invalid"
 
-    record.used_at = datetime.utcnow()
+    record.used_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     return True, "ok"
 

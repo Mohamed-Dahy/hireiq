@@ -7,7 +7,7 @@ Color palette matches the HireIQ app: primary blue + zinc neutrals.
 
 import re
 from fpdf import FPDF
-from datetime import datetime
+from datetime import datetime, timezone
 
 # ── Color palette (app theme) ─────────────────────────────────────────────────
 _P       = (37, 99, 235)     # primary blue-600
@@ -67,7 +67,7 @@ class _Report(FPDF):
         self.set_text_color(*_Z400)
         self.cell(
             0, 5,
-            f"HireIQ  ·  {datetime.utcnow().strftime('%d %b %Y')}  ·  Page {self.page_no()}",
+            f"HireIQ  ·  {datetime.now(timezone.utc).replace(tzinfo=None).strftime('%d %b %Y')}  ·  Page {self.page_no()}",
             align="C",
         )
 
@@ -458,7 +458,7 @@ def generate_report(
     pdf.set_font("Helvetica", size=8)
     pdf.set_text_color(*_Z400)
     pdf.set_x(10)
-    meta = f"CV: {_s(cv_name[:50])}   ·   Generated: {datetime.utcnow().strftime('%d %b %Y')}"
+    meta = f"CV: {_s(cv_name[:50])}   ·   Generated: {datetime.now(timezone.utc).replace(tzinfo=None).strftime('%d %b %Y')}"
     pdf.cell(0, 5, meta, ln=True)
     pdf.ln(5)
 
@@ -532,7 +532,7 @@ def generate_recruiter_report(recruiter_list, candidates: list) -> bytes:
     meta_parts = []
     if recruiter_list.job_title:
         meta_parts.append(f"Position: {recruiter_list.job_title}")
-    meta_parts.append(f"Generated: {datetime.utcnow().strftime('%d %b %Y')}")
+    meta_parts.append(f"Generated: {datetime.now(timezone.utc).replace(tzinfo=None).strftime('%d %b %Y')}")
     pdf.cell(0, 5, _s("   ·   ".join(meta_parts)), ln=True)
     pdf.ln(4)
 

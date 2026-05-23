@@ -1,6 +1,6 @@
 """Referral service — Phase 9, US9"""
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -59,7 +59,7 @@ def apply_referral_reward(db: Session, referred_user_id: int) -> None:
     if not conversion:
         return
     conversion.reward_applied = True
-    conversion.converted_at = datetime.utcnow()
+    conversion.converted_at = datetime.now(timezone.utc).replace(tzinfo=None)
     conversion.days_credited = 10
     db.commit()
 

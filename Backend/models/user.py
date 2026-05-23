@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -13,7 +13,7 @@ class User(Base):
     email               = Column(String, unique=True, nullable=False, index=True)
     username            = Column(String, unique=True, nullable=False, index=True)
     hashed_password     = Column(String, nullable=False)
-    created_at          = Column(DateTime, default=datetime.utcnow)
+    created_at          = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Auth hardening
     email_verified      = Column(Boolean, default=False, nullable=False)
@@ -37,7 +37,7 @@ class CVSession(Base):
     cv_filename      = Column(String, nullable=False)
     jd_text          = Column(Text, nullable=False)
     match_score      = Column(Float, nullable=True)
-    created_at       = Column(DateTime, default=datetime.utcnow)
+    created_at       = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Phase 5: structured analysis (stored as JSON text)
     skill_inventory          = Column(Text, nullable=True)
@@ -104,7 +104,7 @@ class InterviewResult(Base):
     relevance_score  = Column(Float, nullable=True)
     depth_score      = Column(Float, nullable=True)
     eye_contact_ratio = Column(Float, nullable=True)
-    created_at       = Column(DateTime, default=datetime.utcnow)
+    created_at       = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     session = relationship("CVSession", back_populates="interview_results")
 
@@ -120,7 +120,7 @@ class OtpCode(Base):
     expires_at    = Column(DateTime, nullable=False)
     attempt_count = Column(Integer, default=0, nullable=False)
     used_at       = Column(DateTime, nullable=True)
-    created_at    = Column(DateTime, default=datetime.utcnow)
+    created_at    = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 
 class UserProfile(Base):
@@ -135,6 +135,6 @@ class UserProfile(Base):
     portfolio_url     = Column(String(500), nullable=True)
     bio               = Column(Text, nullable=True)
     avatar_url        = Column(String(500), nullable=True)
-    updated_at        = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at        = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     user = relationship("User", back_populates="profile")

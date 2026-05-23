@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from models.user import Base
 
@@ -14,7 +14,7 @@ class InterviewQuestion(Base):
     model_answer   = Column(Text, nullable=False)
     source         = Column(String(20), nullable=False)
     content_hash   = Column(String(64), unique=True, nullable=False)
-    created_at     = Column(DateTime, default=datetime.utcnow)
+    created_at     = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 
 class UserQuestionProgress(Base):
@@ -23,7 +23,7 @@ class UserQuestionProgress(Base):
     id          = Column(Integer, primary_key=True)
     user_id     = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     question_id = Column(Integer, ForeignKey("interview_questions.id"), nullable=False)
-    practiced_at = Column(DateTime, default=datetime.utcnow)
+    practiced_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     __table_args__ = (
         UniqueConstraint("user_id", "question_id", name="uq_user_question"),

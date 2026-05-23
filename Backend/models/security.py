@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Text, DateTime
 from models.user import Base
 
@@ -20,4 +20,4 @@ class SecurityAuditLog(Base):
     source_ip = Column(String, nullable=False)
     outcome = Column(String, nullable=False)   # "blocked" | "allowed" | "logged"
     detail = Column(Text, nullable=True)       # opaque ref only — NO PII, tokens, or card data
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)

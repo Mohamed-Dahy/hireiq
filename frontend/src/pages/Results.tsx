@@ -135,11 +135,18 @@ export default function Results({ result, onBack, onDiscard, onPractice, onRoadm
     analysisTextRef.current = ''
     const token = localStorage.getItem('access_token')
     const es = new EventSource(`/analyze?session_id=${result.session_id}&token=${token}`)
+
+    const timeout = setTimeout(() => {
+      setStreaming(false)
+      es.close()
+    }, 60_000)
+
     es.addEventListener('structured', (e: MessageEvent) => {
       try { setStructured(JSON.parse(e.data) as StructuredAnalysis) } catch {}
     })
     es.onmessage = (e) => {
       if (e.data === '[DONE]') {
+        clearTimeout(timeout)
         setStreaming(false)
         es.close()
         const qs = parseQuestions(analysisTextRef.current)
@@ -152,8 +159,8 @@ export default function Results({ result, onBack, onDiscard, onPractice, onRoadm
       analysisTextRef.current += chunk
       setAnalysis((prev) => prev + chunk)
     }
-    es.onerror = () => { setStreaming(false); es.close() }
-    return () => es.close()
+    es.onerror = () => { clearTimeout(timeout); setStreaming(false); es.close() }
+    return () => { clearTimeout(timeout); es.close() }
   }, [result.session_id])
 
   const handleSave = () => {

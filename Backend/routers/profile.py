@@ -9,7 +9,7 @@ POST   /profile/send-change-otp  — send password-change OTP to user's email
 POST   /profile/change-password  — verify OTP and update password
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
@@ -112,6 +112,6 @@ def change_password(
         raise HTTPException(status_code=400, detail=f"Invalid code. {remaining} attempts remaining.")
 
     current_user.hashed_password = hash_password(payload.new_password)
-    current_user.sessions_revoked_at = datetime.utcnow()
+    current_user.sessions_revoked_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     return MessageResponse(message="Password changed successfully. All other sessions have been revoked.")

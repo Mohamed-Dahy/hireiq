@@ -8,7 +8,7 @@ POST /admin/login is the sole public route — all others require a valid admin 
 import platform
 import sys
 import time
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Optional
 
 import httpx
@@ -24,7 +24,9 @@ from models.jobs import JobApplication
 from models.roadmap import CareerRoadmap
 from models.schemas import AdminLoginRequest, AdminTokenResponse
 from models.user import CVSession, InterviewResult, User
-from services.admin_service import create_admin_token, require_admin, verify_admin_credentials
+from services.admin_service import (
+    blacklist_admin_jti, create_admin_token, require_admin, verify_admin_credentials,
+)
 from services.analytics_service import get_all_users, get_platform_metrics
 from services.cache import redis_client
 from services import token_tracker
@@ -49,6 +51,17 @@ def admin_login(request: Request, body: AdminLoginRequest):
     return {"access_token": create_admin_token()}
 
 
+@router.post("/logout")
+def admin_logout(payload: dict = Depends(require_admin)):
+    """Revoke the current admin token by blacklisting its JTI in Redis."""
+    jti = payload.get("jti")
+    if jti:
+        exp = payload.get("exp", 0)
+        ttl = max(1, int(exp - time.time()))
+        blacklist_admin_jti(jti, ttl)
+    return {"logged_out": True}
+
+
 # ---------------------------------------------------------------------------
 # Metrics / BI
 # ---------------------------------------------------------------------------
@@ -66,7 +79,7 @@ def admin_metrics(
     mrr = pro_count * _TIER_PRICE["pro"] + ent_count * _TIER_PRICE["enterprise"]
 
     # DAU: users who had a cv session today
-    today = datetime.utcnow().date()
+    today = datetime.now(timezone.utc).replace(tzinfo=None).date()
     dau = (
         db.query(func.count(func.distinct(CVSession.user_id)))
         .filter(func.date(CVSession.created_at) == today)
@@ -101,7 +114,7 @@ def list_users(
     if tier:
         q = q.filter(User.tier == tier)
     if status == "locked":
-        q = q.filter(User.locked_until > datetime.utcnow())
+        q = q.filter(User.locked_until > datetime.now(timezone.utc).replace(tzinfo=None))
     elif status == "unverified":
         q = q.filter(User.email_verified == False)
     elif status == "active":
@@ -312,7 +325,7 @@ def token_user_breakdown(
     db: Session = Depends(get_db),
     _=Depends(require_admin),
 ):
-    return {"users": token_tracker.get_user_breakdown(db, for_date, limit), "date": (for_date or datetime.utcnow().date()).isoformat()}
+    return {"users": token_tracker.get_user_breakdown(db, for_date, limit), "date": (for_date or datetime.now(timezone.utc).replace(tzinfo=None).date()).isoformat()}
 
 
 # ---------------------------------------------------------------------------
