@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from models.user import User, CVSession
+from models.user import User
 from models.jobs import RecruiterList, RecruiterCandidate
 from services.auth_service import hash_password, create_access_token
 
@@ -26,22 +26,20 @@ def _other_auth(db: Session) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
-def _make_cv_session(db: Session, user: User, score: float = 78.5) -> CVSession:
-    session = CVSession(
-        user_id=user.id,
-        cv_filename=f"test_cv_{id(user)}_{score}.pdf",
-        jd_text="Senior Python engineer wanted",
-        match_score=score,
-    )
-    db.add(session)
-    db.commit()
-    db.refresh(session)
-    return session
-
-
 def _create_list(client, headers, **overrides):
     payload = {"name": "Backend Engineers", "job_title": "Senior Backend Engineer", **overrides}
     return client.post("/recruiter/lists", json=payload, headers=headers)
+
+
+def _add_candidate(client, headers, list_id: int, name: str = "Test Candidate") -> dict:
+    """Add a standalone candidate via Form data (current API). Returns response JSON."""
+    resp = client.post(
+        f"/recruiter/lists/{list_id}/candidates",
+        data={"candidate_name": name},
+        headers=headers,
+    )
+    assert resp.status_code == 201, f"add_candidate failed: {resp.json()}"
+    return resp.json()
 
 
 # ---------------------------------------------------------------------------
@@ -84,10 +82,10 @@ class TestRecruiterListCRUD:
         self, test_client: TestClient, test_db: Session, auth_headers: dict, test_user: User
     ):
         list_id = _create_list(test_client, auth_headers).json()["id"]
-        session = _make_cv_session(test_db, test_user)
+        # Standalone candidate via Form (session_id no longer accepted — Form-based API)
         test_client.post(
             f"/recruiter/lists/{list_id}/candidates",
-            json={"session_id": session.id},
+            data={"candidate_name": "Alice Smith"},
             headers=auth_headers,
         )
         resp = test_client.get("/recruiter/lists", headers=auth_headers)
@@ -125,113 +123,56 @@ class TestRecruiterListCRUD:
 
 class TestAddCandidate:
     def test_add_candidate_returns_201(
-        self, test_client: TestClient, test_db: Session, auth_headers: dict, test_user: User
+        self, test_client: TestClient, auth_headers: dict
     ):
         list_id = _create_list(test_client, auth_headers).json()["id"]
-        session = _make_cv_session(test_db, test_user)
         resp = test_client.post(
             f"/recruiter/lists/{list_id}/candidates",
-            json={"session_id": session.id},
+            data={"candidate_name": "Alice Smith", "applied_position": "Backend Engineer"},
             headers=auth_headers,
         )
         assert resp.status_code == 201
         body = resp.json()
-        assert body["session_id"] == session.id
-        assert body["match_score"] == session.match_score
+        assert body["candidate_name"] == "Alice Smith"
+        assert body["applied_position"] == "Backend Engineer"
 
-    def test_add_duplicate_candidate_returns_409(
-        self, test_client: TestClient, test_db: Session, auth_headers: dict, test_user: User
+    def test_add_candidate_requires_name(
+        self, test_client: TestClient, auth_headers: dict
     ):
         list_id = _create_list(test_client, auth_headers).json()["id"]
-        session = _make_cv_session(test_db, test_user)
-        test_client.post(
-            f"/recruiter/lists/{list_id}/candidates",
-            json={"session_id": session.id},
-            headers=auth_headers,
-        )
         resp = test_client.post(
             f"/recruiter/lists/{list_id}/candidates",
-            json={"session_id": session.id},
-            headers=auth_headers,
-        )
-        assert resp.status_code == 409
-
-    def test_add_session_without_match_score_returns_422(
-        self, test_client: TestClient, test_db: Session, auth_headers: dict, test_user: User
-    ):
-        list_id = _create_list(test_client, auth_headers).json()["id"]
-        no_score = CVSession(
-            user_id=test_user.id, cv_filename="no_score.pdf",
-            jd_text="jd", match_score=None,
-        )
-        test_db.add(no_score)
-        test_db.commit()
-        test_db.refresh(no_score)
-        resp = test_client.post(
-            f"/recruiter/lists/{list_id}/candidates",
-            json={"session_id": no_score.id},
+            data={},
             headers=auth_headers,
         )
         assert resp.status_code == 422
 
-    def test_enforce_20_candidate_limit(
+    def test_enforce_candidate_limit(
         self, test_client: TestClient, test_db: Session, auth_headers: dict, test_user: User
     ):
         list_id = _create_list(test_client, auth_headers).json()["id"]
-        for i in range(20):
-            s = CVSession(
-                user_id=test_user.id,
-                cv_filename=f"cv_limit_{i}.pdf",
-                jd_text="jd",
-                match_score=float(50 + i),
-            )
-            test_db.add(s)
-            test_db.commit()
-            test_db.refresh(s)
-            r = test_client.post(
-                f"/recruiter/lists/{list_id}/candidates",
-                json={"session_id": s.id},
-                headers=auth_headers,
-            )
-            assert r.status_code == 201, f"Failed to add candidate {i}: {r.json()}"
-
-        extra = CVSession(
-            user_id=test_user.id, cv_filename="cv_extra.pdf",
-            jd_text="jd", match_score=99.0,
-        )
-        test_db.add(extra)
+        # Fill the pipeline to 50 via DB directly (fast — no HTTP overhead for setup)
+        from models.jobs import RecruiterCandidate as RC
+        for i in range(50):
+            test_db.add(RC(recruiter_list_id=list_id, candidate_name=f"Seed {i}", status="new"))
         test_db.commit()
-        test_db.refresh(extra)
-        resp = test_client.post(
-            f"/recruiter/lists/{list_id}/candidates",
-            json={"session_id": extra.id},
-            headers=auth_headers,
-        )
-        assert resp.status_code == 422
 
-    def test_add_other_users_session_returns_422(
-        self, test_client: TestClient, test_db: Session, auth_headers: dict
-    ):
-        list_id = _create_list(test_client, auth_headers).json()["id"]
-        _other_auth(test_db)
-        other_user = test_db.query(User).filter(User.email == "other_recruiter@example.com").first()
-        foreign_session = _make_cv_session(test_db, other_user)
+        # 51st candidate via API must be rejected
         resp = test_client.post(
             f"/recruiter/lists/{list_id}/candidates",
-            json={"session_id": foreign_session.id},
+            data={"candidate_name": "One Too Many"},
             headers=auth_headers,
         )
         assert resp.status_code == 422
 
     def test_add_to_other_users_list_returns_404(
-        self, test_client: TestClient, test_db: Session, auth_headers: dict, test_user: User
+        self, test_client: TestClient, test_db: Session, auth_headers: dict
     ):
         other_headers = _other_auth(test_db)
         list_id = _create_list(test_client, other_headers).json()["id"]
-        session = _make_cv_session(test_db, test_user)
         resp = test_client.post(
             f"/recruiter/lists/{list_id}/candidates",
-            json={"session_id": session.id},
+            data={"candidate_name": "Intruder"},
             headers=auth_headers,
         )
         assert resp.status_code == 404
@@ -242,25 +183,19 @@ class TestAddCandidate:
 # ---------------------------------------------------------------------------
 
 class TestGetCandidates:
-    def test_candidates_sorted_by_score_desc(
-        self, test_client: TestClient, test_db: Session, auth_headers: dict, test_user: User
+    def test_candidates_list_returns_correct_structure(
+        self, test_client: TestClient, auth_headers: dict
     ):
         list_id = _create_list(test_client, auth_headers).json()["id"]
-        s1 = _make_cv_session(test_db, test_user, score=60.0)
-        s2 = _make_cv_session(test_db, test_user, score=90.0)
-        s3 = _make_cv_session(test_db, test_user, score=75.0)
-        for s in (s1, s2, s3):
-            test_client.post(
-                f"/recruiter/lists/{list_id}/candidates",
-                json={"session_id": s.id},
-                headers=auth_headers,
-            )
+        _add_candidate(test_client, auth_headers, list_id, "Alice")
+        _add_candidate(test_client, auth_headers, list_id, "Bob")
         resp = test_client.get(f"/recruiter/lists/{list_id}/candidates", headers=auth_headers)
         assert resp.status_code == 200
         body = resp.json()
         assert body["list_id"] == list_id
-        scores = [c["match_score"] for c in body["candidates"]]
-        assert scores == sorted(scores, reverse=True)
+        assert len(body["candidates"]) == 2
+        names = {c["candidate_name"] for c in body["candidates"]}
+        assert names == {"Alice", "Bob"}
 
     def test_get_other_users_candidates_returns_404(
         self, test_client: TestClient, test_db: Session, auth_headers: dict
@@ -277,15 +212,10 @@ class TestGetCandidates:
 
 class TestRankUpdate:
     def test_update_rank_returns_200(
-        self, test_client: TestClient, test_db: Session, auth_headers: dict, test_user: User
+        self, test_client: TestClient, auth_headers: dict
     ):
         list_id = _create_list(test_client, auth_headers).json()["id"]
-        session = _make_cv_session(test_db, test_user)
-        candidate_id = test_client.post(
-            f"/recruiter/lists/{list_id}/candidates",
-            json={"session_id": session.id},
-            headers=auth_headers,
-        ).json()["id"]
+        candidate_id = _add_candidate(test_client, auth_headers, list_id)["id"]
 
         resp = test_client.patch(
             f"/recruiter/lists/{list_id}/candidates/{candidate_id}",
@@ -313,15 +243,10 @@ class TestRankUpdate:
 
 class TestRemoveCandidate:
     def test_remove_candidate_returns_204(
-        self, test_client: TestClient, test_db: Session, auth_headers: dict, test_user: User
+        self, test_client: TestClient, auth_headers: dict
     ):
         list_id = _create_list(test_client, auth_headers).json()["id"]
-        session = _make_cv_session(test_db, test_user)
-        candidate_id = test_client.post(
-            f"/recruiter/lists/{list_id}/candidates",
-            json={"session_id": session.id},
-            headers=auth_headers,
-        ).json()["id"]
+        candidate_id = _add_candidate(test_client, auth_headers, list_id)["id"]
 
         resp = test_client.delete(
             f"/recruiter/lists/{list_id}/candidates/{candidate_id}",
@@ -330,15 +255,10 @@ class TestRemoveCandidate:
         assert resp.status_code == 204
 
     def test_removed_candidate_no_longer_in_list(
-        self, test_client: TestClient, test_db: Session, auth_headers: dict, test_user: User
+        self, test_client: TestClient, auth_headers: dict
     ):
         list_id = _create_list(test_client, auth_headers).json()["id"]
-        session = _make_cv_session(test_db, test_user)
-        candidate_id = test_client.post(
-            f"/recruiter/lists/{list_id}/candidates",
-            json={"session_id": session.id},
-            headers=auth_headers,
-        ).json()["id"]
+        candidate_id = _add_candidate(test_client, auth_headers, list_id)["id"]
 
         test_client.delete(
             f"/recruiter/lists/{list_id}/candidates/{candidate_id}",
@@ -355,15 +275,10 @@ class TestRemoveCandidate:
 
 class TestPDFExport:
     def test_export_returns_pdf(
-        self, test_client: TestClient, test_db: Session, auth_headers: dict, test_user: User
+        self, test_client: TestClient, auth_headers: dict
     ):
         list_id = _create_list(test_client, auth_headers).json()["id"]
-        session = _make_cv_session(test_db, test_user)
-        test_client.post(
-            f"/recruiter/lists/{list_id}/candidates",
-            json={"session_id": session.id},
-            headers=auth_headers,
-        )
+        _add_candidate(test_client, auth_headers, list_id, "Jane Doe")
         resp = test_client.get(f"/recruiter/lists/{list_id}/export", headers=auth_headers)
         assert resp.status_code == 200
         assert "application/pdf" in resp.headers["content-type"]

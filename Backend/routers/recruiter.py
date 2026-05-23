@@ -19,13 +19,11 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import Response
-from pydantic import BaseModel
-from sqlalchemy import func
-from sqlalchemy.orm import Session, joinedload, subqueryload
+from sqlalchemy.orm import Session
 
 from database import get_db
 from models.jobs import RecruiterCandidate, RecruiterList
-from models.user import CVSession, User
+from models.user import User
 from models.schemas import (
     RecruiterCandidateListResponse,
     RecruiterCandidateResponse,
@@ -38,7 +36,7 @@ from services.report_generator import generate_recruiter_report
 
 router = APIRouter(prefix="/recruiter", tags=["recruiter"])
 
-_MAX_CANDIDATES = 20
+_MAX_CANDIDATES = 50
 _UPLOAD_DIR = "./uploads/recruiter"
 
 VALID_STATUSES = {"new", "screening", "interview", "offer", "hired", "rejected"}
@@ -46,10 +44,8 @@ VALID_STATUSES = {"new", "screening", "interview", "offer", "hired", "rejected"}
 
 def _get_list_or_404(db: Session, list_id: int, user_id: int) -> RecruiterList:
     rl = db.query(RecruiterList).filter(RecruiterList.id == list_id).first()
-    if not rl:
-        raise HTTPException(status_code=404, detail="Pipeline not found")
-    require_ownership(rl.user_id, user_id)
-    return rl
+    require_ownership(rl.user_id if rl else None, user_id)
+    return rl  # type: ignore[return-value]
 
 
 def _candidate_to_response(c: RecruiterCandidate) -> RecruiterCandidateResponse:
@@ -125,22 +121,12 @@ def list_lists(
         .order_by(RecruiterList.created_at.desc())
         .all()
     )
-    if not rows:
-        return []
-
-    list_ids = [rl.id for rl in rows]
-    counts = dict(
-        db.query(RecruiterCandidate.recruiter_list_id, func.count(RecruiterCandidate.id))
-        .filter(RecruiterCandidate.recruiter_list_id.in_(list_ids))
-        .group_by(RecruiterCandidate.recruiter_list_id)
-        .all()
-    )
     return [
         RecruiterListResponse(
             id=rl.id,
             name=rl.name,
             job_title=rl.job_title,
-            candidate_count=counts.get(rl.id, 0),
+            candidate_count=len(rl.candidates),
             created_at=rl.created_at,
         )
         for rl in rows
@@ -172,23 +158,15 @@ def get_candidates(
 ):
     rl = _get_list_or_404(db, list_id, current_user.id)
 
-    q = (
-        db.query(RecruiterCandidate)
-        .options(joinedload(RecruiterCandidate.session))
-        .filter(RecruiterCandidate.recruiter_list_id == list_id)
-    )
+    candidates = list(rl.candidates)
+
     if filter_status and filter_status in VALID_STATUSES:
-        q = q.filter(RecruiterCandidate.status == filter_status)
+        candidates = [c for c in candidates if c.status == filter_status]
     if starred_only:
-        q = q.filter(RecruiterCandidate.starred.is_(True))
+        candidates = [c for c in candidates if c.starred]
 
-    candidates = q.all()
-
-    def _sort_key(c: RecruiterCandidate):
-        score = c.session.match_score if c.session and c.session.match_score is not None else 0.0
-        return (not c.starred, -score)
-
-    candidates.sort(key=_sort_key)
+    # Sort starred first, then by date added (newest first)
+    candidates.sort(key=lambda c: (not c.starred, c.created_at), reverse=False)
 
     return RecruiterCandidateListResponse(
         list_id=rl.id,
@@ -197,55 +175,54 @@ def get_candidates(
     )
 
 
-class _AddCandidateRequest(BaseModel):
-    session_id: int
-
-
 @router.post(
     "/lists/{list_id}/candidates",
     status_code=status.HTTP_201_CREATED,
     response_model=RecruiterCandidateResponse,
 )
-def add_candidate(
+async def add_candidate(
     list_id: int,
-    body: _AddCandidateRequest,
+    candidate_name: str = Form(...),
+    candidate_email: Optional[str] = Form(None),
+    candidate_phone: Optional[str] = Form(None),
+    applied_position: Optional[str] = Form(None),
+    cv_file: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     rl = _get_list_or_404(db, list_id, current_user.id)
 
-    candidate_count = (
-        db.query(func.count(RecruiterCandidate.id))
-        .filter(RecruiterCandidate.recruiter_list_id == list_id)
-        .scalar() or 0
-    )
-    if candidate_count >= _MAX_CANDIDATES:
+    if len(rl.candidates) >= _MAX_CANDIDATES:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Pipeline is at the {_MAX_CANDIDATES}-candidate limit.",
         )
 
-    session = db.query(CVSession).filter(CVSession.id == body.session_id).first()
-    if not session or session.user_id != current_user.id or session.match_score is None:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Session not found, does not belong to you, or has no match score.",
-        )
-
-    existing = (
-        db.query(RecruiterCandidate)
-        .filter(
-            RecruiterCandidate.recruiter_list_id == list_id,
-            RecruiterCandidate.session_id == body.session_id,
-        )
-        .first()
-    )
-    if existing:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Candidate already in this pipeline.")
+    saved_path: Optional[str] = None
+    if cv_file and cv_file.filename:
+        os.makedirs(_UPLOAD_DIR, exist_ok=True)
+        ext = os.path.splitext(cv_file.filename)[1].lower()
+        if ext not in (".pdf", ".doc", ".docx"):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="CV must be a PDF, DOC, or DOCX file.",
+            )
+        content = await cv_file.read()
+        if len(content) > 10 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="CV file too large. Maximum size is 10 MB.")
+        safe_name = f"{uuid.uuid4().hex}{ext}"
+        saved_path = os.path.join(_UPLOAD_DIR, safe_name)
+        with open(saved_path, "wb") as f:
+            f.write(content)
 
     candidate = RecruiterCandidate(
         recruiter_list_id=list_id,
-        session_id=body.session_id,
+        session_id=None,
+        candidate_name=candidate_name.strip(),
+        candidate_email=candidate_email.strip() if candidate_email else None,
+        candidate_phone=candidate_phone.strip() if candidate_phone else None,
+        applied_position=applied_position.strip() if applied_position else None,
+        cv_file_path=saved_path,
         status="new",
     )
     db.add(candidate)
