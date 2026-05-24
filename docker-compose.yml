@@ -1,16 +1,13 @@
-x-logging: &default-logging
-  logging:
-    driver: "json-file"
-    options:
-      max-size: "10m"
-      max-file: "3"
-
 services:
 
   postgres:
     image: postgres:16-alpine
     restart: always
-    <<: *default-logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     env_file:
       - ./Backend/.env
     volumes:
@@ -24,7 +21,11 @@ services:
   adminer:
     image: adminer:latest
     restart: always
-    <<: *default-logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:
@@ -34,7 +35,11 @@ services:
   redis:
     image: redis:7-alpine
     restart: always
-    <<: *default-logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -46,11 +51,15 @@ services:
   chromadb:
     image: chromadb/chroma
     restart: always
-    <<: *default-logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     volumes:
       - chroma_data:/chroma/chroma
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8000/api/v1/heartbeat || exit 1"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/heartbeat')"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -60,7 +69,11 @@ services:
       context: ./Backend
       dockerfile: Dockerfile
     restart: always
-    <<: *default-logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     env_file:
       - ./Backend/.env
       - ./Backend/.env.docker
@@ -84,7 +97,11 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     restart: always
-    <<: *default-logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "3000:80"
     depends_on:
