@@ -77,9 +77,11 @@ class ResetPasswordRequest(BaseModel):
 class CVUploadResponse(BaseModel):
     session_id: int
     cv_filename: str
-    match_score: float
+    match_score: Optional[float] = None        # null for ATS Check with no JD
     skills_found: list[str]
     is_linkedin: bool = False
+    analysis_mode: str = "job_match"           # "job_match" | "ats_check"
+    ats_score: Optional[float] = None          # overall 0-100 ATS score (ats_check only)
     message: str = "CV processed successfully"
 
 
@@ -124,6 +126,41 @@ class AnalysisPendingResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Spec 003: ATS Score Checker response schemas
+# ---------------------------------------------------------------------------
+
+class AtsCategory(BaseModel):
+    key: str
+    label: str
+    score: float            # 0-1 sub-score
+    weight: float
+    ai_dependent: bool = False
+    confidence: str = "high"  # high | medium | best_effort
+
+
+class AtsIssue(BaseModel):
+    category: str
+    severity: str           # high | medium | low
+    message: str
+    recommendation: str
+
+
+class AtsKeywordCoverage(BaseModel):
+    matched: list[str] = []
+    missing: list[str] = []
+    available: bool = True
+
+
+class AtsResultResponse(BaseModel):
+    session_id: int
+    overall_score: float
+    ai_sections_available: bool = True
+    categories: list[AtsCategory] = []
+    issues: list[AtsIssue] = []
+    keyword_coverage: Optional[AtsKeywordCoverage] = None
+
+
+# ---------------------------------------------------------------------------
 # CV session (used when returning history)
 # ---------------------------------------------------------------------------
 
@@ -138,6 +175,9 @@ class CVSessionResponse(BaseModel):
     has_gap_report: bool
     jd_snippet: Optional[str]
     has_interview_questions: bool = False
+    analysis_mode: str = "job_match"
+    ats_score: Optional[float] = None
+    has_ats_result: bool = False
 
 
 # ---------------------------------------------------------------------------

@@ -88,6 +88,14 @@ def analyze(
     if session.user_id != user_id:
         raise HTTPException(status_code=403, detail="Not your session")
 
+    # Skill-gap analysis requires a job description. ATS-only sessions (jd_text
+    # is nullable since spec 003) have no JD — guard against a null concatenation.
+    if session.analysis_mode == "ats_check" or not session.jd_text:
+        raise HTTPException(
+            status_code=400,
+            detail="This session has no job description. Use the ATS result endpoint instead.",
+        )
+
     cv_path = os.path.join(settings.upload_dir, session.cv_filename)
     if not os.path.exists(cv_path):
         raise HTTPException(status_code=404, detail="CV file not found on disk")

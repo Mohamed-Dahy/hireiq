@@ -35,7 +35,7 @@ class CVSession(Base):
     id               = Column(Integer, primary_key=True, index=True)
     user_id          = Column(Integer, ForeignKey("users.id"), nullable=False)
     cv_filename      = Column(String, nullable=False)
-    jd_text          = Column(Text, nullable=False)
+    jd_text          = Column(Text, nullable=True)   # optional: ATS Check runs with no JD
     match_score      = Column(Float, nullable=True)
     created_at       = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
@@ -51,12 +51,22 @@ class CVSession(Base):
     # Original filename supplied by the user at upload time
     original_cv_filename     = Column(String(500), nullable=True)
 
+    # Spec 003 — ATS Score Checker
+    analysis_mode            = Column(String(20), nullable=False, default="job_match", server_default="job_match")
+    ats_score                = Column(Float, nullable=True)        # overall 0-100 ATS score
+    ats_result               = Column(Text, nullable=True)         # full ATS result (JSON)
+    from_stored_cv           = Column(Boolean, nullable=False, default=False, server_default="false")
+
     user             = relationship("User", back_populates="sessions")
     interview_results = relationship("InterviewResult", back_populates="session")
 
     @property
     def has_gap_report(self) -> bool:
         return bool(self.gap_report)
+
+    @property
+    def has_ats_result(self) -> bool:
+        return bool(self.ats_result)
 
     @property
     def has_interview_questions(self) -> bool:

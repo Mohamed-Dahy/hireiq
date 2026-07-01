@@ -158,12 +158,49 @@ export interface UserProfile {
   window_resets_at: string | null
 }
 
+export type AnalysisMode = 'job_match' | 'ats_check'
+
 export interface CVUploadResponse {
   session_id: number
   cv_filename: string
-  match_score: number
+  match_score: number | null
   skills_found: string[]
   is_linkedin?: boolean
+  analysis_mode?: AnalysisMode
+  ats_score?: number | null
+}
+
+// ── Spec 003: ATS Score Checker ───────────────────────────────────────────
+
+export interface AtsCategory {
+  key: string
+  label: string
+  score: number          // 0-1 sub-score
+  weight: number
+  ai_dependent: boolean
+  confidence: 'high' | 'medium' | 'best_effort'
+}
+
+export interface AtsIssue {
+  category: string
+  severity: 'high' | 'medium' | 'low'
+  message: string
+  recommendation: string
+}
+
+export interface AtsKeywordCoverage {
+  matched: string[]
+  missing: string[]
+  available: boolean
+}
+
+export interface AtsResult {
+  session_id: number
+  overall_score: number
+  ai_sections_available: boolean
+  categories: AtsCategory[]
+  issues: AtsIssue[]
+  keyword_coverage: AtsKeywordCoverage | null
 }
 
 export interface SkillItem {
@@ -248,14 +285,24 @@ export const deleteAccount = () =>
 
 // ── CV ───────────────────────────────────────────────────────────────────────
 
-export const uploadCV = (file: File, jdText: string) => {
+export const uploadCV = (file: File, jdText?: string, analysisMode: AnalysisMode = 'job_match') => {
   const form = new FormData()
   form.append('cv_file', file)
-  form.append('jd_text', jdText)
+  if (jdText && jdText.trim()) form.append('jd_text', jdText)
+  form.append('analysis_mode', analysisMode)
   return api.post<CVUploadResponse>('/cv/upload', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 }
+
+export const useStoredCv = (jdText?: string, analysisMode: AnalysisMode = 'job_match') =>
+  api.post<CVUploadResponse>('/cv/use-stored', {
+    jd_text: jdText && jdText.trim() ? jdText : null,
+    analysis_mode: analysisMode,
+  })
+
+export const getAtsResult = (sessionId: number) =>
+  api.get<AtsResult>(`/cv/${sessionId}/ats`)
 
 export const getScore = (sessionId: number) =>
   api.get<{ session_id: number; match_score: number }>(`/cv/${sessionId}/score`)

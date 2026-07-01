@@ -10,9 +10,10 @@ import SkillGapList from '../components/SkillGapList'
 import QuestionCard from '../components/QuestionCard'
 import SkillsInventory from '../components/SkillsInventory'
 import SkillGapChart from '../components/SkillGapChart'
+import AtsResultView from '../components/AtsResultView'
 import { useToast } from '../components/Toast'
-import type { CVUploadResponse, StructuredAnalysis } from '../api'
-import { deleteSession, saveInterviewQuestions } from '../api'
+import type { CVUploadResponse, StructuredAnalysis, AtsResult } from '../api'
+import { deleteSession, saveInterviewQuestions, getAtsResult } from '../api'
 import { parseQuestions } from '../utils/parseQuestions'
 
 interface Props {
@@ -117,21 +118,43 @@ export default function Results({ result, onBack, onDiscard, onPractice, onRoadm
   const [discardConfirm, setDiscardConfirm] = useState(false)
   const [discarding, setDiscarding] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('overview')
+  const [atsResult, setAtsResult] = useState<AtsResult | null>(null)
+  const [atsLoading, setAtsLoading] = useState(true)
 
+  const isAts = result.analysis_mode === 'ats_check'
   const analysisTextRef = useRef('')
   const questions = parseQuestions(analysis)
-  const tier = getScoreTier(result.match_score)
+  const tier = getScoreTier(result.match_score ?? 0)
 
   useEffect(() => {
-    if (reduced || result.match_score < 70) return
+    if (reduced || isAts || (result.match_score ?? 0) < 70) return
     const t = setTimeout(() => {
       const colors = ['#2563eb', '#3b82f6', '#60a5fa', '#0d9488', '#14b8a6']
       confetti({ particleCount: 90, spread: 70, origin: { y: 0.35 }, colors, scalar: 0.9, ticks: 220 })
     }, 600)
     return () => clearTimeout(t)
-  }, [result.match_score, reduced])
+  }, [result.match_score, reduced, isAts])
+
+  // ATS Check: fetch the stored ATS result (retry once while it computes).
+  useEffect(() => {
+    if (!isAts) return
+    let cancelled = false
+    let tries = 0
+    const fetchAts = () => {
+      getAtsResult(result.session_id)
+        .then((res) => { if (!cancelled) { setAtsResult(res.data); setAtsLoading(false) } })
+        .catch((err) => {
+          if (cancelled) return
+          if (err.response?.status === 202 && tries < 5) { tries += 1; setTimeout(fetchAts, 1000) }
+          else { setAtsLoading(false) }
+        })
+    }
+    fetchAts()
+    return () => { cancelled = true }
+  }, [isAts, result.session_id])
 
   useEffect(() => {
+    if (isAts) return
     analysisTextRef.current = ''
     const token = localStorage.getItem('access_token')
     const es = new EventSource(`/analyze?session_id=${result.session_id}&token=${token}`)
@@ -161,7 +184,7 @@ export default function Results({ result, onBack, onDiscard, onPractice, onRoadm
     }
     es.onerror = () => { clearTimeout(timeout); setStreaming(false); es.close() }
     return () => { clearTimeout(timeout); es.close() }
-  }, [result.session_id])
+  }, [result.session_id, isAts])
 
   const handleSave = () => {
     setSaved(true)
@@ -210,6 +233,59 @@ export default function Results({ result, onBack, onDiscard, onPractice, onRoadm
     }
   }
 
+  // ── ATS Check layout ───────────────────────────────────────────────────
+  if (isAts) {
+    return (
+      <motion.div
+        initial={reduced ? {} : { opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className="max-w-3xl mx-auto py-8 px-4 sm:px-6 space-y-6"
+      >
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <button
+            onClick={onBack}
+            className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors cursor-pointer"
+          >
+            ← Analyze another CV
+          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={downloadReport}
+              disabled={downloading}
+              className="flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 px-3 py-1.5 rounded-lg hover:border-zinc-400 dark:hover:border-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              {downloading
+                ? <><Loader2 size={14} strokeWidth={2} className="animate-spin" /> Generating…</>
+                : <><Download size={14} strokeWidth={1.5} /> Download PDF</>}
+            </button>
+            <button
+              onClick={() => (discardConfirm ? handleDiscard() : setDiscardConfirm(true))}
+              disabled={discarding}
+              className="flex items-center gap-1.5 text-sm font-medium text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 px-3 py-1.5 rounded-lg hover:border-red-300 dark:hover:border-red-700 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              {discarding
+                ? <><Loader2 size={13} strokeWidth={2} className="animate-spin" /> Deleting…</>
+                : <><Trash2 size={13} strokeWidth={1.5} /> {discardConfirm ? 'Confirm delete' : 'Discard'}</>}
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight">ATS Compatibility Check</h2>
+          <p className="text-sm text-zinc-500 mt-1">
+            {result.skills_found.length > 0
+              ? `Detected skills: ${result.skills_found.join(', ')}`
+              : 'Your CV scored against automated applicant tracking systems.'}
+          </p>
+        </div>
+
+        <AtsResultView result={atsResult} loading={atsLoading} />
+      </motion.div>
+    )
+  }
+
+  // ── Job Match layout (existing) ─────────────────────────────────────────
   return (
     <motion.div
       initial={reduced ? {} : { opacity: 0 }}
@@ -344,7 +420,7 @@ export default function Results({ result, onBack, onDiscard, onPractice, onRoadm
       >
         <div className="p-6 flex flex-col sm:flex-row items-center sm:items-start gap-6">
           <div className="shrink-0">
-            <ScoreGauge score={result.match_score} />
+            <ScoreGauge score={result.match_score ?? 0} />
           </div>
           <div className="flex-1 min-w-0 text-center sm:text-left">
             <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border mb-2 ${tier.bg} ${tier.color} ${tier.border}`}>

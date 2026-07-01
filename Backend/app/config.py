@@ -59,6 +59,24 @@ class Settings(BaseSettings):
     llm_model: str = "llama-3.3-70b-versatile"
     groq_price_per_1k_tokens: float = 0.0006
 
+    # --- ATS Score Checker ---
+    # Non-secret scoring thresholds (env-overridable). Category weights below
+    # are a plain default mapping consumed by services/ats_checker.py.
+    ats_min_words: int = 300              # CVs shorter than this are flagged as too thin
+    ats_max_pages: int = 2                # CVs longer than this are flagged as too long
+    ats_min_action_verbs: int = 5         # minimum distinct action verbs expected
+    ats_min_parse_chars_per_page: int = 250  # below this avg ⇒ likely image-only/scanned
+    ats_category_weights: dict[str, float] = {
+        "parseability": 0.20,
+        "sections": 0.18,
+        "headings": 0.08,
+        "contact": 0.12,
+        "formatting": 0.12,
+        "unfriendly_elements": 0.08,
+        "content_quality": 0.14,
+        "dates": 0.08,
+    }
+
     # --- Admin ---
     admin_email: str = ""
     admin_password: str = ""

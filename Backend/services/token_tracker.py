@@ -55,6 +55,39 @@ def check_free_tier_quota(db: Session, user: User) -> None:
         )
 
 
+def check_free_tier_quota_for_new(db: Session, user: User) -> None:
+    """Raise HTTP 429 if creating a NEW analysis would exceed the free-tier limit.
+
+    Unlike check_free_tier_quota (which runs after the session row already exists
+    and so uses ``count > limit``), this is called BEFORE inserting the row, so it
+    blocks at ``count >= limit``. A blocked attempt therefore creates no row and
+    consumes no future slot (FR-025/026).
+    """
+    window_start = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=settings.free_tier_window_days)
+    sessions_in_window = (
+        db.query(CVSession)
+        .filter(CVSession.user_id == user.id, CVSession.created_at >= window_start)
+        .order_by(CVSession.created_at.asc())
+        .all()
+    )
+    count = len(sessions_in_window)
+    limit = settings.free_tier_analysis_limit
+
+    if count >= limit:
+        oldest = sessions_in_window[0].created_at
+        resets_at = oldest + timedelta(days=settings.free_tier_window_days)
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "code": "quota_exceeded",
+                "message": f"You've used your {limit} free analyses for this period.",
+                "window_resets_at": resets_at.isoformat(),
+                "analyses_used": count,
+                "limit": limit,
+            },
+        )
+
+
 def check_paid_tier_quota(db: Session, user: User) -> None:
     """Raise HTTP 429 if the user has exhausted today's paid-tier token budget.
 

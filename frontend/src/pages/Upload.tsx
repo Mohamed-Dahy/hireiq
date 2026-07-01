@@ -3,10 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   CloudUpload, FileText, X, Sparkles, Loader2,
   Target, Brain, Map as MapIcon, Mic, Download, CheckCircle2,
-  AlertTriangle, Clock,
+  AlertTriangle, Clock, ShieldCheck, Briefcase,
 } from 'lucide-react'
-import { uploadCV, getProfile } from '../api'
-import type { CVUploadResponse } from '../api'
+import { uploadCV, useStoredCv, getProfile } from '../api'
+import type { CVUploadResponse, AnalysisMode } from '../api'
 
 interface Props {
   onDone: (result: CVUploadResponse) => void
@@ -177,7 +177,20 @@ function FeaturesPanel() {
   )
 }
 
+interface AnalysisModeOption {
+  id: AnalysisMode
+  label: string
+  desc: string
+  icon: typeof Target
+}
+
+const MODES: AnalysisModeOption[] = [
+  { id: 'ats_check', label: 'ATS Check', desc: 'Score how well automated screeners can read your CV. Job description optional.', icon: ShieldCheck },
+  { id: 'job_match', label: 'Job Match Analysis', desc: 'Match your CV against a specific job: skill gaps, interview prep & roadmap. Needs a job description.', icon: Briefcase },
+]
+
 export default function Upload({ onDone, onViewLastSession }: Props) {
+  const [mode, setMode] = useState<AnalysisMode>('ats_check')
   const [file, setFile] = useState<File | null>(null)
   const [jd, setJd] = useState('')
   const [activeTemplate, setActiveTemplate] = useState<string | null>(null)
@@ -220,17 +233,20 @@ export default function Upload({ onDone, onViewLastSession }: Props) {
     }
   }
 
+  const jdRequired = mode === 'job_match'
+  const canSubmit = (file || usingStoredCv) && (!jdRequired || jd.trim().length > 0)
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if ((!file && !usingStoredCv) || !jd.trim()) return
+    if (!canSubmit) return
     setError('')
     setLoading(true)
     try {
       if (usingStoredCv) {
-        const { data } = await import('../api').then(m => m.default.post<CVUploadResponse>('/cv/use-stored', { jd_text: jd }))
+        const { data } = await useStoredCv(jd, mode)
         onDone(data)
       } else {
-        const res = await uploadCV(file!, jd)
+        const res = await uploadCV(file!, jd, mode)
         onDone(res.data)
       }
     } catch (err: any) {
@@ -323,11 +339,41 @@ export default function Upload({ onDone, onViewLastSession }: Props) {
         {/* Left: form */}
         <div className="lg:col-span-3">
           {/* Header */}
-          <div className="mb-7">
+          <div className="mb-5">
             <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight mb-1">Analyze Your CV</h2>
             <p className="text-sm text-zinc-500">
-              Upload your PDF and a job description to get your match score and AI skill gap analysis.
+              Choose what you'd like to do, then upload your CV.
             </p>
+          </div>
+
+          {/* Mode chooser (subsections) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-7" role="radiogroup" aria-label="Analysis type">
+            {MODES.map((m) => {
+              const active = mode === m.id
+              const Icon = m.icon
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setMode(m.id)}
+                  className={`text-left p-4 rounded-xl border transition-all cursor-pointer ${
+                    active
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30 ring-1 ring-primary-500'
+                      : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-zinc-400 dark:hover:border-zinc-500'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${active ? 'bg-primary-100 dark:bg-primary-900/50' : 'bg-zinc-100 dark:bg-zinc-800'}`}>
+                      <Icon size={15} strokeWidth={1.75} className={active ? 'text-primary-600 dark:text-primary-400' : 'text-zinc-500 dark:text-zinc-400'} />
+                    </div>
+                    <span className={`text-sm font-semibold ${active ? 'text-primary-700 dark:text-primary-300' : 'text-zinc-800 dark:text-zinc-200'}`}>{m.label}</span>
+                  </div>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-snug">{m.desc}</p>
+                </button>
+              )
+            })}
           </div>
 
           {/* Step indicator */}
@@ -468,6 +514,9 @@ export default function Upload({ onDone, onViewLastSession }: Props) {
               <label className="text-xs font-medium text-zinc-500 uppercase tracking-widest flex items-center gap-2">
                 <span className="w-4 h-4 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-[10px] flex items-center justify-center font-bold">2</span>
                 Job description
+                <span className="normal-case tracking-normal text-zinc-400 font-normal">
+                  {jdRequired ? '(required)' : '(optional — adds keyword coverage)'}
+                </span>
               </label>
               <div>
                 <p className="text-xs text-zinc-400 mb-2">Start with a template or paste your own</p>
@@ -533,16 +582,18 @@ export default function Upload({ onDone, onViewLastSession }: Props) {
             <div className="pt-1">
               <button
                 type="submit"
-                disabled={loading || (!file && !usingStoredCv) || !jd.trim() || quotaExceeded}
+                disabled={loading || !canSubmit || quotaExceeded}
                 className="w-full bg-primary-600 hover:bg-primary-500 text-white py-3 rounded-xl text-sm font-medium disabled:opacity-40 transition-colors cursor-pointer flex items-center justify-center gap-2"
               >
                 {loading ? (
-                  <><Loader2 size={15} strokeWidth={2} className="animate-spin" /> Analyzing your CV…</>
+                  <><Loader2 size={15} strokeWidth={2} className="animate-spin" /> {mode === 'ats_check' ? 'Checking your CV…' : 'Analyzing your CV…'}</>
+                ) : mode === 'ats_check' ? (
+                  <><ShieldCheck size={15} strokeWidth={1.5} /> Run ATS Check</>
                 ) : (
                   <><Sparkles size={15} strokeWidth={1.5} /> Analyze CV</>
                 )}
               </button>
-              {(!file && !usingStoredCv) || !jd.trim() ? (
+              {!canSubmit ? (
                 <p className="text-center text-xs text-zinc-400 mt-2">
                   {!file && !usingStoredCv ? 'Upload a PDF CV to continue' : 'Add a job description to continue'}
                 </p>
