@@ -194,6 +194,11 @@ export interface AtsKeywordCoverage {
   available: boolean
 }
 
+export interface AtsStrength {
+  category: string
+  message: string
+}
+
 export interface AtsResult {
   session_id: number
   overall_score: number
@@ -201,6 +206,9 @@ export interface AtsResult {
   categories: AtsCategory[]
   issues: AtsIssue[]
   keyword_coverage: AtsKeywordCoverage | null
+  strengths?: AtsStrength[]
+  next_steps?: string[]
+  score_explanation?: string | null
 }
 
 export interface SkillItem {
@@ -245,6 +253,9 @@ export interface CVSession {
   has_gap_report: boolean
   has_interview_questions: boolean
   jd_snippet: string | null
+  analysis_mode?: AnalysisMode
+  ats_score?: number | null
+  has_ats_result?: boolean
 }
 
 export interface InterviewResult {

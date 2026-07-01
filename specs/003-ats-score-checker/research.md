@@ -44,6 +44,8 @@ This document resolves the open technical questions for adding a production ATS 
 
 **Rationale**: The user explicitly chose "keyword coverage requires AI" during clarification (Session 2026-07-01, Q2). LLM extraction of role-relevant keywords handles synonyms/phrasing better than literal matching.
 
+**As built (US3)**: keyword coverage is computed **synchronously at upload** (`services/ats_keywords.compute_keyword_coverage`, one bounded LLM call with a hard timeout so it can never hang the request), merged into `ats_result.keyword_coverage`, and read via `GET /cv/{id}/ats`. Streaming *written suggestions* over SSE (originally sketched as `GET /analyze/ats-keywords`) is **deferred as gold-plating** — the matched/missing requirement (FR-017/018/019) and graceful degradation + no-charge (FR-028) are fully met by the synchronous path. See contracts §4.
+
 **Alternatives considered (documented rejected alternative)**:
 - *Deterministic TF-IDF / keyword-overlap coverage* (reusing `rag_scorer`'s scikit-learn path): technically would serve FR-027 (resilience) and FR-032 (less PII to the LLM) better, and remains available as a future fallback. **Rejected for this iteration** because the clarified requirement designates keyword coverage as AI-dependent. Recorded here so the decision is traceable; not reopened.
 

@@ -161,3 +161,44 @@ class TestChangePassword:
         )
         assert resp.status_code == 400
         assert "invalid" in resp.json()["detail"].lower()
+
+
+class TestStoredCvDeletionCascade:
+    """FR-031: deleting the stored CV also removes its derived ATS sessions/files."""
+
+    def test_delete_stored_cv_cascades(self, test_client, test_db):
+        import os
+        from app.config import settings
+        from models.user import CVSession
+
+        user = _make_user(test_db, email="cascade@example.com", username="cascadeuser")
+        os.makedirs(settings.upload_dir, exist_ok=True)
+
+        stored_path = os.path.join(settings.upload_dir, "stored_cascade.pdf")
+        with open(stored_path, "wb") as f:
+            f.write(b"%PDF-1.4")
+        user.profile.stored_cv_path = stored_path
+        user.profile.stored_cv_filename = "cv.pdf"
+        test_db.commit()
+
+        derived_file = os.path.join(settings.upload_dir, "derived_cascade.pdf")
+        with open(derived_file, "wb") as f:
+            f.write(b"%PDF-1.4")
+        derived = CVSession(user_id=user.id, cv_filename="derived_cascade.pdf",
+                            analysis_mode="ats_check", from_stored_cv=True,
+                            ats_score=90.0, ats_result="{}")
+        keep = CVSession(user_id=user.id, cv_filename="keep.pdf", jd_text="role",
+                         analysis_mode="job_match", from_stored_cv=False)
+        test_db.add_all([derived, keep])
+        test_db.commit()
+        did, kid = derived.id, keep.id
+
+        resp = test_client.delete("/profile/cv", headers=_headers(user))
+        assert resp.status_code == 200
+
+        # derived session + its file removed; stored file removed
+        assert test_db.query(CVSession).filter(CVSession.id == did).first() is None
+        assert not os.path.exists(derived_file)
+        assert not os.path.exists(stored_path)
+        # a non-derived session is preserved
+        assert test_db.query(CVSession).filter(CVSession.id == kid).first() is not None

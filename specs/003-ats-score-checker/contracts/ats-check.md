@@ -63,20 +63,13 @@ Returns the stored ATS result for a session. Owner-only (`require_ownership`).
 
 ---
 
-## 4. `GET /analyze/ats-keywords` (new, SSE, optional / AI-dependent)
+## 4. Keyword coverage — computed synchronously at upload (implemented) + streaming SSE (deferred)
 
-Streams the AI-assisted keyword-coverage + written suggestions for an `ats_check` session **that has a JD**. Mirrors `routers/analysis.py` auth (JWT as query param, JTI blacklist, `sessions_revoked_at`). Degrades gracefully.
+**As implemented (US3)**: keyword coverage is computed **synchronously during `/cv/upload` (and `/cv/use-stored`)** when an `ats_check` request includes a JD. `services/ats_keywords.compute_keyword_coverage(cv_text, jd)` makes one bounded LLM call (hard timeout `ATS_KEYWORD_TIMEOUT_SECONDS`, default 20s), and the result is merged into `ats_result.keyword_coverage` and read back via **`GET /cv/{id}/ats`** (section 3). This satisfies FR-017/018/019 (matched/missing keywords) and FR-028 (degrades to `keyword_coverage.available=false`, deterministic score intact, run **not** charged) without putting an SSE lifecycle on the critical path.
 
-**Query**: `session_id` (int), `token` (JWT access).
+**Degradation (FR-028)**: on AI error/timeout, `keyword_coverage.available=false` and `ai_sections_available=false`; the deterministic categories/issues/score are unaffected; no `ats_keyword_coverage` token row is logged (not charged). A successful call logs one token row.
 
-**Event sequence**
-1. `data: <text chunk>` … (optional written suggestions narrative)
-2. `event: keyword_coverage` / `data: {matched:[], missing:[]}`
-3. `data: [DONE]`
-
-**Degradation (FR-028)**: on AI/rate-limit failure, emits a single `event: ai_unavailable` + `[DONE]`; the persisted `ats_result.ai_sections_available` is set `false`; the run is **not** charged against quota.
-
-- `400` if session has no JD (keyword coverage N/A) · `403`/`404`/`401` as in `/analyze`.
+**Deferred — `GET /analyze/ats-keywords` (SSE)**: streaming *written qualitative suggestions* was scoped out (tasks T026/T029 deferred). It is **gold-plating beyond the matched/missing keyword requirement** — the FRs are met by the synchronous path above. It touches `analysis.py` + `Results.tsx` and can be added later without changing the stored `ats_result` shape.
 
 ---
 

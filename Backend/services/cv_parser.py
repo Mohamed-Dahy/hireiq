@@ -67,6 +67,7 @@ def extract_layout_signals(file_path: str) -> dict:
     fonts: set[str] = set()
     header_footer_parts: list[str] = []
     multi_col_pages = 0
+    table_pages = 0
     full_text_parts: list[str] = []
 
     try:
@@ -108,6 +109,16 @@ def extract_layout_signals(file_path: str) -> dict:
                         header_footer_parts.append(b[4].strip())
             except Exception:
                 pass
+
+            # Table detection — PyMuPDF's TableFinder when available (guarded:
+            # older builds lack find_tables). ATS parsers read tables poorly.
+            try:
+                finder = page.find_tables()
+                tables = getattr(finder, "tables", finder)
+                if tables and len(tables) > 0:
+                    table_pages += 1
+            except Exception:
+                pass
     finally:
         doc.close()
 
@@ -116,6 +127,7 @@ def extract_layout_signals(file_path: str) -> dict:
     signals["total_chars"] = len(full_text.strip())
     signals["fonts"] = sorted(fonts)
     signals["multi_column"] = multi_col_pages > 0
+    signals["table_like"] = table_pages > 0
     signals["header_footer_text"] = "\n".join(header_footer_parts)[:2000]
 
     if full_text:

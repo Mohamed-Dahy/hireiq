@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import {
   AlertTriangle, AlertCircle, Info, CheckCircle2, Loader2, ShieldCheck,
+  ListChecks, ThumbsUp,
 } from 'lucide-react'
 import type { AtsResult, AtsIssue, AtsCategory } from '../api'
 
@@ -106,10 +107,12 @@ export default function AtsResultView({ result, loading }: Props) {
             <ShieldCheck size={13} /> {scoreTier(score)}
           </div>
           <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-            How well an automated applicant tracking system can read and rank this CV.
-            {result.issues.length > 0
-              ? ` We found ${result.issues.length} issue${result.issues.length !== 1 ? 's' : ''} to address below.`
-              : ' No major issues found — nice work.'}
+            {result.score_explanation
+              ? result.score_explanation
+              : `How well an automated applicant tracking system can read and rank this CV.${
+                  result.issues.length > 0
+                    ? ` We found ${result.issues.length} issue${result.issues.length !== 1 ? 's' : ''} to address below.`
+                    : ' No major issues found — nice work.'}`}
           </p>
           {!result.ai_sections_available && (
             <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
@@ -119,6 +122,25 @@ export default function AtsResultView({ result, loading }: Props) {
         </div>
       </div>
 
+      {/* What to do next */}
+      {result.next_steps && result.next_steps.length > 0 && (
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6">
+          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3 flex items-center gap-2">
+            <ListChecks size={16} className="text-primary-500" /> What to do next
+          </h3>
+          <ol className="space-y-2">
+            {result.next_steps.map((step, i) => (
+              <li key={i} className="flex items-start gap-2.5 text-sm text-zinc-700 dark:text-zinc-300">
+                <span className="mt-0.5 w-5 h-5 shrink-0 rounded-full bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400 text-xs font-semibold flex items-center justify-center">
+                  {i + 1}
+                </span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
       {/* Category breakdown */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6">
         <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Category breakdown</h3>
@@ -126,6 +148,23 @@ export default function AtsResultView({ result, loading }: Props) {
           {result.categories.map((c) => <CategoryBar key={c.key} cat={c} />)}
         </div>
       </div>
+
+      {/* Strengths */}
+      {result.strengths && result.strengths.length > 0 && (
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6">
+          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3 flex items-center gap-2">
+            <ThumbsUp size={16} className="text-emerald-500" /> Strengths
+          </h3>
+          <ul className="space-y-2">
+            {result.strengths.map((s) => (
+              <li key={s.category} className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+                <CheckCircle2 size={15} className="text-emerald-500 shrink-0 mt-0.5" />
+                <span>{s.message}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Keyword coverage (only when a job description was supplied) */}
       {result.keyword_coverage && (

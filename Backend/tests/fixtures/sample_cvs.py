@@ -108,3 +108,47 @@ NONSTANDARD_HEADINGS_CV = (
         non_ascii_ratio=0.04,
     ),
 )
+
+
+# A deliberately WEAK CV: no standard section headings, no metrics, no phone,
+# decorative glyphs, no dates. Used for the score-discrimination test (SC-013).
+WEAK_CV_TEXT = """Jane Doe
+jane.doe@example.com
+
+About Me
+I have worked at a few companies and helped with various tasks over the years.
+
+★ My Journey ★
+Did some work. Helped the team. Was responsible for things and other duties.
+"""
+
+WEAK_CV = (
+    WEAK_CV_TEXT,
+    make_signals(
+        total_chars=len(WEAK_CV_TEXT),
+        chars_per_page=[len(WEAK_CV_TEXT)],
+        non_ascii_ratio=0.03,
+    ),
+)
+
+
+# A CV whose only "quantified" tokens are bare calendar years, and no phone —
+# used to prove the recalibrated detection no longer gives false passes (SC-016).
+YEARS_ONLY_CV_TEXT = """Bob Lee
+bob.lee@example.com
+
+Experience
+Analyst, Contoso — 2016 2018 2020
+Worked on reports and analysis.
+
+Education
+B.A. Economics — 2012 2016
+
+Skills
+Excel, PowerPoint
+"""
+
+YEARS_ONLY_CV = (
+    YEARS_ONLY_CV_TEXT,
+    make_signals(total_chars=len(YEARS_ONLY_CV_TEXT), chars_per_page=[len(YEARS_ONLY_CV_TEXT)]),
+)

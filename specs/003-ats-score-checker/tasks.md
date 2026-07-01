@@ -97,17 +97,17 @@ description: "Task list for ATS Score Checker implementation"
 
 ### Tests for User Story 3 (write first, ensure they FAIL) ⚠️
 
-- [ ] T022 [P] [US3] Unit tests in `Backend/tests/unit/test_ats_keywords.py` — JD keyword extraction + matched/missing computation; empty/junk JD treated as no-JD (FR-019); fallback payload when AI raises
-- [ ] T023 [US3] Integration tests in `Backend/tests/integration/test_ats_check.py` (extend) — ATS+JD upload produces `keyword_coverage`; `GET /analyze/ats-keywords` streams coverage; AI-failure path sets `ai_sections_available=false` and does NOT consume quota (FR-028); no-JD ATS omits coverage
+- [X] T022 [P] [US3] Unit tests in `Backend/tests/unit/test_ats_keywords.py` — JD keyword extraction + matched/missing computation; empty/junk JD treated as no-JD (FR-019); fallback payload when AI raises
+- [X] T023 [US3] Integration tests in `Backend/tests/integration/test_ats_check.py` (extend) — ATS+JD upload produces `keyword_coverage`; `GET /analyze/ats-keywords` streams coverage; AI-failure path sets `ai_sections_available=false` and does NOT consume quota (FR-028); no-JD ATS omits coverage
 
 ### Implementation for User Story 3
 
-- [ ] T024 [P] [US3] Add keyword-coverage prompt template in `Backend/rag/prompts.py` (JD keyword extraction + coverage assessment)
-- [ ] T025 [US3] Implement `Backend/services/ats_keywords.py` — AI-assisted matched/missing keyword coverage + optional written suggestions; raises-safe with a graceful fallback payload (FR-028); estimates tokens from `cv_text`(+JD)
-- [ ] T026 [US3] Add `GET /analyze/ats-keywords` SSE in `Backend/routers/analysis.py` — reuse the existing query-token auth + JTI/`sessions_revoked_at` checks; stream suggestions then `event: keyword_coverage`; on failure emit `event: ai_unavailable` and do not charge; 400 if session has no JD
-- [ ] T027 [US3] In `Backend/routers/cv.py` ATS path, when `jd_text` present: compute `match_score`, attempt keyword coverage, merge into `ats_result` (set `ai_sections_available`/`keyword_coverage.available`), log tokens via `token_tracker` with `operation_type="ats_keyword_coverage"`
-- [ ] T028 [P] [US3] Fill the keyword-coverage section in `frontend/src/components/AtsResultView.tsx` — matched/missing lists shown distinctly from structural categories (FR-018); "AI unavailable" state when degraded
-- [ ] T029 [US3] Add the `/analyze/ats-keywords` SSE client wiring in `frontend/src/pages/Results.tsx` / `frontend/src/api.ts` for ATS sessions that have a JD
+- [X] T024 [P] [US3] Add keyword-coverage prompt template in `Backend/rag/prompts.py` (JD keyword extraction + coverage assessment)
+- [X] T025 [US3] Implement `Backend/services/ats_keywords.py` — AI-assisted matched/missing keyword coverage + optional written suggestions; raises-safe with a graceful fallback payload (FR-028); estimates tokens from `cv_text`(+JD)
+- [ ] T026 ⏸️ DEFERRED (gold-plating beyond matched/missing FRs; see contracts §4) — [US3] Add `GET /analyze/ats-keywords` SSE in `Backend/routers/analysis.py` — reuse the existing query-token auth + JTI/`sessions_revoked_at` checks; stream suggestions then `event: keyword_coverage`; on failure emit `event: ai_unavailable` and do not charge; 400 if session has no JD
+- [X] T027 [US3] In `Backend/routers/cv.py` ATS path, when `jd_text` present: compute `match_score`, attempt keyword coverage, merge into `ats_result` (set `ai_sections_available`/`keyword_coverage.available`), log tokens via `token_tracker` with `operation_type="ats_keyword_coverage"`
+- [X] T028 [P] [US3] Fill the keyword-coverage section in `frontend/src/components/AtsResultView.tsx` — matched/missing lists shown distinctly from structural categories (FR-018); "AI unavailable" state when degraded
+- [ ] T029 ⏸️ DEFERRED (gold-plating beyond matched/missing FRs; see contracts §4) — [US3] Add the `/analyze/ats-keywords` SSE client wiring in `frontend/src/pages/Results.tsx` / `frontend/src/api.ts` for ATS sessions that have a JD
 
 **Checkpoint**: ATS Check with a JD adds keyword coverage; resilience and quota-non-charge on AI failure verified.
 
@@ -121,12 +121,12 @@ description: "Task list for ATS Score Checker implementation"
 
 ### Tests for User Story 4 (write first, ensure they FAIL) ⚠️
 
-- [ ] T030 [P] [US4] Regression integration test in `Backend/tests/integration/test_ats_check.py` (extend) — `job_match` upload still requires JD, computes `match_score`, stores embeddings, and `/analyze` SSE + `/cv/{id}/analysis` behave unchanged (FR-023); a pre-existing (`analysis_mode='job_match'`) session loads (FR-024)
+- [X] T030 [P] [US4] Regression integration test in `Backend/tests/integration/test_ats_check.py` (extend) — `job_match` upload still requires JD, computes `match_score`, stores embeddings, and `/analyze` SSE + `/cv/{id}/analysis` behave unchanged (FR-023); a pre-existing (`analysis_mode='job_match'`) session loads (FR-024)
 
 ### Implementation for User Story 4
 
-- [ ] T031 [US4] Verify/keep `Backend/routers/analysis.py` `/analyze` and `Backend/routers/cv.py` job-match path unchanged for `job_match`; confirm `GET /cv/sessions` now returns `analysis_mode`/`ats_score`/`has_ats_result` (FR-021)
-- [ ] T032 [US4] Show mode badge + ATS score in `frontend/src/pages/History.tsx` session list (distinguish ATS vs job-match results — FR-021)
+- [X] T031 [US4] Verify/keep `Backend/routers/analysis.py` `/analyze` and `Backend/routers/cv.py` job-match path unchanged for `job_match`; confirm `GET /cv/sessions` now returns `analysis_mode`/`ats_score`/`has_ats_result` (FR-021)
+- [X] T032 [US4] Show mode badge + ATS score in `frontend/src/pages/History.tsx` session list (distinguish ATS vs job-match results — FR-021)
 
 **Checkpoint**: Both modes coexist; no job-match regression; history is mode-aware.
 
@@ -136,11 +136,11 @@ description: "Task list for ATS Score Checker implementation"
 
 **Purpose**: Leakage/retention guarantees spanning modes, report export, and final validation
 
-- [ ] T033 [P] Stored-CV deletion cascade — update `Backend/services/profile_service.py` `delete_stored_cv` to also delete the caller's `from_stored_cv = True` sessions (rows, files, embeddings, ATS results); cover with an integration test in `Backend/tests/integration/test_profile.py` (FR-031)
-- [ ] T034 Make `POST /cv/use-stored` mode-aware in `Backend/routers/cv.py` — accept `analysis_mode` + optional `jd_text`, set `from_stored_cv=True`, run the ATS path for `ats_check` (same quota/guards as T012)
-- [ ] T035 [P] Extend `Backend/services/report_generator.py` to render ATS score, category breakdown, issues/recommendations, and keyword coverage for `ats_check` sessions; keep export an authenticated owner-only attachment (no public URL — FR-022)
-- [ ] T036 [P] Add an admin-aggregate-only assertion test (no endpoint exposes CV content or individual ATS results — FR-030) in `Backend/tests/integration/test_admin.py`
-- [ ] T037 Run full validation — `pytest` (unit + integration) green, `cd frontend && npx tsc --noEmit` clean, and walk the `quickstart.md` acceptance checklist (SC-001…SC-012)
+- [X] T033 [P] Stored-CV deletion cascade — update `Backend/services/profile_service.py` `delete_stored_cv` to also delete the caller's `from_stored_cv = True` sessions (rows, files, embeddings, ATS results); cover with an integration test in `Backend/tests/integration/test_profile.py` (FR-031)
+- [X] T034 Make `POST /cv/use-stored` mode-aware in `Backend/routers/cv.py` — accept `analysis_mode` + optional `jd_text`, set `from_stored_cv=True`, run the ATS path for `ats_check` (same quota/guards as T012)
+- [X] T035 [P] Extend `Backend/services/report_generator.py` to render ATS score, category breakdown, issues/recommendations, and keyword coverage for `ats_check` sessions; keep export an authenticated owner-only attachment (no public URL — FR-022)
+- [X] T036 [P] Add an admin-aggregate-only assertion test (no endpoint exposes CV content or individual ATS results — FR-030) in `Backend/tests/integration/test_admin.py`
+- [X] T037 Run full validation — `pytest` (unit + integration) green, `cd frontend && npx tsc --noEmit` clean, and walk the `quickstart.md` acceptance checklist (SC-001…SC-012)
 
 ---
 
@@ -152,20 +152,20 @@ description: "Task list for ATS Score Checker implementation"
 
 ### Tests for User Story 5 (write first, ensure they FAIL) ⚠️
 
-- [ ] T038 [P] [US5] Add fixtures to `Backend/tests/fixtures/sample_cvs.py` — a **weak CV** (missing sections, no metrics/quantified, no phone, decorative formatting) and signal fixtures for `table_like=True` and `multi_column=True`
-- [ ] T039 [US5] Extend unit tests in `Backend/tests/unit/test_ats_checker.py` — **score spread** strong vs weak ≥ 25 pts (SC-013); quantified detection rejects bare years but accepts `%`/`$`/`10k`/`3x`/`N+ years` (SC-016); contact rejects `YYYY–YYYY` date ranges as phones (SC-016); section detection is heading-anchored (a keyword only inside body text does NOT count); `table_like`/`multi_column` signals produce formatting deductions (FR-035); result always contains non-empty `strengths`, `next_steps`, `score_explanation`, and an "ATS-ready" next_steps message when there are no material faults (FR-036–039)
+- [X] T038 [P] [US5] Add fixtures to `Backend/tests/fixtures/sample_cvs.py` — a **weak CV** (missing sections, no metrics/quantified, no phone, decorative formatting) and signal fixtures for `table_like=True` and `multi_column=True`
+- [X] T039 [US5] Extend unit tests in `Backend/tests/unit/test_ats_checker.py` — **score spread** strong vs weak ≥ 25 pts (SC-013); quantified detection rejects bare years but accepts `%`/`$`/`10k`/`3x`/`N+ years` (SC-016); contact rejects `YYYY–YYYY` date ranges as phones (SC-016); section detection is heading-anchored (a keyword only inside body text does NOT count); `table_like`/`multi_column` signals produce formatting deductions (FR-035); result always contains non-empty `strengths`, `next_steps`, `score_explanation`, and an "ATS-ready" next_steps message when there are no material faults (FR-036–039)
 
 ### Implementation for User Story 5
 
-- [ ] T040 [P] [US5] Add calibration thresholds to `Backend/app/config.py` (+ `Backend/.env.example`) — quantified/contact strictness knobs, score band cutoffs; non-secret
-- [ ] T041 [US5] Implement structural signals in `Backend/services/cv_parser.py` — compute `table_like` via PyMuPDF `find_tables()` (guarded for availability) and strengthen `multi_column` via body-text x-position clustering (replace the dead `table_like=False`)
-- [ ] T042 [US5] Recalibrate `Backend/services/ats_checker.py` detection — fix `_QUANTIFIED_RE` (no bare 4-digit years; require real metric), fix `_PHONE_RE` (reject date ranges; require ≥7-digit phone token), make section detection heading-anchored, and wire the new `table_like` into `_eval_formatting`; keep sub-scores graded so faults cost points (FR-033/034/035/040)
-- [ ] T043 [US5] Enrich `Backend/services/ats_checker.py` `evaluate()` output — add `strengths` (categories scoring ≥ 0.9, phrased positively), `next_steps` (top-N recommendations ranked by severity × weight, deduped; "ATS-ready" affirmation when none), and `score_explanation` (plain-language band + top drivers) (FR-036–039)
-- [ ] T044 [US5] Extend `AtsResultResponse` in `Backend/models/schemas.py` and the `GET /cv/{id}/ats` mapping in `Backend/routers/cv.py` — add `strengths`, `next_steps`, `score_explanation` (additive/defaulted; pre-US5 results deserialize cleanly)
-- [ ] T045 [P] [US5] Add `strengths`, `next_steps`, `score_explanation` to the `AtsResult` type in `frontend/src/api.ts`
-- [ ] T046 [US5] Render the enriched result in `frontend/src/components/AtsResultView.tsx` — a Strengths section, a "What to do next" section, and the score explanation near the gauge; explicit "ATS-ready" state when no material weaknesses (FR-036–039)
-- [ ] T047 [P] [US5] Add component test `frontend/src/pages/__tests__/AtsResultView.test.tsx` — asserts strengths, next-steps, and explanation render, and the ATS-ready state shows when issues are empty
-- [ ] T048 [US5] Real-CV verification — run the recalibrated engine on the user's actual uploads (e.g. `Backend/uploads/Mohamed Dahy CV.pdf`, `..._AI_Architect.pdf`); confirm each deduction maps to a named fault and the enriched output makes any high score informative (SC-014); record the observed scores
+- [X] T040 [P] [US5] Add calibration thresholds to `Backend/app/config.py` (+ `Backend/.env.example`) — quantified/contact strictness knobs, score band cutoffs; non-secret
+- [X] T041 [US5] Implement structural signals in `Backend/services/cv_parser.py` — compute `table_like` via PyMuPDF `find_tables()` (guarded for availability) and strengthen `multi_column` via body-text x-position clustering (replace the dead `table_like=False`)
+- [X] T042 [US5] Recalibrate `Backend/services/ats_checker.py` detection — fix `_QUANTIFIED_RE` (no bare 4-digit years; require real metric), fix `_PHONE_RE` (reject date ranges; require ≥7-digit phone token), make section detection heading-anchored, and wire the new `table_like` into `_eval_formatting`; keep sub-scores graded so faults cost points (FR-033/034/035/040)
+- [X] T043 [US5] Enrich `Backend/services/ats_checker.py` `evaluate()` output — add `strengths` (categories scoring ≥ 0.9, phrased positively), `next_steps` (top-N recommendations ranked by severity × weight, deduped; "ATS-ready" affirmation when none), and `score_explanation` (plain-language band + top drivers) (FR-036–039)
+- [X] T044 [US5] Extend `AtsResultResponse` in `Backend/models/schemas.py` and the `GET /cv/{id}/ats` mapping in `Backend/routers/cv.py` — add `strengths`, `next_steps`, `score_explanation` (additive/defaulted; pre-US5 results deserialize cleanly)
+- [X] T045 [P] [US5] Add `strengths`, `next_steps`, `score_explanation` to the `AtsResult` type in `frontend/src/api.ts`
+- [X] T046 [US5] Render the enriched result in `frontend/src/components/AtsResultView.tsx` — a Strengths section, a "What to do next" section, and the score explanation near the gauge; explicit "ATS-ready" state when no material weaknesses (FR-036–039)
+- [X] T047 [P] [US5] Add component test `frontend/src/pages/__tests__/AtsResultView.test.tsx` — asserts strengths, next-steps, and explanation render, and the ATS-ready state shows when issues are empty
+- [X] T048 [US5] Real-CV verification — run the recalibrated engine on the user's actual uploads (e.g. `Backend/uploads/Mohamed Dahy CV.pdf`, `..._AI_Architect.pdf`); confirm each deduction maps to a named fault and the enriched output makes any high score informative (SC-014); record the observed scores
 
 **Checkpoint**: ATS scores are earned and explainable; every result gives strengths + concrete next steps; verified on synthetic fixtures AND the real uploaded CVs.
 

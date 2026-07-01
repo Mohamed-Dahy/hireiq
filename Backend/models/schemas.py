@@ -151,6 +151,11 @@ class AtsKeywordCoverage(BaseModel):
     available: bool = True
 
 
+class AtsStrength(BaseModel):
+    category: str
+    message: str
+
+
 class AtsResultResponse(BaseModel):
     session_id: int
     overall_score: float
@@ -158,6 +163,10 @@ class AtsResultResponse(BaseModel):
     categories: list[AtsCategory] = []
     issues: list[AtsIssue] = []
     keyword_coverage: Optional[AtsKeywordCoverage] = None
+    # US5 enrichment (additive; pre-US5 results default to empty/None)
+    strengths: list[AtsStrength] = []
+    next_steps: list[str] = []
+    score_explanation: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------

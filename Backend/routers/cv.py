@@ -7,6 +7,7 @@ GET  /cv/{id}/analysis    — return stored structured analysis (202 if not yet 
 """
 
 import json
+import logging
 import os
 import uuid
 
@@ -26,10 +27,11 @@ from services.auth_service import get_current_user, require_ownership
 from services.report_generator import generate_report
 from services.llm_analyzer import run_analysis
 from services.linkedin_service import is_linkedin_pdf
-from services import ats_checker, token_tracker
+from services import ats_checker, token_tracker, ats_keywords
 from models.schemas import AtsResultResponse
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 _MAX_CV_BYTES = 10 * 1024 * 1024  # 10 MB
 _PDF_MAGIC = b"%PDF"
@@ -44,6 +46,37 @@ def _enforce_new_analysis_quota(db: Session, user: User) -> None:
         token_tracker.check_free_tier_quota_for_new(db, user)
     elif user.tier in ("pro", "enterprise"):
         token_tracker.check_paid_tier_quota(db, user)
+
+
+def _build_ats_result(cv_text: str, file_path: str, jd_clean: str) -> dict:
+    """Deterministic ATS evaluation, plus AI keyword coverage when a JD is present.
+
+    Keyword coverage is a non-critical, timeout-bounded AI step: on failure it
+    reports keyword_coverage.available=False and the deterministic score stands
+    (FR-027/028). Returns the full ats_result dict.
+    """
+    signals = extract_layout_signals(file_path)
+    ats_result = ats_checker.evaluate(cv_text, signals)
+    if jd_clean:
+        coverage = ats_keywords.compute_keyword_coverage(cv_text, jd_clean)
+        ats_result["keyword_coverage"] = {
+            "matched": coverage["matched"],
+            "missing": coverage["missing"],
+            "available": coverage["available"],
+        }
+        ats_result["ai_sections_available"] = coverage["available"]
+    return ats_result
+
+
+def _log_keyword_tokens_if_available(db: Session, user: User, cv_text: str, jd_clean: str, ats_result: dict) -> None:
+    """Charge tokens for keyword coverage only when the AI step actually succeeded (FR-028)."""
+    kc = ats_result.get("keyword_coverage") or {}
+    if jd_clean and kc.get("available"):
+        estimated = len(cv_text + jd_clean) // 4
+        try:
+            token_tracker.log_token_usage(db, user.id, estimated, "ats_keyword_coverage", user.tier)
+        except Exception:
+            logger.exception("Failed to log ATS keyword-coverage tokens")
 
 
 @router.post("/upload", response_model=CVUploadResponse)
@@ -95,13 +128,9 @@ async def upload_cv(
     linkedin = is_linkedin_pdf(contents)
 
     if analysis_mode == "ats_check":
-        # Deterministic, AI-free ATS evaluation (re-use parsed text; extract layout).
-        signals = extract_layout_signals(file_path)
-        ats_result = ats_checker.evaluate(cv_text, signals)
+        # Deterministic ATS evaluation + (when a JD is present) AI keyword coverage.
+        ats_result = _build_ats_result(cv_text, file_path, jd_clean)
         ats_score = ats_result.get("overall_score")
-
-        # Optional keyword coverage (JD present) is layered on in a later phase;
-        # here we still record the match score when a JD was supplied.
         match_score = compute_match_score(cv_text, jd_clean) if jd_clean else None
 
         session = CVSession(
@@ -122,6 +151,7 @@ async def upload_cv(
         if jd_clean:
             store_embeddings(session_id=session.id, cv_text=cv_text, jd_text=jd_clean)
             set_cached_score(session_id=session.id, score=match_score)
+        _log_keyword_tokens_if_available(db, current_user, cv_text, jd_clean, ats_result)
 
         return CVUploadResponse(
             session_id=session.id,
@@ -207,8 +237,7 @@ async def use_stored_cv(
     linkedin = is_linkedin_pdf(cv_bytes)
 
     if analysis_mode == "ats_check":
-        signals = extract_layout_signals(dest_path)
-        ats_result = ats_checker.evaluate(cv_text, signals)
+        ats_result = _build_ats_result(cv_text, dest_path, jd_clean)
         ats_score = ats_result.get("overall_score")
         match_score = compute_match_score(cv_text, jd_clean) if jd_clean else None
 
@@ -231,6 +260,7 @@ async def use_stored_cv(
         if jd_clean:
             store_embeddings(session_id=session.id, cv_text=cv_text, jd_text=jd_clean)
             set_cached_score(session_id=session.id, score=match_score)
+        _log_keyword_tokens_if_available(db, current_user, cv_text, jd_clean, ats_result)
 
         return CVUploadResponse(
             session_id=session.id,
@@ -304,11 +334,30 @@ def download_report(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Generate and return a PDF report for this CV session."""
+    """Generate and return a PDF report for this CV session (owner-only download)."""
     session = db.query(CVSession).filter(CVSession.id == session_id).first()
     if not session:
         raise HTTPException(status_code=404, detail="Not found")
     require_ownership(session.user_id, current_user.id)
+
+    # ATS Check sessions get the ATS report (no LLM recompute; JD may be absent).
+    if session.analysis_mode == "ats_check" and session.ats_result:
+        from services.report_generator import generate_ats_report
+        try:
+            ats_data = json.loads(session.ats_result)
+        except Exception:
+            ats_data = {}
+        pdf_bytes = generate_ats_report(
+            cv_filename=session.cv_filename,
+            original_cv_filename=session.original_cv_filename,
+            ats_result=ats_data,
+        )
+        filename = f"hireiq_ats_report_session_{session_id}.pdf"
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
 
     interview_rows = (
         db.query(InterviewResult)
@@ -448,6 +497,9 @@ def get_ats_result(
         categories=data.get("categories", []),
         issues=data.get("issues", []),
         keyword_coverage=data.get("keyword_coverage"),
+        strengths=data.get("strengths", []),
+        next_steps=data.get("next_steps", []),
+        score_explanation=data.get("score_explanation"),
     )
 
 
