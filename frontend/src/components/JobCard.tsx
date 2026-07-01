@@ -35,6 +35,12 @@ function ScoreRing({ score }: { score: number | null }) {
   )
 }
 
+function deadlineDays(dateStr: string): number {
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const dl = new Date(dateStr); dl.setHours(0, 0, 0, 0)
+  return Math.round((dl.getTime() - today.getTime()) / 86_400_000)
+}
+
 interface Props {
   job: JobApplication
   onClick: () => void
@@ -44,6 +50,13 @@ interface Props {
 export default function JobCard({ job, onClick, onArchive }: Props) {
   const today = new Date().toISOString().split('T')[0]
   const followupOverdue = job.followup_date && job.followup_date < today
+
+  const daysInStage = Math.floor(
+    (Date.now() - new Date(job.stage_entered_at).getTime()) / 86_400_000
+  )
+
+  const dlDays = job.deadline_date ? deadlineDays(job.deadline_date) : null
+  const dlUrgent = dlDays !== null && dlDays <= 3
 
   return (
     <div
@@ -68,8 +81,21 @@ export default function JobCard({ job, onClick, onArchive }: Props) {
             {job.priority}
           </span>
         )}
-        {job.source && (
-          <span className="text-xs text-zinc-400 bg-zinc-50 dark:bg-zinc-800 px-2 py-0.5 rounded-full">{job.source}</span>
+        {daysInStage > 0 && (
+          <span className={`text-xs ${daysInStage >= 14 ? 'text-amber-500' : 'text-zinc-400'}`}>
+            {daysInStage}d here
+          </span>
+        )}
+        {dlDays !== null && (
+          <span className={`text-xs font-medium px-1.5 py-0.5 rounded-md ${
+            dlDays < 0
+              ? 'bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-400'
+              : dlUrgent
+              ? 'bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400'
+              : 'text-zinc-400'
+          }`}>
+            {dlDays < 0 ? `${Math.abs(dlDays)}d overdue` : dlDays === 0 ? 'due today' : `${dlDays}d left`}
+          </span>
         )}
       </div>
 

@@ -2,10 +2,9 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   BookOpen, Search, ChevronDown, ChevronUp, CheckCircle2, Circle,
-  Loader2, AlertCircle, X, Clock, BarChart3, Filter
+  Loader2, AlertCircle, X, Clock, BarChart3,
 } from 'lucide-react'
 import {
-  getInterviewRoles,
   getInterviewQuestions,
   searchInterviewQuestions,
   markQuestionPracticed,
@@ -15,24 +14,28 @@ import type { BankQuestion, BankSearchResult, BankQuestionsResponse, BankProgres
 
 const HISTORY_KEY = 'bank:search_history'
 const MAX_HISTORY = 10
-const LEVELS = ['junior', 'mid', 'senior', 'all']
+
+// Fixed role tabs — maps display label to the DB role name
+const ROLE_TABS = [
+  { key: 'sw',    label: 'SW',           dbRole: 'Software Engineer' },
+  { key: 'ds',    label: 'Data Science', dbRole: 'Data Scientist'    },
+  { key: 'behav', label: 'Behavioral',   dbRole: 'All Roles'         },
+] as const
+type TabKey = typeof ROLE_TABS[number]['key']
+
+// Tabs where level filtering is not applicable — use 'all' internally
+const NO_LEVEL_TABS = new Set<TabKey>(['behav'])
+const LEVEL_OPTIONS = ['junior', 'mid', 'senior'] as const
 
 function loadHistory(): string[] {
-  try {
-    return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]')
-  } catch {
-    return []
-  }
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]') }
+  catch { return [] }
 }
-
 function saveHistory(term: string) {
   const prev = loadHistory().filter(h => h !== term)
   localStorage.setItem(HISTORY_KEY, JSON.stringify([term, ...prev].slice(0, MAX_HISTORY)))
 }
-
-function clearHistory() {
-  localStorage.removeItem(HISTORY_KEY)
-}
+function clearHistory() { localStorage.removeItem(HISTORY_KEY) }
 
 function ProgressBar({ pct }: { pct: number }) {
   return (
@@ -68,11 +71,10 @@ function QuestionCard({
             className="mt-0.5 shrink-0 text-primary-500 disabled:opacity-40 transition-opacity"
             title={q.practiced ? 'Mark as not practiced' : 'Mark as practiced'}
           >
-            {q.practiced ? (
-              <CheckCircle2 size={20} className="text-accent-500" />
-            ) : (
-              <Circle size={20} className="text-zinc-400 hover:text-primary-400 transition-colors" />
-            )}
+            {q.practiced
+              ? <CheckCircle2 size={20} className="text-accent-500" />
+              : <Circle size={20} className="text-zinc-400 hover:text-primary-400 transition-colors" />
+            }
           </button>
           <div className="flex-1 min-w-0">
             <p className="text-sm text-zinc-800 dark:text-zinc-200 leading-relaxed font-medium">
@@ -128,12 +130,7 @@ function QuestionCard({
 }
 
 function CategoryAccordion({
-  category,
-  questions,
-  progressPct,
-  onTogglePracticed,
-  togglingIds,
-  defaultOpen,
+  category, questions, progressPct, onTogglePracticed, togglingIds, defaultOpen,
 }: {
   category: string
   questions: BankQuestion[]
@@ -197,9 +194,8 @@ function CategoryAccordion({
 }
 
 export default function Bank() {
-  const [roles, setRoles] = useState<string[]>([])
-  const [selectedRole, setSelectedRole] = useState('')
-  const [selectedLevel, setSelectedLevel] = useState('mid')
+  const [activeTab, setActiveTab] = useState<TabKey>('sw')
+  const [selectedLevel, setSelectedLevel] = useState<string>('junior')
   const [questionsData, setQuestionsData] = useState<BankQuestionsResponse | null>(null)
   const [progress, setProgress] = useState<BankProgressResponse | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -213,23 +209,17 @@ export default function Bank() {
   const searchRef = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => {
-    getInterviewRoles()
-      .then(r => {
-        setRoles(r.data.roles)
-        if (r.data.roles.length > 0) setSelectedRole(r.data.roles[0])
-      })
-      .catch(() => setError('Failed to load roles'))
-  }, [])
+  const currentTab = ROLE_TABS.find(t => t.key === activeTab)!
+  const effectiveLevel = NO_LEVEL_TABS.has(activeTab) ? 'all' : selectedLevel
+  const showLevelFilter = !NO_LEVEL_TABS.has(activeTab)
 
-  const loadQuestions = useCallback(async (role: string, level: string) => {
-    if (!role) return
+  const loadQuestions = useCallback(async (dbRole: string, level: string) => {
     setBrowsing(true)
     setError('')
     try {
       const [qRes, pRes] = await Promise.allSettled([
-        getInterviewQuestions(role, level),
-        getInterviewProgress(role, level).catch(() => null),
+        getInterviewQuestions(dbRole, level),
+        getInterviewProgress(dbRole, level).catch(() => null),
       ])
       if (qRes.status === 'fulfilled') setQuestionsData(qRes.value.data)
       else throw new Error('Failed to load questions')
@@ -242,19 +232,18 @@ export default function Bank() {
   }, [])
 
   useEffect(() => {
-    if (selectedRole && !searchTerm) {
-      loadQuestions(selectedRole, selectedLevel)
+    if (!searchTerm) {
+      setQuestionsData(null)
+      setProgress(null)
+      loadQuestions(currentTab.dbRole, effectiveLevel)
     }
-  }, [selectedRole, selectedLevel, loadQuestions, searchTerm])
+  }, [activeTab, selectedLevel, loadQuestions, searchTerm, currentTab.dbRole, effectiveLevel])
 
   const runSearch = useCallback(async (term: string) => {
-    if (!term.trim()) {
-      setSearchResults(null)
-      return
-    }
+    if (!term.trim()) { setSearchResults(null); return }
     setSearchLoading(true)
     try {
-      const r = await searchInterviewQuestions(term, selectedRole || undefined, selectedLevel || undefined)
+      const r = await searchInterviewQuestions(term, currentTab.dbRole, effectiveLevel)
       setSearchResults(r.data.results)
       saveHistory(term.trim())
       setSearchHistory(loadHistory())
@@ -263,7 +252,7 @@ export default function Bank() {
     } finally {
       setSearchLoading(false)
     }
-  }, [selectedRole, selectedLevel])
+  }, [currentTab.dbRole, effectiveLevel])
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value)
@@ -272,17 +261,18 @@ export default function Bank() {
     debounceRef.current = setTimeout(() => runSearch(value), 300)
   }
 
-  const applyHistory = (term: string) => {
-    setSearchTerm(term)
-    setShowHistory(false)
-    runSearch(term)
+  const switchTab = (key: TabKey) => {
+    setActiveTab(key)
+    setSearchTerm('')
+    setSearchResults(null)
+    setQuestionsData(null)
+    setProgress(null)
   }
 
   const handleTogglePracticed = async (questionId: number, current: boolean) => {
     setTogglingIds(prev => new Set(prev).add(questionId))
     try {
       await markQuestionPracticed(questionId, !current)
-      // Update local state optimistically
       if (questionsData) {
         const updated = { ...questionsData }
         for (const cat of Object.keys(updated.categories)) {
@@ -297,15 +287,11 @@ export default function Bank() {
           q.id === questionId ? { ...q, practiced: !current } : q
         ))
       }
-      // Refresh progress
-      if (selectedRole) {
-        getInterviewProgress(selectedRole, selectedLevel)
-          .then(r => setProgress(r.data))
-          .catch(() => {})
-      }
+      getInterviewProgress(currentTab.dbRole, effectiveLevel)
+        .then(r => setProgress(r.data))
+        .catch(() => {})
     } catch {
-      // revert on error — reload
-      if (selectedRole) loadQuestions(selectedRole, selectedLevel)
+      loadQuestions(currentTab.dbRole, effectiveLevel)
     } finally {
       setTogglingIds(prev => { const s = new Set(prev); s.delete(questionId); return s })
     }
@@ -341,33 +327,48 @@ export default function Bank() {
 
       {/* Filters */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-4 space-y-4">
-        <div className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          <Filter size={15} className="text-primary-500" />
-          Filters
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-zinc-500 dark:text-zinc-400 mb-1">Role</label>
-            <select
-              value={selectedRole}
-              onChange={e => { setSelectedRole(e.target.value); setSearchTerm(''); setSearchResults(null) }}
-              className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 transition"
-            >
-              {roles.length === 0 && <option value="">Loading…</option>}
-              {roles.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-zinc-500 dark:text-zinc-400 mb-1">Level</label>
-            <select
-              value={selectedLevel}
-              onChange={e => { setSelectedLevel(e.target.value); setSearchTerm(''); setSearchResults(null) }}
-              className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 transition"
-            >
-              {LEVELS.map(l => <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>)}
-            </select>
+
+        {/* Role tabs */}
+        <div>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2">Category</p>
+          <div className="flex gap-2">
+            {ROLE_TABS.map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => switchTab(tab.key)}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium border transition-all cursor-pointer ${
+                  activeTab === tab.key
+                    ? 'bg-primary-600 text-white border-primary-600'
+                    : 'bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
+
+        {/* Level filter — hidden for Behavioral */}
+        {showLevelFilter && (
+          <div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2">Level</p>
+            <div className="flex gap-2">
+              {LEVEL_OPTIONS.map(lvl => (
+                <button
+                  key={lvl}
+                  onClick={() => { setSelectedLevel(lvl); setSearchTerm(''); setSearchResults(null) }}
+                  className={`px-3 py-1 rounded-md text-xs font-medium border capitalize transition-all cursor-pointer ${
+                    selectedLevel === lvl
+                      ? 'bg-accent-600 text-white border-accent-600'
+                      : 'bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500'
+                  }`}
+                >
+                  {lvl}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Search */}
         <div className="relative">
@@ -390,7 +391,6 @@ export default function Bank() {
             </button>
           )}
 
-          {/* History dropdown */}
           <AnimatePresence>
             {showHistory && searchHistory.length > 0 && (
               <motion.div
@@ -415,7 +415,7 @@ export default function Bank() {
                 {searchHistory.map((h, i) => (
                   <button
                     key={i}
-                    onMouseDown={e => { e.preventDefault(); applyHistory(h) }}
+                    onMouseDown={e => { e.preventDefault(); setSearchTerm(h); setShowHistory(false); runSearch(h) }}
                     className="w-full text-left px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-2 transition-colors"
                   >
                     <Search size={12} className="text-zinc-400 shrink-0" />
@@ -446,17 +446,15 @@ export default function Bank() {
       {/* Search Results */}
       {isSearchMode && !searchLoading && searchResults !== null && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              {searchResults.length === 0
-                ? `No results for "${searchTerm}"`
-                : `${searchResults.length} result${searchResults.length !== 1 ? 's' : ''} for "${searchTerm}"`}
-            </p>
-          </div>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            {searchResults.length === 0
+              ? `No results for "${searchTerm}"`
+              : `${searchResults.length} result${searchResults.length !== 1 ? 's' : ''} for "${searchTerm}"`}
+          </p>
           {searchResults.length === 0 ? (
             <div className="text-center py-16 text-zinc-400 dark:text-zinc-500">
               <Search size={40} className="mx-auto mb-3 opacity-30" />
-              <p className="text-sm">Try a different keyword or remove filters.</p>
+              <p className="text-sm">Try a different keyword or switch category.</p>
             </div>
           ) : (
             searchResults.map(q => (
@@ -474,7 +472,6 @@ export default function Bank() {
       {/* Browse Mode */}
       {!isSearchMode && !browsing && questionsData && (
         <div className="space-y-4">
-          {/* Stats strip */}
           <div className="flex items-center gap-4 text-sm text-zinc-500 dark:text-zinc-400">
             <span>{totalQuestions} question{totalQuestions !== 1 ? 's' : ''}</span>
             <span className="text-zinc-300 dark:text-zinc-700">·</span>
@@ -484,8 +481,10 @@ export default function Bank() {
           {totalQuestions === 0 ? (
             <div className="text-center py-16 text-zinc-400 dark:text-zinc-500">
               <BookOpen size={40} className="mx-auto mb-3 opacity-30" />
-              <p className="text-sm">No questions found for this role and level.</p>
-              <p className="text-xs mt-1">Try selecting a different level or role.</p>
+              <p className="text-sm">No questions found for this selection.</p>
+              {activeTab !== 'behav' && (
+                <p className="text-xs mt-1">Try a different level.</p>
+              )}
             </div>
           ) : (
             Object.entries(questionsData.categories).map(([cat, questions], idx) => {
@@ -503,14 +502,6 @@ export default function Bank() {
               )
             })
           )}
-        </div>
-      )}
-
-      {/* Empty — no role selected yet */}
-      {!isSearchMode && !browsing && !questionsData && !error && (
-        <div className="text-center py-16 text-zinc-400 dark:text-zinc-500">
-          <BookOpen size={40} className="mx-auto mb-3 opacity-30" />
-          <p className="text-sm">Select a role to start browsing questions.</p>
         </div>
       )}
     </div>

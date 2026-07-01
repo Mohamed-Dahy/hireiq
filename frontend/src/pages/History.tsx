@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Search, FileText, Trash2, ChevronRight } from 'lucide-react'
+import { Search, FileText, Trash2, ChevronRight, Mic } from 'lucide-react'
 import { getSessions, deleteSession } from '../api'
 import type { CVSession } from '../api'
+import { getSessionLabel } from '../utils/sessionLabel'
 import { useToast } from '../components/Toast'
 import Modal from '../components/Modal'
 
@@ -32,7 +33,7 @@ export default function History({ onSelect }: Props) {
 
   const filtered = useMemo(() => {
     return sessions.filter((s) => {
-      if (search && !s.cv_filename.toLowerCase().includes(search.toLowerCase())) return false
+      if (search && !getSessionLabel(s).toLowerCase().includes(search.toLowerCase())) return false
       if (filter === 'all') return true
       if (s.match_score == null) return false
       if (filter === 'high') return s.match_score >= 70
@@ -48,7 +49,7 @@ export default function History({ onSelect }: Props) {
     try {
       await deleteSession(pendingDelete.id)
       setSessions((list) => list.filter((s) => s.id !== pendingDelete.id))
-      toast.success(`Deleted "${pendingDelete.cv_filename}"`)
+      toast.success(`Deleted "${getSessionLabel(pendingDelete)}"`)
       setPendingDelete(null)
     } catch {
       toast.error('Failed to delete session')
@@ -97,7 +98,7 @@ export default function History({ onSelect }: Props) {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by CV filename…"
+              placeholder="Search sessions…"
               className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl pl-9 pr-3 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
             />
           </div>
@@ -165,7 +166,7 @@ export default function History({ onSelect }: Props) {
                   <FileText size={13} strokeWidth={1.5} className="text-zinc-400" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{s.cv_filename}</p>
+                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{getSessionLabel(s)}</p>
                   <p className="text-xs text-zinc-400 mt-0.5">
                     {new Date(s.created_at).toLocaleDateString('en-GB', {
                       day: 'numeric', month: 'short', year: 'numeric',
@@ -178,6 +179,17 @@ export default function History({ onSelect }: Props) {
                 <span className={`text-xs font-medium px-2 py-0.5 rounded ${scoreClass(s.match_score)}`}>
                   {s.match_score != null ? `${s.match_score}%` : '—'}
                 </span>
+
+                {s.has_interview_questions && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onSelect(s.id) }}
+                    aria-label="Practice interview"
+                    title="Practice interview questions"
+                    className="w-7 h-7 rounded-md flex items-center justify-center text-accent-500 hover:bg-accent-50 dark:hover:bg-accent-950/50 transition-all cursor-pointer"
+                  >
+                    <Mic size={13} strokeWidth={1.5} />
+                  </button>
+                )}
 
                 <button
                   onClick={(e) => { e.stopPropagation(); setPendingDelete(s) }}
@@ -198,7 +210,7 @@ export default function History({ onSelect }: Props) {
         open={pendingDelete !== null}
         onClose={() => !deleting && setPendingDelete(null)}
         title="Delete this session?"
-        description={`This will permanently delete "${pendingDelete?.cv_filename}" and all its interview answers. This cannot be undone.`}
+        description={`This will permanently delete "${pendingDelete ? getSessionLabel(pendingDelete) : ''}" and all its interview answers. This cannot be undone.`}
         confirmLabel="Delete"
         danger
         loading={deleting}

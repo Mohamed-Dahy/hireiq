@@ -15,7 +15,7 @@ DELETE /auth/account            — permanently delete account and all data
 
 import os
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
@@ -234,7 +234,7 @@ def get_me(
             .scalar() or 0
         )
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     month_start = datetime(now.year, now.month, 1)
     sessions_this_month = sum(1 for s in sessions if s.created_at >= month_start)
 
@@ -246,7 +246,7 @@ def get_me(
 
     recent = sorted(sessions, key=lambda s: s.created_at, reverse=True)[:5]
 
-    window_start = datetime.utcnow() - timedelta(days=settings.free_tier_window_days)
+    window_start = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=settings.free_tier_window_days)
     analyses_in_window = sum(1 for s in sessions if s.created_at >= window_start)
     window_resets_at = None
     if analyses_in_window > 0:
@@ -363,7 +363,7 @@ def reset_password(
     if not user:
         raise HTTPException(status_code=400, detail="User not found.")
     user.hashed_password = hash_password(payload.new_password)
-    user.sessions_revoked_at = datetime.utcnow()
+    user.sessions_revoked_at = datetime.now(timezone.utc).replace(tzinfo=None)
     reset_failed_login(db, user)
     db.commit()
     write_audit_log(db, "auth.password_change", _client_ip(request), "allowed", user_id=user.id)

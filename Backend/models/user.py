@@ -1,4 +1,5 @@
-from datetime import datetime
+import re
+from datetime import datetime, timezone
 from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -12,7 +13,7 @@ class User(Base):
     email               = Column(String, unique=True, nullable=False, index=True)
     username            = Column(String, unique=True, nullable=False, index=True)
     hashed_password     = Column(String, nullable=False)
-    created_at          = Column(DateTime, default=datetime.utcnow)
+    created_at          = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Auth hardening
     email_verified      = Column(Boolean, default=False, nullable=False)
@@ -34,15 +35,27 @@ class CVSession(Base):
     id               = Column(Integer, primary_key=True, index=True)
     user_id          = Column(Integer, ForeignKey("users.id"), nullable=False)
     cv_filename      = Column(String, nullable=False)
-    jd_text          = Column(Text, nullable=False)
+    jd_text          = Column(Text, nullable=True)   # optional: ATS Check runs with no JD
     match_score      = Column(Float, nullable=True)
-    created_at       = Column(DateTime, default=datetime.utcnow)
+    created_at       = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Phase 5: structured analysis (stored as JSON text)
-    skill_inventory  = Column(Text, nullable=True)
-    gap_report       = Column(Text, nullable=True)
-    study_roadmap    = Column(Text, nullable=True)
-    is_linkedin      = Column(Boolean, default=False, nullable=False)
+    skill_inventory          = Column(Text, nullable=True)
+    gap_report               = Column(Text, nullable=True)
+    study_roadmap            = Column(Text, nullable=True)
+    is_linkedin              = Column(Boolean, default=False, nullable=False)
+
+    # AI-generated interview questions (JSON array of strings)
+    ai_interview_questions   = Column(Text, nullable=True)
+
+    # Original filename supplied by the user at upload time
+    original_cv_filename     = Column(String(500), nullable=True)
+
+    # Spec 003 — ATS Score Checker
+    analysis_mode            = Column(String(20), nullable=False, default="job_match", server_default="job_match")
+    ats_score                = Column(Float, nullable=True)        # overall 0-100 ATS score
+    ats_result               = Column(Text, nullable=True)         # full ATS result (JSON)
+    from_stored_cv           = Column(Boolean, nullable=False, default=False, server_default="false")
 
     user             = relationship("User", back_populates="sessions")
     interview_results = relationship("InterviewResult", back_populates="session")
@@ -52,11 +65,42 @@ class CVSession(Base):
         return bool(self.gap_report)
 
     @property
+    def has_ats_result(self) -> bool:
+        return bool(self.ats_result)
+
+    @property
+    def has_interview_questions(self) -> bool:
+        return bool(self.ai_interview_questions)
+
+    @property
     def jd_snippet(self) -> str | None:
         if not self.jd_text:
             return None
         text = self.jd_text.strip()
-        return text[:80] + ('…' if len(text) > 80 else '')
+        lines = [l.strip() for l in text.split('\n')]
+
+        # Scan up to 15 lines for an explicit title label
+        for line in lines[:15]:
+            if not line or len(line) < 4:
+                continue
+            m = re.match(
+                r'(?:job\s+title|position|role|title)\s*[:—\-]\s*(.{3,80})',
+                line, re.IGNORECASE,
+            )
+            if m:
+                return m.group(1).strip()[:80]
+
+        # Fall back to first meaningful line (not a URL, not an all-caps header)
+        for line in lines[:8]:
+            if not line or len(line) < 5:
+                continue
+            if line.startswith('http'):
+                continue
+            if line.upper() == line and len(line) < 35:
+                continue  # skip all-caps section headers like "JOB DESCRIPTION"
+            return line[:80]
+
+        return text[:80]
 
 
 class InterviewResult(Base):
@@ -70,7 +114,7 @@ class InterviewResult(Base):
     relevance_score  = Column(Float, nullable=True)
     depth_score      = Column(Float, nullable=True)
     eye_contact_ratio = Column(Float, nullable=True)
-    created_at       = Column(DateTime, default=datetime.utcnow)
+    created_at       = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     session = relationship("CVSession", back_populates="interview_results")
 
@@ -86,7 +130,7 @@ class OtpCode(Base):
     expires_at    = Column(DateTime, nullable=False)
     attempt_count = Column(Integer, default=0, nullable=False)
     used_at       = Column(DateTime, nullable=True)
-    created_at    = Column(DateTime, default=datetime.utcnow)
+    created_at    = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 
 class UserProfile(Base):
@@ -101,6 +145,6 @@ class UserProfile(Base):
     portfolio_url     = Column(String(500), nullable=True)
     bio               = Column(Text, nullable=True)
     avatar_url        = Column(String(500), nullable=True)
-    updated_at        = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at        = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     user = relationship("User", back_populates="profile")

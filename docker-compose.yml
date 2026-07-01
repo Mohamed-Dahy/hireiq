@@ -1,16 +1,13 @@
-x-logging: &default-logging
-  logging:
-    driver: "json-file"
-    options:
-      max-size: "10m"
-      max-file: "3"
-
 services:
 
   postgres:
     image: postgres:16-alpine
     restart: always
-    <<: *default-logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     env_file:
       - ./Backend/.env
     volumes:
@@ -24,7 +21,11 @@ services:
   adminer:
     image: adminer:latest
     restart: always
-    <<: *default-logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:
@@ -34,7 +35,11 @@ services:
   redis:
     image: redis:7-alpine
     restart: always
-    <<: *default-logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -46,16 +51,29 @@ services:
   chromadb:
     image: chromadb/chroma
     restart: always
-    <<: *default-logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     volumes:
       - chroma_data:/chroma/chroma
+    healthcheck:
+      test: ["CMD", "bash", "-c", "(echo > /dev/tcp/127.0.0.1/8000) 2>/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
       context: ./Backend
       dockerfile: Dockerfile
     restart: always
-    <<: *default-logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     env_file:
       - ./Backend/.env
       - ./Backend/.env.docker
@@ -67,7 +85,7 @@ services:
       redis:
         condition: service_healthy
       chromadb:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
       interval: 10s
@@ -79,7 +97,11 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     restart: always
-    <<: *default-logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "3000:80"
     depends_on:

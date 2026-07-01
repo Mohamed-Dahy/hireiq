@@ -17,19 +17,21 @@ const inputCls = 'w-full border border-zinc-200 dark:border-zinc-700 rounded-lg 
 
 export default function AddEditJobModal({ job, onClose, onSaved }: Props) {
   const [form, setForm] = useState<CreateJobPayload>({
-    company:     job?.company ?? '',
-    title:       job?.title ?? '',
-    location:    job?.location ?? '',
-    remote_type: job?.remote_type ?? '',
-    job_url:     job?.job_url ?? '',
-    jd_text:     '',
-    source:      job?.source ?? '',
-    priority:    job?.priority ?? 'medium',
+    company:       job?.company ?? '',
+    title:         job?.title ?? '',
+    location:      job?.location ?? '',
+    remote_type:   job?.remote_type ?? '',
+    job_url:       job?.job_url ?? '',
+    jd_text:       job?.jd_text ?? '',
+    source:        job?.source ?? '',
+    priority:      job?.priority ?? 'medium',
     deadline_date: job?.deadline_date ?? '',
     followup_date: job?.followup_date ?? '',
-    salary_min:  job?.salary_min ?? undefined,
-    salary_max:  job?.salary_max ?? undefined,
-    notes:       job?.notes ?? '',
+    applied_date:  job?.applied_date ?? '',
+    salary_min:    job?.salary_min ?? undefined,
+    salary_max:    job?.salary_max ?? undefined,
+    notes:         job?.notes ?? '',
+    cover_letter:  job?.cover_letter ?? '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -122,6 +124,10 @@ export default function AddEditJobModal({ job, onClose, onSaved }: Props) {
               <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">Follow-up Date</label>
               <input type="date" value={form.followup_date ?? ''} onChange={e => set('followup_date', e.target.value)} className={inputCls} />
             </div>
+            <div>
+              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">Applied Date</label>
+              <input type="date" value={form.applied_date ?? ''} onChange={e => set('applied_date', e.target.value)} className={inputCls} />
+            </div>
           </div>
 
           <div>
@@ -129,18 +135,27 @@ export default function AddEditJobModal({ job, onClose, onSaved }: Props) {
             <input value={form.job_url ?? ''} onChange={e => set('job_url', e.target.value)} className={inputCls} placeholder="https://..." />
           </div>
 
-          {!job && (
-            <div>
-              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">Job Description</label>
-              <textarea
-                value={form.jd_text ?? ''}
-                onChange={e => set('jd_text', e.target.value)}
-                rows={4}
-                className={inputCls + ' resize-none'}
-                placeholder="Paste the job description to get AI match score and prep questions…"
-              />
-            </div>
-          )}
+          <div>
+            <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">Job Description</label>
+            <textarea
+              value={form.jd_text ?? ''}
+              onChange={e => set('jd_text', e.target.value)}
+              rows={4}
+              className={inputCls + ' resize-none'}
+              placeholder="Paste the job description to get AI match score and prep questions…"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">Cover Letter</label>
+            <textarea
+              value={form.cover_letter ?? ''}
+              onChange={e => set('cover_letter', e.target.value)}
+              rows={4}
+              className={inputCls + ' resize-none'}
+              placeholder="Paste or write your cover letter…"
+            />
+          </div>
 
           <div>
             <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">Notes</label>

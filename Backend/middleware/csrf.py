@@ -10,7 +10,7 @@ X-Requested-With: XMLHttpRequest header on non-safe methods.
 
 Exemptions:
   - Safe methods: GET, HEAD, OPTIONS (no state change)
-  - Public auth paths: login, register, verify-email, etc. (API clients)
+  - Public auth paths: login, register, send-otp, verify-otp, etc. (API clients)
   - /health (monitoring probes)
   - Any path containing /webhook (third-party callbacks cannot set custom headers)
 """
@@ -24,8 +24,8 @@ _SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 _CSRF_EXEMPT_PREFIXES = (
     "/auth/login",
     "/auth/register",
-    "/auth/verify-email",
-    "/auth/resend-verification",
+    "/auth/send-otp",
+    "/auth/verify-otp",
     "/auth/forgot-password",
     "/auth/reset-password",
     "/auth/refresh",

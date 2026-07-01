@@ -3,7 +3,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # System deps: compiler, libpq for psycopg2, curl for healthchecks, libgomp for ML libs
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends --fix-missing \
     gcc g++ libpq-dev curl libglib2.0-0 libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 

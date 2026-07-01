@@ -10,7 +10,7 @@ export const PLANS = [
     period: 'forever',
     color: 'gray',
     features: [
-      '3 CV analyses / month',
+      '2 CV analyses / 10 days',
       'AI skill gap report',
       '5 mock interview questions',
       'Basic score gauge',
@@ -33,7 +33,7 @@ export const PLANS = [
       'PDF export reports',
       'Priority AI processing',
     ],
-    cta: 'Start free trial',
+    cta: 'Get started',
     highlight: true,
   },
   {
@@ -47,10 +47,10 @@ export const PLANS = [
       'Candidate comparison lists',
       'Ranked shortlisting (up to 20)',
       'Recruiter PDF exports',
-      'Team collaboration (soon)',
-      'API access (soon)',
+      'Team collaboration',
+      'API access',
     ],
-    cta: 'Contact sales',
+    cta: 'Get started',
     highlight: false,
   },
 ] as const

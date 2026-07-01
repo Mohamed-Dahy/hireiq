@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { FileText, TrendingUp, Calendar, Upload, ChevronRight, Sparkles, Mic, Map } from 'lucide-react'
+import { FileText, TrendingUp, Calendar, Upload, ChevronRight, Sparkles, Mic, Map, Briefcase } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts'
 import { getMe, getSessions } from '../api'
 import type { UserProfile, CVSession } from '../api'
+import { getSessionLabel } from '../utils/sessionLabel'
 
 interface Props {
   onAnalyze:   () => void
   onHistory:   () => void
   onInterview: () => void
   onRoadmap:   () => void
+  onJobs:      () => void
   onSession:   (id: number) => void
 }
 
@@ -52,31 +54,29 @@ function timeAgo(dateStr: string): string {
 
 interface ChartPayload {
   score: number
-  filename: string
+  label: string
+  date: string
 }
 
 function ChartTooltip({
   active,
   payload,
-  label,
 }: {
   active?: boolean
   payload?: Array<{ payload: ChartPayload }>
-  label?: string
 }) {
   if (!active || !payload?.length) return null
-  const { score, filename } = payload[0].payload
-  const name = filename.length > 34 ? filename.slice(0, 34) + '…' : filename
+  const { score, label, date } = payload[0].payload
   return (
     <div className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-xs shadow-lg min-w-40">
-      <p className="text-zinc-400 font-medium mb-1">{label}</p>
-      <p className="text-zinc-300 mb-1 truncate">{name}</p>
+      <p className="text-zinc-400 font-medium mb-1">{date}</p>
+      <p className="text-zinc-300 mb-1 truncate">{label}</p>
       <p className="text-primary-400 font-semibold">{Math.round(score)}% match</p>
     </div>
   )
 }
 
-export default function Dashboard({ onAnalyze, onHistory, onInterview, onRoadmap, onSession }: Props) {
+export default function Dashboard({ onAnalyze, onHistory, onInterview, onRoadmap, onJobs, onSession }: Props) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [sessions, setSessions] = useState<CVSession[]>([])
   const [loading, setLoading] = useState(true)
@@ -101,7 +101,7 @@ export default function Dashboard({ onAnalyze, onHistory, onInterview, onRoadmap
       idx: i + 1,
       score: s.match_score,
       date: new Date(s.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
-      filename: s.cv_filename,
+      label: getSessionLabel(s),
     }))
 
   if (loading) {
@@ -237,6 +237,16 @@ export default function Dashboard({ onAnalyze, onHistory, onInterview, onRoadmap
             <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Career Roadmap</p>
             <p className="text-xs text-zinc-500 mt-0.5">Personalized learning path</p>
           </button>
+          <button
+            onClick={onJobs}
+            className="w-full text-left bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors rounded-xl p-4 cursor-pointer"
+          >
+            <div className="w-7 h-7 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-3">
+              <Briefcase size={13} strokeWidth={1.5} className="text-zinc-500 dark:text-zinc-400" />
+            </div>
+            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Jobs Pipeline</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Track your applications</p>
+          </button>
         </div>
 
         {/* Recent sessions — driven by getSessions(), not profile.recent_sessions */}
@@ -268,7 +278,7 @@ export default function Dashboard({ onAnalyze, onHistory, onInterview, onRoadmap
                         <FileText size={13} strokeWidth={1.5} className="text-zinc-400" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{s.cv_filename}</p>
+                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{getSessionLabel(s)}</p>
                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                           <p className="text-xs text-zinc-400">{timeAgo(s.created_at)}</p>
                           {s.has_gap_report && (
@@ -337,7 +347,7 @@ export default function Dashboard({ onAnalyze, onHistory, onInterview, onRoadmap
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" vertical={false} opacity={0.4} />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#71717a' }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="idx" tick={{ fontSize: 10, fill: '#71717a' }} axisLine={false} tickLine={false} tickFormatter={(v) => `#${v}`} />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#71717a' }} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} />
                 <Area

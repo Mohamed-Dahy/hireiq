@@ -1,3 +1,4 @@
+import os
 import uuid
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,7 +7,7 @@ from fastapi.security import HTTPBearer
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from routers import cv, auth, analysis, interview, jobs, recruiter, referrals, roadmap, profile, salary, interview_bank, admin
+from routers import cv, auth, analysis, interview, jobs, recruiter, referrals, roadmap, profile, interview_bank, admin
 from limiter import limiter
 from app.config import settings, configure_logging
 from middleware.security_headers import SecurityHeadersMiddleware
@@ -16,10 +17,15 @@ configure_logging()
 
 security = HTTPBearer()
 
+_debug = os.getenv("DEBUG", "false").lower() == "true"
+
 app = FastAPI(
     title="HireIQ API",
     version="1.0.0",
     description="AI-powered CV screener and interview coach",
+    docs_url="/docs" if _debug else None,
+    redoc_url="/redoc" if _debug else None,
+    openapi_url="/openapi.json" if _debug else None,
 )
 
 app.state.limiter = limiter
@@ -35,8 +41,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
 )
 
 
@@ -65,6 +71,5 @@ app.include_router(recruiter.router)
 app.include_router(referrals.router, prefix="/referrals", tags=["referrals"])
 app.include_router(roadmap.router, prefix="/roadmap", tags=["roadmap"])
 app.include_router(profile.router, prefix="/profile", tags=["profile"])
-app.include_router(salary.router, prefix="/salary", tags=["salary"])
 app.include_router(interview_bank.router, prefix="/interview-bank", tags=["interview-bank"])
 app.include_router(admin.router, prefix="/admin", tags=["admin"])

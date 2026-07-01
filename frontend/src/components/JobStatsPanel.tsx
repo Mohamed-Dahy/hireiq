@@ -54,7 +54,7 @@ export default function JobStatsPanel({ stats }: Props) {
                 labelStyle={{ color: '#a1a1aa' }}
                 itemStyle={{ color: '#e4e4e7' }}
               />
-              <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -72,7 +72,7 @@ export default function JobStatsPanel({ stats }: Props) {
                 labelStyle={{ color: '#a1a1aa' }}
                 itemStyle={{ color: '#e4e4e7' }}
               />
-              <Bar dataKey="count" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

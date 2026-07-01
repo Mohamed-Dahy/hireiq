@@ -18,12 +18,17 @@ const KANBAN_COLS = [
   { key: 'offer',        label: 'Offer' },
 ]
 
-export default function Jobs() {
+interface Props {
+  onNavigateToRoadmap?: (sessionId: number) => void
+}
+
+export default function Jobs({ onNavigateToRoadmap }: Props) {
   const [jobs, setJobs] = useState<JobApplication[]>([])
   const [stats, setStats] = useState<JobStatsResponse | null>(null)
   const [view, setView] = useState<ViewMode>('kanban')
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
+  const [filterPriority, setFilterPriority] = useState('')
   const [selectedJob, setSelectedJob] = useState<JobApplication | null>(null)
   const [showAdd, setShowAdd] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -69,7 +74,8 @@ export default function Jobs() {
     const q = search.toLowerCase()
     const matchSearch = !q || j.company.toLowerCase().includes(q) || j.title.toLowerCase().includes(q)
     const matchStatus = !filterStatus || j.status === filterStatus
-    return matchSearch && matchStatus
+    const matchPriority = !filterPriority || j.priority === filterPriority
+    return matchSearch && matchStatus && matchPriority
   })
 
   return (
@@ -117,8 +123,18 @@ export default function Jobs() {
           onChange={e => setFilterStatus(e.target.value)}
           className="border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
         >
-          <option value="">All statuses</option>
+          <option value="">All stages</option>
           {KANBAN_COLS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+        </select>
+        <select
+          value={filterPriority}
+          onChange={e => setFilterPriority(e.target.value)}
+          className="border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+        >
+          <option value="">All priorities</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
         </select>
 
         <div className="flex items-center border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
@@ -192,7 +208,7 @@ export default function Jobs() {
                       <th className="text-left px-4 py-3">Title</th>
                       <th className="text-left px-4 py-3">Status</th>
                       <th className="text-left px-4 py-3">Score</th>
-                      <th className="text-left px-4 py-3">Source</th>
+                      <th className="text-left px-4 py-3">Priority</th>
                       <th className="text-left px-4 py-3">Deadline</th>
                     </tr>
                   </thead>
@@ -213,7 +229,7 @@ export default function Jobs() {
                         <td className="px-4 py-3 text-zinc-500 dark:text-zinc-400 tabular-nums">
                           {job.match_score !== null ? `${Math.round((job.match_score ?? 0) * 100)}%` : '—'}
                         </td>
-                        <td className="px-4 py-3 text-zinc-400">{job.source ?? '—'}</td>
+                        <td className="px-4 py-3 text-zinc-400">{job.priority ?? '—'}</td>
                         <td className="px-4 py-3 text-zinc-400">{job.deadline_date ?? '—'}</td>
                       </tr>
                     ))}
@@ -248,6 +264,7 @@ export default function Jobs() {
           job={selectedJob}
           onClose={() => setSelectedJob(null)}
           onUpdated={handleUpdated}
+          onNavigateToRoadmap={onNavigateToRoadmap}
         />
       )}
     </div>

@@ -1,29 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Eye, EyeOff, Layers, Loader2, CheckCircle, BrainCircuit, Target, TrendingUp } from 'lucide-react'
-import {
-  login,
-  register,
-  verifyEmail,
-  resendVerification,
-  forgotPassword,
-  resetPassword,
-} from '../api'
+import { login, register, forgotPassword } from '../api'
 
-type AuthMode =
-  | 'login'
-  | 'register'
-  | 'verification-pending'
-  | 'forgot-password'
-  | 'forgot-sent'
-  | 'verify-email'
-  | 'reset-password'
+type AuthMode = 'login' | 'register' | 'forgot-password'
 
 interface Props {
   onAuth: () => void
   onBack?: () => void
   defaultMode?: AuthMode
-  urlToken?: string
   onNeedVerifyOtp?: (email: string, purpose: string) => void
 }
 
@@ -33,30 +18,15 @@ const FEATURES = [
   { icon: TrendingUp,   text: 'Track your readiness and progress' },
 ]
 
-export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken, onNeedVerifyOtp }: Props) {
+export default function Auth({ onAuth, onBack, defaultMode = 'login', onNeedVerifyOtp }: Props) {
   const [mode, setMode] = useState<AuthMode>(defaultMode)
   const [email, setEmail] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-
-  useEffect(() => {
-    if (mode === 'verify-email' && urlToken) {
-      setLoading(true)
-      verifyEmail(urlToken)
-        .then(() => { setInfo('Email verified! You can now log in.'); setMode('login') })
-        .catch((err: any) => {
-          const detail = err.response?.data?.detail
-          setError(detail || 'Verification failed. The link may have expired.')
-          setMode('login')
-        })
-        .finally(() => setLoading(false))
-    }
-  }, [])
 
   const handleErr = (err: any) => {
     const detail = err.response?.data?.detail
@@ -84,15 +54,11 @@ export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken, 
         await forgotPassword(trimEmail)
         onNeedVerifyOtp?.(trimEmail, 'password_reset')
         return
-      } else if (mode === 'reset-password' && urlToken) {
-        await resetPassword(urlToken, newPassword)
-        setInfo('Password reset successfully. You can now log in.')
-        setMode('login')
       }
     } catch (err: any) {
       const status = err.response?.status
       if (status === 403 && mode === 'login') {
-        setError(err.response.data?.detail || 'Your email is not verified. Please check your inbox.')
+        setError('Your email is not verified.')
       } else if (status === 423) {
         const detail: string = err.response?.data?.detail ?? ''
         const match = detail.match(/until (.+)$/)
@@ -113,78 +79,22 @@ export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken, 
     }
   }
 
-  const handleResend = async () => {
-    if (!email) { setError('Enter your email first'); return }
-    setError('')
-    setLoading(true)
-    try {
-      await resendVerification(email)
-      setInfo('Verification email sent. Check your inbox.')
-    } catch {
-      setInfo('Verification email sent. Check your inbox.')
-    } finally {
-      setLoading(false)
-    }
+  const handleGoToVerify = () => {
+    if (!email.trim()) { setError('Enter your email first'); return }
+    onNeedVerifyOtp?.(email.trim(), 'registration')
   }
 
   const inputCls = 'w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 px-4 py-3 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent focus:bg-white dark:focus:bg-zinc-800 transition-all'
 
-  // ── Confirmation screens ────────────────────────────────────────────────────
-  if (mode === 'verification-pending' || mode === 'forgot-sent') {
-    const isVerify = mode === 'verification-pending'
-    return (
-      <div className="min-h-screen bg-linear-to-br from-zinc-50 via-white to-primary-50/40 dark:from-zinc-950 dark:via-zinc-900 dark:to-primary-950/20 flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.97, y: 12 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
-          className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xl shadow-zinc-200/60 dark:shadow-zinc-950/60 w-full max-w-md p-10 text-center"
-        >
-          <div className="w-14 h-14 rounded-2xl bg-primary-50 dark:bg-primary-950/50 border border-primary-100 dark:border-primary-900 flex items-center justify-center mx-auto mb-5">
-            <CheckCircle size={26} strokeWidth={1.5} className="text-primary-500" />
-          </div>
-          <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2">Check your inbox</h2>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6 leading-relaxed">
-            {isVerify
-              ? <>Verification link sent to <span className="font-medium text-zinc-800 dark:text-zinc-200">{email}</span>. Click it to activate your account.</>
-              : <>If <span className="font-medium text-zinc-800 dark:text-zinc-200">{email}</span> is registered, a reset link is on its way (valid 60 min).</>
-            }
-          </p>
-          {isVerify && (
-            <button onClick={handleResend} disabled={loading} className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-500 disabled:opacity-50 mb-6 block mx-auto transition-colors cursor-pointer font-medium">
-              Didn't receive it? Resend
-            </button>
-          )}
-          {info && <p className="text-xs text-green-600 dark:text-green-400 mb-4">{info}</p>}
-          <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 flex flex-col gap-2">
-            <button
-              onClick={() => { setMode('login'); setError(''); setInfo('') }}
-              className="text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors cursor-pointer"
-            >
-              ← Back to sign in
-            </button>
-            {onBack && (
-              <button onClick={onBack} className="text-sm text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors cursor-pointer">
-                ← Back to home
-              </button>
-            )}
-          </div>
-        </motion.div>
-      </div>
-    )
-  }
-
   const title =
     mode === 'login'           ? 'Welcome back' :
     mode === 'register'        ? 'Create your account' :
-    mode === 'forgot-password' ? 'Reset your password' :
-    'Set new password'
+    'Reset your password'
 
   const subtitle =
     mode === 'login'           ? 'Sign in to continue your interview prep.' :
     mode === 'register'        ? 'Start your AI-powered job interview coaching.' :
-    mode === 'forgot-password' ? "Enter your email and we'll send a reset link." :
-    'Enter your new password below.'
+    "Enter your email and we'll send you a verification code."
 
   const showTabs = mode === 'login' || mode === 'register'
 
@@ -192,13 +102,11 @@ export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken, 
     <div className="min-h-screen flex">
       {/* ── Left brand panel (lg+) ── */}
       <div className="hidden lg:flex lg:w-[45%] xl:w-2/5 bg-linear-to-br from-primary-600 via-primary-700 to-primary-900 flex-col items-center justify-center p-12 relative overflow-hidden">
-        {/* Decorative circles */}
         <div className="absolute -top-20 -left-20 w-72 h-72 rounded-full bg-white/5" />
         <div className="absolute -bottom-16 -right-16 w-64 h-64 rounded-full bg-white/5" />
         <div className="absolute top-1/2 -right-8 w-40 h-40 rounded-full bg-white/5" />
 
         <div className="relative z-10 max-w-xs">
-          {/* Logo */}
           <div className="flex items-center gap-3 mb-10">
             <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
               <Layers size={20} strokeWidth={1.5} className="text-white" />
@@ -228,7 +136,6 @@ export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken, 
 
       {/* ── Right form panel ── */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-white dark:bg-zinc-950">
-        {/* Mobile-only logo */}
         <div className="lg:hidden flex flex-col items-center mb-8">
           <div className="flex items-center gap-2 mb-1">
             <Layers size={18} strokeWidth={1.5} className="text-primary-500" />
@@ -264,7 +171,6 @@ export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken, 
             </motion.p>
           </div>
 
-          {/* Animated underline tabs */}
           {showTabs && (
             <div className="flex mb-7 border-b border-zinc-200 dark:border-zinc-800">
               {(['login', 'register'] as const).map((m) => (
@@ -302,15 +208,13 @@ export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken, 
           )}
 
           <form onSubmit={submit} className="space-y-4">
-            {mode !== 'reset-password' && (
-              <div>
-                <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5 uppercase tracking-wide">Email</label>
-                <input
-                  type="email" placeholder="you@example.com" required value={email}
-                  onChange={(e) => setEmail(e.target.value)} className={inputCls}
-                />
-              </div>
-            )}
+            <div>
+              <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5 uppercase tracking-wide">Email</label>
+              <input
+                type="email" placeholder="you@example.com" required value={email}
+                onChange={(e) => setEmail(e.target.value)} className={inputCls}
+              />
+            </div>
 
             {mode === 'register' && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.2 }}>
@@ -351,33 +255,14 @@ export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken, 
               </div>
             )}
 
-            {mode === 'reset-password' && (
-              <div>
-                <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5 uppercase tracking-wide">New password</label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'} placeholder="Min 6 characters"
-                    required value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className={inputCls + ' pr-11'}
-                  />
-                  <button type="button" tabIndex={-1} onClick={() => setShowPassword(v => !v)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors cursor-pointer"
-                    aria-label={showPassword ? 'Hide' : 'Show'}>
-                    {showPassword ? <EyeOff size={15} strokeWidth={1.5} /> : <Eye size={15} strokeWidth={1.5} />}
-                  </button>
-                </div>
-              </div>
-            )}
-
             {error && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 className="text-red-600 dark:text-red-400 text-xs bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 px-3 py-2.5 rounded-xl">
                 <p>{error}</p>
                 {mode === 'login' && error.toLowerCase().includes('verif') && (
-                  <button type="button" onClick={handleResend} disabled={loading}
+                  <button type="button" onClick={handleGoToVerify} disabled={loading}
                     className="mt-1.5 underline text-primary-500 hover:text-primary-400 disabled:opacity-50 cursor-pointer">
-                    Resend verification email
+                    Verify your email →
                   </button>
                 )}
               </motion.div>
@@ -391,12 +276,11 @@ export default function Auth({ onAuth, onBack, defaultMode = 'login', urlToken, 
                 <><Loader2 size={14} strokeWidth={2} className="animate-spin" /> Please wait…</>
               ) : mode === 'login' ? 'Sign in to HireIQ'
                 : mode === 'register' ? 'Create account'
-                : mode === 'forgot-password' ? 'Send reset link'
-                : 'Set new password'}
+                : 'Send reset code'}
             </button>
           </form>
 
-          {(mode === 'forgot-password' || mode === 'reset-password') && (
+          {mode === 'forgot-password' && (
             <button
               onClick={() => { setMode('login'); setError(''); setInfo('') }}
               className="mt-5 w-full text-center text-sm text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors cursor-pointer">

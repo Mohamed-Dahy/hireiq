@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from models.user import Base
 
@@ -11,4 +11,4 @@ class CareerRoadmap(Base):
     cv_session_id = Column(Integer, ForeignKey("cv_sessions.id"), nullable=True)
     target_role   = Column(String, nullable=False)
     roadmap_data  = Column(Text, nullable=False)
-    created_at    = Column(DateTime, default=datetime.utcnow)
+    created_at    = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

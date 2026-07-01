@@ -56,8 +56,7 @@ api.interceptors.response.use(
 
     // Skip refresh for auth endpoints — their 401s are credential errors, not expired tokens
     const AUTH_NO_REFRESH = [
-      '/auth/login', '/auth/register', '/auth/verify-email',
-      '/auth/resend-verification', '/auth/forgot-password',
+      '/auth/login', '/auth/register', '/auth/forgot-password',
       '/auth/reset-password', '/auth/refresh',
     ]
     const isAuthEndpoint = AUTH_NO_REFRESH.some(ep => original.url?.includes(ep))
@@ -159,12 +158,49 @@ export interface UserProfile {
   window_resets_at: string | null
 }
 
+export type AnalysisMode = 'job_match' | 'ats_check'
+
 export interface CVUploadResponse {
   session_id: number
   cv_filename: string
-  match_score: number
+  match_score: number | null
   skills_found: string[]
   is_linkedin?: boolean
+  analysis_mode?: AnalysisMode
+  ats_score?: number | null
+}
+
+// ── Spec 003: ATS Score Checker ───────────────────────────────────────────
+
+export interface AtsCategory {
+  key: string
+  label: string
+  score: number          // 0-1 sub-score
+  weight: number
+  ai_dependent: boolean
+  confidence: 'high' | 'medium' | 'best_effort'
+}
+
+export interface AtsIssue {
+  category: string
+  severity: 'high' | 'medium' | 'low'
+  message: string
+  recommendation: string
+}
+
+export interface AtsKeywordCoverage {
+  matched: string[]
+  missing: string[]
+  available: boolean
+}
+
+export interface AtsResult {
+  session_id: number
+  overall_score: number
+  ai_sections_available: boolean
+  categories: AtsCategory[]
+  issues: AtsIssue[]
+  keyword_coverage: AtsKeywordCoverage | null
 }
 
 export interface SkillItem {
@@ -203,9 +239,11 @@ export interface StructuredAnalysis {
 export interface CVSession {
   id: number
   cv_filename: string
+  original_cv_filename: string | null
   match_score: number | null
   created_at: string
   has_gap_report: boolean
+  has_interview_questions: boolean
   jd_snippet: string | null
 }
 
@@ -222,6 +260,7 @@ export interface InterviewResult {
 
 export interface CVSessionDetail extends CVSession {
   interview_results: InterviewResult[]
+  ai_interview_questions: string[]
 }
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
@@ -235,17 +274,8 @@ export const login = (email: string, password: string) =>
 export const logout = (refreshToken?: string) =>
   api.post<MessageResponse>('/auth/logout', refreshToken ? { refresh_token: refreshToken } : {})
 
-export const verifyEmail = (token: string) =>
-  api.post<MessageResponse>('/auth/verify-email', { token })
-
-export const resendVerification = (email: string) =>
-  api.post<MessageResponse>('/auth/resend-verification', { email })
-
 export const forgotPassword = (email: string) =>
   api.post<MessageResponse>('/auth/forgot-password', { email })
-
-export const resetPassword = (token: string, newPassword: string) =>
-  api.post<MessageResponse>('/auth/reset-password', { token, new_password: newPassword })
 
 export const getMe = () =>
   api.get<UserProfile>('/auth/me')
@@ -255,14 +285,24 @@ export const deleteAccount = () =>
 
 // ── CV ───────────────────────────────────────────────────────────────────────
 
-export const uploadCV = (file: File, jdText: string) => {
+export const uploadCV = (file: File, jdText?: string, analysisMode: AnalysisMode = 'job_match') => {
   const form = new FormData()
   form.append('cv_file', file)
-  form.append('jd_text', jdText)
+  if (jdText && jdText.trim()) form.append('jd_text', jdText)
+  form.append('analysis_mode', analysisMode)
   return api.post<CVUploadResponse>('/cv/upload', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 }
+
+export const useStoredCv = (jdText?: string, analysisMode: AnalysisMode = 'job_match') =>
+  api.post<CVUploadResponse>('/cv/use-stored', {
+    jd_text: jdText && jdText.trim() ? jdText : null,
+    analysis_mode: analysisMode,
+  })
+
+export const getAtsResult = (sessionId: number) =>
+  api.get<AtsResult>(`/cv/${sessionId}/ats`)
 
 export const getScore = (sessionId: number) =>
   api.get<{ session_id: number; match_score: number }>(`/cv/${sessionId}/score`)
@@ -283,6 +323,9 @@ export const startAnalysisStream = (sessionId: number): EventSource =>
 
 export const getEnhancedAnalysis = (sessionId: number) =>
   api.get<StructuredAnalysis>(`/cv/${sessionId}/analysis`)
+
+export const saveInterviewQuestions = (sessionId: number, questions: string[]) =>
+  api.patch<{ saved: number }>(`/cv/${sessionId}/save-questions`, { questions })
 
 // ── Phase 6: ATS Job Tracker ─────────────────────────────────────────────────
 
@@ -370,9 +413,11 @@ export interface CreateJobPayload {
   priority?: string
   deadline_date?: string
   followup_date?: string
+  applied_date?: string
   salary_min?: number
   salary_max?: number
   notes?: string
+  cover_letter?: string
 }
 
 export const getJobs = (filters?: JobFilters) =>
@@ -441,9 +486,19 @@ export interface RecruiterList {
 
 export interface RecruiterCandidate {
   id: number
-  session_id: number
+  session_id: number | null
   rank: number | null
-  cv_filename: string
+  status: string
+  notes: string | null
+  starred: boolean
+  candidate_name: string | null
+  candidate_email: string | null
+  candidate_phone: string | null
+  applied_position: string | null
+  cv_file_path: string | null
+  display_name: string
+  cv_filename: string | null
+  jd_snippet: string | null
   match_score: number | null
   skill_inventory: unknown
   created_at: string
@@ -467,14 +522,41 @@ export const deleteRecruiterList = (listId: number) =>
 export const getRecruiterCandidates = (listId: number) =>
   api.get<RecruiterCandidateListResponse>(`/recruiter/lists/${listId}/candidates`)
 
-export const addRecruiterCandidate = (listId: number, sessionId: number) =>
-  api.post<RecruiterCandidate>(`/recruiter/lists/${listId}/candidates`, { session_id: sessionId })
+export const addRecruiterCandidate = (
+  listId: number,
+  data: { candidate_name: string; candidate_email?: string; candidate_phone?: string; applied_position?: string; cv_file?: File | null },
+) => {
+  const form = new FormData()
+  form.append('candidate_name', data.candidate_name)
+  if (data.candidate_email) form.append('candidate_email', data.candidate_email)
+  if (data.candidate_phone) form.append('candidate_phone', data.candidate_phone)
+  if (data.applied_position) form.append('applied_position', data.applied_position)
+  if (data.cv_file) form.append('cv_file', data.cv_file)
+  return api.post<RecruiterCandidate>(`/recruiter/lists/${listId}/candidates`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
 
 export const removeRecruiterCandidate = (listId: number, candidateId: number) =>
   api.delete(`/recruiter/lists/${listId}/candidates/${candidateId}`)
 
 export const updateCandidateRank = (listId: number, candidateId: number, rank: number) =>
   api.patch<RecruiterCandidate>(`/recruiter/lists/${listId}/candidates/${candidateId}`, { rank })
+
+export const updateCandidate = (
+  listId: number,
+  candidateId: number,
+  patch: {
+    rank?: number
+    status?: string
+    notes?: string | null
+    starred?: boolean
+    candidate_name?: string
+    candidate_email?: string | null
+    candidate_phone?: string | null
+    applied_position?: string | null
+  },
+) => api.patch<RecruiterCandidate>(`/recruiter/lists/${listId}/candidates/${candidateId}`, patch)
 
 export const exportRecruiterList = (listId: number) =>
   api.get<ArrayBuffer>(`/recruiter/lists/${listId}/export`, { responseType: 'arraybuffer' })
@@ -659,3 +741,167 @@ export const markQuestionPracticed = (questionId: number, practiced: boolean) =>
 
 export const getInterviewProgress = (role: string, level: string) =>
   api.get<BankProgressResponse>('/interview-bank/progress', { params: { role, level } })
+
+// ── Phase 10: Admin BI Dashboard ─────────────────────────────────────────────
+// Admin uses a separate axios instance — reads from sessionStorage, never localStorage.
+// This avoids polluting or being polluted by the user auth interceptor.
+
+const adminApi = axios.create({
+  baseURL: '/',
+  headers: { 'X-Requested-With': 'XMLHttpRequest' },
+})
+
+adminApi.interceptors.request.use((config) => {
+  const token = sessionStorage.getItem('admin_token')
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+export interface AdminUserItem {
+  id: number
+  email: string
+  username: string
+  tier: string
+  is_admin: boolean
+  email_verified: boolean
+  created_at: string | null
+  session_count: number
+  locked_until: string | null
+}
+
+export interface AdminTrendPoint {
+  date: string
+  count: number
+}
+
+export interface AdminMetrics {
+  users: {
+    total: number
+    new_this_week: number
+    new_this_month: number
+    free: number
+    paid: number
+    admins: number
+    tier_distribution: { tier: string; count: number }[]
+    signup_trend: AdminTrendPoint[]
+  }
+  cv_sessions: {
+    total: number
+    this_week: number
+    avg_match_score: number | null
+    trend: AdminTrendPoint[]
+  }
+  interviews: { total: number }
+  jobs: { total: number; active: number; by_status: Record<string, number> }
+  roadmaps: { total: number; this_week: number }
+  referrals: { total: number; converted: number; conversion_rate: number }
+  interview_bank: { total_questions: number }
+}
+
+export interface AdminQuestion {
+  id: number
+  role: string
+  level: string
+  category: string
+  question_text: string
+}
+
+export interface AdminHealthResponse {
+  uptime_seconds: number
+  python_version: string
+  os: string
+  services: { postgres: { ok: boolean }; redis: { ok: boolean }; chromadb: { ok: boolean } }
+  cpu_percent: number
+  memory: { total_mb: number; used_mb: number; percent: number }
+}
+
+export interface AdminUserUsage {
+  user_id: number
+  email: string
+  username: string
+  tier: string
+  cv_sessions: number
+  avg_cv_score: number | null
+  interviews: number
+  job_applications: number
+  roadmaps: number
+  last_active: string | null
+  joined: string | null
+}
+
+export const adminLogin = (email: string, password: string) =>
+  adminApi.post<{ access_token: string; token_type: string }>('/admin/login', { email, password })
+
+export interface AdminUserFilters {
+  tier?: string
+  status?: string
+  joined_from?: string
+  joined_to?: string
+  skip?: number
+  limit?: number
+}
+
+export const getAdminMetrics = () =>
+  adminApi.get<AdminMetrics & { billing: { mrr_estimate_usd: number; pro_users: number; enterprise_users: number }; dau: number }>('/admin/metrics')
+
+export const getAdminUsers = (filters: AdminUserFilters = {}) =>
+  adminApi.get<{ total: number; users: AdminUserItem[] }>('/admin/users', { params: filters })
+
+export const setUserTier = (userId: number, tier: string) =>
+  adminApi.patch(`/admin/users/${userId}/tier`, null, { params: { tier } })
+
+export const unlockUser = (userId: number) =>
+  adminApi.patch(`/admin/users/${userId}/unlock`)
+
+export const verifyUserEmail = (userId: number) =>
+  adminApi.patch(`/admin/users/${userId}/verify`)
+
+export const adminDeleteUser = (userId: number) =>
+  adminApi.delete(`/admin/users/${userId}`)
+
+export const getAdminUserUsage = (userId: number) =>
+  adminApi.get<AdminUserUsage>(`/admin/usage/${userId}`)
+
+export const getAdminQuestions = (skip = 0, limit = 50) =>
+  adminApi.get<{ total: number; questions: AdminQuestion[] }>('/admin/content/questions', { params: { skip, limit } })
+
+export const adminDeleteQuestion = (questionId: number) =>
+  adminApi.delete(`/admin/content/questions/${questionId}`)
+
+export const getAdminHealth = () =>
+  adminApi.get<AdminHealthResponse>('/admin/health')
+
+// ── Phase 12: Token Management ────────────────────────────────────────────────
+
+export interface AdminTokenSummary {
+  tokens_today: number
+  analyses_today: number
+  active_users_by_tier: Record<string, number>
+  est_monthly_cost_usd: number
+  provider: string
+  model: string
+  price_per_1k_tokens: number
+  date: string
+}
+
+export interface AdminTokenUserRow {
+  user_id: number
+  email: string | null
+  username: string | null
+  tier: string
+  tokens_used: number
+  operations: number
+}
+
+export interface AdminTokenUserBreakdown {
+  users: AdminTokenUserRow[]
+  date: string
+}
+
+export const getAdminTokenSummary = () =>
+  adminApi.get<AdminTokenSummary>('/admin/tokens/summary')
+
+export const getAdminUserBreakdown = (forDate?: string, limit = 50) =>
+  adminApi.get<AdminTokenUserBreakdown>('/admin/tokens/users', {
+    params: { for_date: forDate, limit },
+  })

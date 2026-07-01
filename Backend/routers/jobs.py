@@ -21,7 +21,7 @@ GET    /jobs/{id}/prep              — interview prep questions
 
 import json
 import os
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -76,7 +76,7 @@ def create_job(
 ):
     job = JobApplication(
         user_id=current_user.id,
-        stage_entered_at=datetime.utcnow(),
+        stage_entered_at=datetime.now(timezone.utc).replace(tzinfo=None),
         **payload.model_dump(exclude_none=False),
     )
     db.add(job)
@@ -179,7 +179,7 @@ def update_job(
     job = _get_job_or_404(db, job_id, current_user.id)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(job, field, value)
-    job.updated_at = datetime.utcnow()
+    job.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     db.refresh(job)
     return job
@@ -193,7 +193,7 @@ def archive_job(
 ):
     job = _get_job_or_404(db, job_id, current_user.id)
     job.is_archived = True
-    job.updated_at = datetime.utcnow()
+    job.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     db.refresh(job)
     return job
@@ -214,8 +214,8 @@ def transition_status(
     validate_status_transition(job.status, payload.new_status)
 
     job.status = payload.new_status
-    job.stage_entered_at = datetime.utcnow()
-    job.updated_at = datetime.utcnow()
+    job.stage_entered_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    job.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     activity = ApplicationActivity(
         job_application_id=job.id,
@@ -370,7 +370,7 @@ def analyze_job(
     job.ai_prep_questions = json.dumps(result.get("questions", []))
     if payload.jd_text:
         job.jd_text = payload.jd_text
-    job.updated_at = datetime.utcnow()
+    job.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     db.refresh(job)
 

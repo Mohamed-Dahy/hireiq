@@ -23,9 +23,10 @@ const Recruiter = lazy(() => import('./pages/Recruiter'))
 const Referrals = lazy(() => import('./pages/Referrals'))
 const CareerRoadmap = lazy(() => import('./pages/CareerRoadmap'))
 const Bank = lazy(() => import('./pages/Bank'))
+const Admin = lazy(() => import('./pages/Admin'))
 
 type Page = 'home' | 'upload' | 'results' | 'history' | 'detail' | 'interview' | 'profile' | 'jobs' | 'recruiter' | 'referrals' | 'roadmap' | 'bank'
-type View = 'landing' | 'auth' | 'app' | 'verify-otp'
+type View = 'landing' | 'auth' | 'app' | 'verify-otp' | 'admin'
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -33,12 +34,9 @@ const PageLoader = () => (
   </div>
 )
 
-function getInitialViewAndMode(): { view: View; authMode: 'register' | 'login' | 'verify-email' | 'reset-password'; urlToken?: string } {
+function getInitialViewAndMode(): { view: View; authMode: 'register' | 'login' } {
   const path = window.location.pathname
-  const params = new URLSearchParams(window.location.search)
-  const token = params.get('token') ?? undefined
-  if (path === '/verify-email' && token) return { view: 'auth', authMode: 'verify-email', urlToken: token }
-  if (path === '/reset-password' && token) return { view: 'auth', authMode: 'reset-password', urlToken: token }
+  if (path.startsWith('/admin')) return { view: 'admin', authMode: 'login' }
   if (path === '/verify-otp') return { view: 'verify-otp', authMode: 'register' }
   if (path === '/auth') return { view: 'auth', authMode: 'login' }
   if (path === '/referrals' && localStorage.getItem('access_token')) return { view: 'app', authMode: 'login' }
@@ -69,8 +67,7 @@ export default function App() {
   const toast = useToast()
   const _init = getInitialViewAndMode()
   const [view, setView] = useState<View>(_init.view)
-  const [authMode, setAuthMode] = useState<'register' | 'login' | 'verify-email' | 'reset-password'>(_init.authMode)
-  const [urlToken] = useState<string | undefined>(_init.urlToken)
+  const [authMode, setAuthMode] = useState<'register' | 'login'>(_init.authMode)
   const [page, setPage] = useState<Page>('home')
   const [result, setResult] = useState<CVUploadResponse | null>(null)
   const [interviewQuestions, setInterviewQuestions] = useState<string[]>([])
@@ -169,9 +166,10 @@ export default function App() {
 
   const openDetail = (sessionId: number) => { setDetailSessionId(sessionId); setPage('detail') }
 
+  if (view === 'admin') return <Suspense fallback={<PageLoader />}><Admin /></Suspense>
   if (view === 'verify-otp') return <VerifyOtp email={otpEmail} purpose={otpPurpose} onSuccess={handleOtpSuccess} onBack={() => setView('auth')} />
   if (view === 'landing') return <Landing onGetStarted={() => goToAuth('register')} onLogin={() => goToAuth('login')} dark={dark} onToggleDark={() => setDark(d => !d)} />
-  if (view === 'auth') return <Auth defaultMode={authMode as any} urlToken={urlToken} onAuth={onAuth} onNeedVerifyOtp={goToVerifyOtp} onBack={authMode === 'login' || authMode === 'register' ? () => setView('landing') : undefined} />
+  if (view === 'auth') return <Auth defaultMode={authMode} onAuth={onAuth} onNeedVerifyOtp={goToVerifyOtp} onBack={() => setView('landing')} />
 
   const activeNav = (id: Page) =>
     page === id || (page === 'detail' && id === 'history') || (page === 'results' && id === 'upload')
@@ -221,7 +219,7 @@ export default function App() {
 
           {/* Analyze CV — primary action */}
           <button
-            onClick={() => setPage('upload')}
+            onClick={() => result ? setPage('results') : setPage('upload')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg font-medium transition-colors cursor-pointer ${
               activeNav('upload')
                 ? 'bg-primary-600 text-white shadow-sm'
@@ -364,7 +362,7 @@ export default function App() {
             <motion.div
               initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
               transition={{ duration: 0.22, ease: [0, 0, 0.2, 1] }}
-              className="fixed top-0 right-0 bottom-0 w-72 bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 z-[60] flex flex-col md:hidden overflow-y-auto"
+              className="fixed top-0 right-0 bottom-0 w-72 bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 z-60 flex flex-col md:hidden overflow-y-auto"
             >
               <div className="flex items-center justify-between px-4 h-12 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
                 <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Menu</span>
@@ -384,7 +382,7 @@ export default function App() {
                 </button>
                 {/* Analyze CV */}
                 <button
-                  onClick={() => goToPage('upload')}
+                  onClick={() => { setMobileOpen(false); result ? setPage('results') : setPage('upload') }}
                   className={`flex items-center gap-2 text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                     activeNav('upload') ? 'bg-primary-600 text-white' : 'bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/40'
                   }`}
@@ -459,21 +457,27 @@ export default function App() {
         {page === 'home' && (
           <motion.div key="home" variants={pageVariants} initial="initial" animate="animate" exit="exit">
             <Suspense fallback={<PageLoader />}>
-              <Dashboard onAnalyze={() => setPage('upload')} onHistory={() => setPage('history')} onInterview={() => setPage('interview')} onSession={openDetail} onRoadmap={() => setPage('roadmap')} />
+              <Dashboard onAnalyze={() => setPage('upload')} onHistory={() => setPage('history')} onInterview={() => setPage('interview')} onSession={openDetail} onRoadmap={() => setPage('roadmap')} onJobs={() => setPage('jobs')} />
             </Suspense>
           </motion.div>
         )}
         {page === 'upload' && (
           <motion.div key="upload" variants={pageVariants} initial="initial" animate="animate" exit="exit">
             <Suspense fallback={<PageLoader />}>
-              <Upload onDone={(r) => { setResult(r); setPage('results') }} />
+              <Upload onDone={(r) => { setResult(r); setPage('results') }} onViewLastSession={result ? () => setPage('results') : undefined} />
             </Suspense>
           </motion.div>
         )}
         {page === 'results' && result && (
           <motion.div key="results" variants={pageVariants} initial="initial" animate="animate" exit="exit">
             <Suspense fallback={<PageLoader />}>
-              <Results result={result} onBack={() => setPage('upload')} onPractice={(qs) => goToPractice(qs, result.session_id)} onRoadmap={(sid) => { setRoadmapSessionId(sid); setPage('roadmap') }} />
+              <Results
+                result={result}
+                onBack={() => { setResult(null); setPage('upload') }}
+                onDiscard={() => { setResult(null); setPage('upload') }}
+                onPractice={(qs) => goToPractice(qs, result.session_id)}
+                onRoadmap={(sid) => { setRoadmapSessionId(sid); setPage('roadmap') }}
+              />
             </Suspense>
           </motion.div>
         )}
@@ -507,7 +511,7 @@ export default function App() {
         {page === 'jobs' && (
           <motion.div key="jobs" variants={pageVariants} initial="initial" animate="animate" exit="exit">
             <Suspense fallback={<PageLoader />}>
-              <Jobs />
+              <Jobs onNavigateToRoadmap={(sid) => { setRoadmapSessionId(sid); setPage('roadmap') }} />
             </Suspense>
           </motion.div>
         )}
@@ -535,7 +539,7 @@ export default function App() {
         {page === 'profile' && (
           <motion.div key="profile" variants={pageVariants} initial="initial" animate="animate" exit="exit">
             <Suspense fallback={<PageLoader />}>
-              <Profile onBack={() => setPage('home')} onLogout={logout} />
+              <Profile onBack={() => setPage('home')} onLogout={logout} onReferrals={() => setPage('referrals')} />
             </Suspense>
           </motion.div>
         )}

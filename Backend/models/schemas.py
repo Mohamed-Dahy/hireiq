@@ -5,6 +5,7 @@ Pydantic models that define what the API accepts (requests)
 and what it returns (responses). No raw dicts ever leave the API.
 """
 
+import json
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator, model_validator
 from typing import Any, Optional
 from datetime import date, datetime
@@ -76,9 +77,11 @@ class ResetPasswordRequest(BaseModel):
 class CVUploadResponse(BaseModel):
     session_id: int
     cv_filename: str
-    match_score: float
+    match_score: Optional[float] = None        # null for ATS Check with no JD
     skills_found: list[str]
     is_linkedin: bool = False
+    analysis_mode: str = "job_match"           # "job_match" | "ats_check"
+    ats_score: Optional[float] = None          # overall 0-100 ATS score (ats_check only)
     message: str = "CV processed successfully"
 
 
@@ -123,6 +126,41 @@ class AnalysisPendingResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Spec 003: ATS Score Checker response schemas
+# ---------------------------------------------------------------------------
+
+class AtsCategory(BaseModel):
+    key: str
+    label: str
+    score: float            # 0-1 sub-score
+    weight: float
+    ai_dependent: bool = False
+    confidence: str = "high"  # high | medium | best_effort
+
+
+class AtsIssue(BaseModel):
+    category: str
+    severity: str           # high | medium | low
+    message: str
+    recommendation: str
+
+
+class AtsKeywordCoverage(BaseModel):
+    matched: list[str] = []
+    missing: list[str] = []
+    available: bool = True
+
+
+class AtsResultResponse(BaseModel):
+    session_id: int
+    overall_score: float
+    ai_sections_available: bool = True
+    categories: list[AtsCategory] = []
+    issues: list[AtsIssue] = []
+    keyword_coverage: Optional[AtsKeywordCoverage] = None
+
+
+# ---------------------------------------------------------------------------
 # CV session (used when returning history)
 # ---------------------------------------------------------------------------
 
@@ -131,10 +169,15 @@ class CVSessionResponse(BaseModel):
 
     id: int
     cv_filename: str
+    original_cv_filename: Optional[str] = None
     match_score: Optional[float]
     created_at: datetime
     has_gap_report: bool
     jd_snippet: Optional[str]
+    has_interview_questions: bool = False
+    analysis_mode: str = "job_match"
+    ats_score: Optional[float] = None
+    has_ats_result: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -169,9 +212,26 @@ class CVSessionDetailResponse(BaseModel):
 
     id: int
     cv_filename: str
+    original_cv_filename: Optional[str] = None
     match_score: Optional[float]
     created_at: datetime
     interview_results: list[InterviewResultResponse]
+    ai_interview_questions: list[str] = []
+
+    @field_validator("ai_interview_questions", mode="before")
+    @classmethod
+    def parse_questions_json(cls, v: Any) -> list[str]:
+        if isinstance(v, str):
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return [str(q) for q in parsed]
+            except (json.JSONDecodeError, TypeError):
+                pass
+            return []
+        if isinstance(v, list):
+            return v
+        return []
 
 
 # ---------------------------------------------------------------------------
@@ -180,6 +240,10 @@ class CVSessionDetailResponse(BaseModel):
 
 class AnalysisRequest(BaseModel):
     session_id: int
+
+
+class SaveQuestionsRequest(BaseModel):
+    questions: list[str]
 
 
 # The response for analysis is streamed via SSE, not a single JSON blob,
@@ -293,28 +357,6 @@ class ChangePasswordRequest(BaseModel):
             raise ValueError("Password must be at least 6 characters")
         return v
 
-
-class SalaryQueryResponse(BaseModel):
-    role: str
-    level: str
-    country: str
-    currency: str
-    min_salary: int
-    median_salary: int
-    max_salary: int
-    usd_min: int
-    usd_max: int
-    confidence: str
-    last_updated_at: datetime
-    source: str
-
-
-class RolesListResponse(BaseModel):
-    roles: list[str]
-
-
-class CountriesListResponse(BaseModel):
-    countries: list[str]
 
 
 class InterviewQuestionResponse(BaseModel):
@@ -529,24 +571,41 @@ class RecruiterListResponse(BaseModel):
     created_at:      datetime
 
 
-class AddCandidateRequest(BaseModel):
-    session_id: int
-
-
 class RecruiterCandidateResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id:               int
-    session_id:       int
+    session_id:       Optional[int]
     rank:             Optional[int]
-    cv_filename:      str
+    status:           str
+    notes:            Optional[str]
+    starred:          bool
+
+    # Standalone candidate identity
+    candidate_name:   Optional[str]
+    candidate_email:  Optional[str]
+    candidate_phone:  Optional[str]
+    applied_position: Optional[str]
+    cv_file_path:     Optional[str]
+    display_name:     str
+
+    # From linked CV session (None for standalone)
+    cv_filename:      Optional[str]
+    jd_snippet:       Optional[str]
     match_score:      Optional[float]
     skill_inventory:  Optional[Any]
     created_at:       datetime
 
 
 class RecruiterCandidateUpdate(BaseModel):
-    rank: Optional[int] = None
+    rank:             Optional[int] = None
+    status:           Optional[str] = None
+    notes:            Optional[str] = None
+    starred:          Optional[bool] = None
+    candidate_name:   Optional[str] = None
+    candidate_email:  Optional[str] = None
+    candidate_phone:  Optional[str] = None
+    applied_position: Optional[str] = None
 
 
 class RecruiterCandidateListResponse(BaseModel):
@@ -635,3 +694,53 @@ class RoadmapResponse(BaseModel):
     career_insight: CareerInsight
     quick_wins: list[QuickWin]
     created_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Phase 10: Admin BI Dashboard
+# ---------------------------------------------------------------------------
+
+class AdminLoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class AdminTokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class AdminUserItem(BaseModel):
+    id: int
+    email: str
+    username: str
+    tier: str
+    is_admin: bool
+    email_verified: bool
+    created_at: Optional[str]
+    session_count: int
+    locked_until: Optional[str]
+
+
+class AdminUsersResponse(BaseModel):
+    users: list[AdminUserItem]
+
+
+class TierDistributionItem(BaseModel):
+    tier: str
+    count: int
+
+
+class TrendPoint(BaseModel):
+    date: str
+    count: int
+
+
+class AdminMetricsResponse(BaseModel):
+    users: dict
+    cv_sessions: dict
+    interviews: dict
+    jobs: dict
+    roadmaps: dict
+    referrals: dict
+    interview_bank: dict
