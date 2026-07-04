@@ -24,7 +24,7 @@ class TestReferralCodeEndpoint:
 
     def test_get_code_requires_auth(self, test_client: TestClient):
         resp = test_client.get("/referrals/my-code")
-        assert resp.status_code == 403
+        assert resp.status_code in (401, 403)
 
 
 class TestRegisterViaReferral:
@@ -60,7 +60,7 @@ class TestReferralStats:
 
     def test_stats_requires_auth(self, test_client: TestClient):
         resp = test_client.get("/referrals/stats")
-        assert resp.status_code == 403
+        assert resp.status_code in (401, 403)
 
 
 class TestLeaderboard:

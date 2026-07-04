@@ -6,6 +6,7 @@ import Landing from './pages/Landing'
 import Auth from './pages/Auth'
 import VerifyOtp from './pages/VerifyOtp'
 import ThemeToggle from './components/ThemeToggle'
+import ErrorBoundary from './components/ErrorBoundary'
 import { getMe, logout as apiLogout, getJobStats, getReferralStats } from './api'
 import type { CVUploadResponse, UserProfile } from './api'
 import { useToast } from './components/Toast'
@@ -453,6 +454,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      <ErrorBoundary resetKey={page}>
       <AnimatePresence mode="wait">
         {page === 'home' && (
           <motion.div key="home" variants={pageVariants} initial="initial" animate="animate" exit="exit">
@@ -551,6 +553,7 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+      </ErrorBoundary>
     </div>
   )
 }

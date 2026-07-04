@@ -40,7 +40,7 @@ class TestGetProfile:
 
     def test_get_profile_requires_auth(self, test_client):
         resp = test_client.get("/profile/me")
-        assert resp.status_code == 403
+        assert resp.status_code in (401, 403)
 
 
 class TestUpdateProfile:

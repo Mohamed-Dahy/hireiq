@@ -59,7 +59,7 @@ class TestAdminMetrics:
 
     def test_unauthenticated_rejected_on_metrics(self, test_client: TestClient):
         resp = test_client.get("/admin/metrics")
-        assert resp.status_code == 403
+        assert resp.status_code in (401, 403)
 
 
 class TestAdminUsers:

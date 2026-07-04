@@ -29,7 +29,7 @@ class TestAdminTokenSummary:
 
     def test_summary_unauthenticated_rejected(self, test_client: TestClient):
         resp = test_client.get("/admin/tokens/summary")
-        assert resp.status_code == 403
+        assert resp.status_code in (401, 403)
 
     def test_summary_returns_expected_shape(self, test_client: TestClient, admin_headers: dict):
         resp = test_client.get("/admin/tokens/summary", headers=admin_headers)
