@@ -164,6 +164,38 @@ def delete_stored_cv(db: Session, user: User) -> None:
     except OSError:
         pass
 
+    # FR-031 cascade: deleting the stored CV also removes every analysis session
+    # derived from it (their rows, uploaded files, embeddings, cached scores, and
+    # ATS results) so no residual copy of the user's CV data is left behind.
+    from models.user import InterviewResult
+    from services.cache import clear_cached_score
+    from services.rag_scorer import delete_embeddings
+
+    derived = (
+        db.query(CVSession)
+        .filter(CVSession.user_id == user.id, CVSession.from_stored_cv.is_(True))
+        .all()
+    )
+    for s in derived:
+        sid, fname = s.id, s.cv_filename
+        db.query(InterviewResult).filter(InterviewResult.session_id == sid).delete()
+        db.delete(s)
+        try:
+            clear_cached_score(sid)
+        except Exception:
+            pass
+        try:
+            delete_embeddings(sid)
+        except Exception:
+            pass
+        if fname:
+            fp = os.path.join(settings.upload_dir, fname)
+            try:
+                if os.path.exists(fp):
+                    os.remove(fp)
+            except OSError:
+                pass
+
     profile.stored_cv_path = None
     profile.stored_cv_filename = None
     profile.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)

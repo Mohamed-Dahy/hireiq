@@ -11,6 +11,8 @@ from tests.fixtures.sample_cvs import (
     MISSING_SKILLS_CV,
     IMAGE_ONLY_CV,
     NONSTANDARD_HEADINGS_CV,
+    WEAK_CV,
+    YEARS_ONLY_CV,
     make_signals,
 )
 
@@ -133,3 +135,62 @@ class TestIssueOrdering:
         ranks = {"high": 0, "medium": 1, "low": 2}
         seq = [ranks[i["severity"]] for i in result["issues"]]
         assert seq == sorted(seq)
+
+
+# ── US5: recalibration (score discriminates; accurate detection) ──────────────
+
+class TestRecalibration:
+    def test_strong_vs_weak_spread_at_least_25(self):
+        strong = ats_checker.evaluate(*CLEAN_CV)["overall_score"]
+        weak = ats_checker.evaluate(*WEAK_CV)["overall_score"]
+        assert strong - weak >= 25, f"strong={strong} weak={weak}"
+
+    def test_bare_years_are_not_quantified_achievements(self):
+        assert ats_checker._QUANTIFIED_RE.search("2016 2018 2020") is None
+        assert ats_checker._QUANTIFIED_RE.search("reduced cost by 40%")
+        assert ats_checker._QUANTIFIED_RE.search("handled 2M requests")
+        assert ats_checker._QUANTIFIED_RE.search("led 5 engineers")
+        assert ats_checker._QUANTIFIED_RE.search("made it 3x faster")
+
+    def test_phone_detection_rejects_date_ranges(self):
+        assert ats_checker._has_phone("2012 - 2016") is False
+        assert ats_checker._has_phone("Jan 2019 - Dec 2020") is False
+        assert ats_checker._has_phone("+1 555 123 4567") is True
+        assert ats_checker._has_phone("555-123-4567") is True
+
+    def test_years_only_cv_flags_quantified_and_contact(self):
+        r = ats_checker.evaluate(*YEARS_ONLY_CV)
+        cats = {i["category"] for i in r["issues"]}
+        assert "content_quality" in cats   # bare years are not achievements
+        assert "contact" in cats           # no phone (years are not a phone)
+
+    def test_section_detection_is_heading_anchored(self):
+        # 'experience'/'skills'/'education' appear only inside a sentence, not as headings
+        text = "Summary\nI have experience and skills gained during my education.\ncontact me at a@b.com"
+        r = ats_checker.evaluate(text, make_signals(total_chars=200))
+        sect = next(c for c in r["categories"] if c["key"] == "sections")
+        assert sect["score"] < 1.0
+
+    def test_table_and_multicolumn_are_flagged(self):
+        r = ats_checker.evaluate(CLEAN_CV[0], make_signals(table_like=True, multi_column=True))
+        fmt = " ".join(i["message"].lower() for i in r["issues"] if i["category"] == "formatting")
+        assert "table" in fmt and "column" in fmt
+
+
+# ── US5: enriched output (strengths / next steps / explanation) ───────────────
+
+class TestEnrichment:
+    def test_enriched_fields_present(self):
+        r = ats_checker.evaluate(*CLEAN_CV)
+        assert isinstance(r["strengths"], list) and len(r["strengths"]) >= 1
+        assert all("category" in s and "message" in s for s in r["strengths"])
+        assert isinstance(r["next_steps"], list) and len(r["next_steps"]) >= 1
+        assert isinstance(r["score_explanation"], str) and r["score_explanation"]
+
+    def test_next_steps_ats_ready_when_no_issues(self):
+        assert "ATS-ready" in ats_checker._build_next_steps([])[0]
+
+    def test_weak_cv_has_actionable_next_steps(self):
+        r = ats_checker.evaluate(*WEAK_CV)
+        assert 1 <= len(r["next_steps"]) <= 3
+        assert r["strengths"] is not None  # even weak CVs may have some strengths (e.g. parseability)

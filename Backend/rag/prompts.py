@@ -132,6 +132,44 @@ skill_gap_prompt = PromptTemplate(
 
 
 # ---------------------------------------------------------------------------
+# ATS keyword coverage — strict JSON of matched vs. missing role keywords
+# (used by services/ats_keywords.py; spec 003 US3)
+# ---------------------------------------------------------------------------
+
+ATS_KEYWORD_TEMPLATE = """You are an ATS (Applicant Tracking System) keyword analyzer.
+
+From the JOB DESCRIPTION below, extract the most important, concrete keywords a
+recruiter's ATS would screen for — hard skills, tools, technologies, certifications,
+and role-specific terms (not soft/generic words like "team player" or "motivated").
+Then decide, for each, whether it appears in the CV (as an exact term or an obvious
+synonym/abbreviation).
+
+Return ONLY a JSON object — no explanation, no markdown fences:
+{{
+  "matched": ["keyword present in the CV", ...],
+  "missing": ["important JD keyword absent from the CV", ...]
+}}
+
+Rules:
+- Consider at most the 25 most important JD keywords total (matched + missing).
+- "matched" = the CV clearly demonstrates it; "missing" = the JD wants it and the CV does not show it.
+- Keep each keyword short (1–3 words), lowercase unless it is a proper noun/acronym.
+
+CV:
+{cv_text}
+
+JOB DESCRIPTION:
+{jd_text}
+
+Return ONLY the JSON object:"""
+
+ats_keyword_prompt = PromptTemplate(
+    input_variables=["cv_text", "jd_text"],
+    template=ATS_KEYWORD_TEMPLATE,
+)
+
+
+# ---------------------------------------------------------------------------
 # Career Roadmap — structured JSON (used by roadmap_service)
 # ---------------------------------------------------------------------------
 

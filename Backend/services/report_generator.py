@@ -421,6 +421,100 @@ class _Report(FPDF):
         self.set_y(y + card_h + 4)
 
 
+# ── ATS report (spec 003 US5) ──────────────────────────────────────────────────
+
+def _render_ats(pdf: "_Report", ats: dict) -> None:
+    score = float(ats.get("overall_score", 0) or 0)
+    sc = _OK if score >= 70 else _WARN if score >= 40 else _ERR
+
+    pdf.section("ATS Compatibility", f"Score {score:.0f} / 100")
+
+    exp = ats.get("score_explanation")
+    if exp:
+        pdf.set_x(10)
+        pdf.set_font("Helvetica", size=9)
+        pdf.set_text_color(*_Z700)
+        pdf.multi_cell(190, 5, _s(exp))
+        pdf.ln(2)
+
+    cats = ats.get("categories", [])
+    if cats:
+        pdf.set_x(10); pdf.set_font("Helvetica", "B", 9); pdf.set_text_color(*_Z900)
+        pdf.cell(0, 6, "Category breakdown", ln=True)
+        for c in cats:
+            cscore = round(float(c.get("score", 0) or 0) * 100)
+            pdf.set_x(12); pdf.set_font("Helvetica", size=8); pdf.set_text_color(*_Z700)
+            pdf.cell(120, 5, _s(c.get("label") or c.get("key", "")))
+            pdf.set_text_color(*(_OK if cscore >= 80 else _WARN if cscore >= 50 else _ERR))
+            pdf.cell(0, 5, f"{cscore}%", ln=True)
+        pdf.ln(2)
+
+    strengths = ats.get("strengths", [])
+    if strengths:
+        pdf.set_x(10); pdf.set_font("Helvetica", "B", 9); pdf.set_text_color(*_OK)
+        pdf.cell(0, 6, "Strengths", ln=True)
+        pdf.set_font("Helvetica", size=8); pdf.set_text_color(*_Z700)
+        for s in strengths:
+            pdf.set_x(12); pdf.multi_cell(186, 5, _s("- " + (s.get("message") or "")))
+        pdf.ln(2)
+
+    steps = ats.get("next_steps", [])
+    if steps:
+        pdf.set_x(10); pdf.set_font("Helvetica", "B", 9); pdf.set_text_color(*_P)
+        pdf.cell(0, 6, "What to do next", ln=True)
+        pdf.set_font("Helvetica", size=8); pdf.set_text_color(*_Z700)
+        for i, st in enumerate(steps, 1):
+            pdf.set_x(12); pdf.multi_cell(186, 5, _s(f"{i}. {st}"))
+        pdf.ln(2)
+
+    issues = ats.get("issues", [])
+    if issues:
+        pdf.section("Issues & Recommendations", f"{len(issues)} found")
+        for it in issues:
+            sev = (it.get("severity") or "").lower()
+            col = _ERR if sev == "high" else _WARN if sev == "medium" else _Z400
+            pdf.set_x(12); pdf.set_font("Helvetica", "B", 8); pdf.set_text_color(*col)
+            pdf.multi_cell(186, 5, _s(f"[{sev.upper()}] {it.get('message', '')}"))
+            pdf.set_x(14); pdf.set_font("Helvetica", size=8); pdf.set_text_color(*_Z500)
+            pdf.multi_cell(184, 5, _s("Fix: " + (it.get("recommendation") or "")))
+            pdf.ln(1)
+
+    kc = ats.get("keyword_coverage")
+    if kc and kc.get("available"):
+        pdf.section("Keyword Coverage")
+        pdf.set_x(10); pdf.set_font("Helvetica", size=8); pdf.set_text_color(*_OK)
+        pdf.multi_cell(190, 5, _s("Matched: " + ", ".join(kc.get("matched", []) or ["-"])))
+        pdf.set_x(10); pdf.set_text_color(*_ERR)
+        pdf.multi_cell(190, 5, _s("Missing: " + ", ".join(kc.get("missing", []) or ["-"])))
+
+
+def generate_ats_report(
+    cv_filename: str,
+    original_cv_filename: str | None,
+    ats_result: dict,
+) -> bytes:
+    """Owner-only ATS compatibility PDF (no public/shareable URL — FR-022)."""
+    pdf = _Report()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+
+    cv_name = original_cv_filename or ""
+    if not cv_name or re.match(r'^[0-9a-f\-]{36}\.pdf$', cv_name, re.IGNORECASE):
+        cv_name = "Uploaded CV"
+
+    pdf.set_fill_color(*_P)
+    pdf.rect(10, pdf.get_y(), 190, 1.5, style="F")
+    pdf.ln(4)
+    pdf.set_font("Helvetica", "B", 14); pdf.set_text_color(*_Z900); pdf.set_x(10)
+    pdf.cell(0, 9, "ATS Compatibility Report", ln=True)
+    pdf.set_font("Helvetica", size=8); pdf.set_text_color(*_Z400); pdf.set_x(10)
+    pdf.cell(0, 5, _s(f"CV: {cv_name[:50]}   ·   Generated: {datetime.now(timezone.utc).replace(tzinfo=None).strftime('%d %b %Y')}"), ln=True)
+    pdf.ln(3)
+
+    _render_ats(pdf, ats_result or {})
+    return bytes(pdf.output())
+
+
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def generate_report(

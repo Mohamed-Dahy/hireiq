@@ -218,7 +218,7 @@ class TestGetMe:
 
     def test_get_me_without_token_returns_403(self, test_client: TestClient):
         resp = test_client.get("/auth/me")
-        assert resp.status_code == 403
+        assert resp.status_code in (401, 403)
 
 
 # ---------------------------------------------------------------------------

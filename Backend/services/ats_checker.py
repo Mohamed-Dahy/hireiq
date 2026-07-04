@@ -55,9 +55,42 @@ _ACTION_VERBS = {
 }
 
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
-_PHONE_RE = re.compile(r"(?:(?:\+|00)\d{1,3}[\s.\-]?)?(?:\(?\d{2,4}\)?[\s.\-]?){2,4}\d{2,4}")
-_QUANTIFIED_RE = re.compile(r"\b\d+(?:[.,]\d+)?\s?(?:%|percent|k\b|m\b|x\b)|[$€£]\s?\d|\b\d{3,}\b")
+
+# Quantified achievements — require a REAL metric. Deliberately does NOT match a
+# bare number/year (e.g. "2019"), which the previous pattern wrongly counted.
+_QUANTIFIED_RE = re.compile(
+    r"\d+(?:\.\d+)?\s?%"                       # 40%
+    r"|[$€£]\s?\d"                              # $10 / £5k
+    r"|\b\d+(?:\.\d+)?\s?[kmb]\b"               # 10k, 2m, 1.5b
+    r"|\b\d+\s?x\b"                             # 3x
+    r"|\b\d[\d,]*\+?\s?(?:years?|yrs?|users?|customers?|clients?|requests?|"
+    r"projects?|people|engineers?|reports?|hours?|days|weeks|months|countries|"
+    r"teams?|members?|records?|transactions?|downloads?|installs?|stars?)\b",
+    re.IGNORECASE,
+)
 _YEAR_RE = re.compile(r"\b(?:19|20)\d{2}\b")
+
+# Phone detection — a candidate token with 7–15 digits that is NOT a year range
+# like "2012 - 2016" (the previous phone regex accepted those false positives).
+_PHONE_CANDIDATE_RE = re.compile(r"[\+\(]?\d[\d\s().\-]{6,}\d")
+
+
+def _looks_like_years(token: str) -> bool:
+    """True if every numeric group in the token is a 4-digit calendar year
+    (e.g. '2012 - 2016' or '2016 2018 2020') — a date range/list, not a phone."""
+    groups = re.findall(r"\d+", token)
+    return len(groups) >= 2 and all(len(g) == 4 and 1900 <= int(g) <= 2099 for g in groups)
+
+
+def _has_phone(text: str) -> bool:
+    for m in _PHONE_CANDIDATE_RE.finditer(text):
+        token = m.group()
+        if _looks_like_years(token):
+            continue
+        digits = re.sub(r"\D", "", token)
+        if 7 <= len(digits) <= 15:
+            return True
+    return False
 
 # uncommon / decorative fonts that hurt ATS parsing
 _BAD_FONT_HINTS = ("comic", "brush", "script", "wingding", "papyrus", "curlz", "jokerman")
@@ -126,12 +159,34 @@ def _eval_parseability(text: str, signals: dict) -> tuple[dict, list[dict]]:
     return _category("parseability", "Parseability", score, confidence="high"), issues
 
 
-def _eval_sections(text_lower: str) -> tuple[dict, list[dict]]:
+def _section_headings(text: str) -> list[str]:
+    """Short standalone lines that plausibly act as section headings."""
+    out = []
+    for raw in text.splitlines():
+        line = raw.strip().lower().rstrip(":").strip()
+        if line and len(line) <= 40:
+            out.append(line)
+    return out
+
+
+def _eval_sections(text: str) -> tuple[dict, list[dict]]:
     issues: list[dict] = []
     present = 0
     total = len(_SECTION_SYNONYMS)
+    headings = _section_headings(text)
+
+    def _has_section(synonyms: list[str]) -> bool:
+        # Heading-anchored: a synonym must BE a heading line (or start one),
+        # not merely appear somewhere in the body text.
+        for h in headings:
+            for s in synonyms:
+                if h == s or h.startswith(s + " ") or h.startswith(s):
+                    if len(h) <= len(s) + 15:  # guard against matching a sentence
+                        return True
+        return False
+
     for canonical, synonyms in _SECTION_SYNONYMS.items():
-        if any(s in text_lower for s in synonyms):
+        if _has_section(synonyms):
             present += 1
         else:
             issues.append(_issue(
@@ -162,7 +217,7 @@ def _eval_headings(text: str) -> tuple[dict, list[dict]]:
 def _eval_contact(text: str) -> tuple[dict, list[dict]]:
     issues: list[dict] = []
     has_email = bool(_EMAIL_RE.search(text))
-    has_phone = bool(_PHONE_RE.search(text))
+    has_phone = _has_phone(text)
     if has_email and has_phone:
         score = 1.0
     elif has_email or has_phone:
@@ -304,6 +359,62 @@ def _length_issue(signals: dict) -> list[dict]:
     return []
 
 
+# Positive, category-specific messages for the Strengths list (FR-036).
+_STRENGTH_MESSAGES = {
+    "parseability": "Text is cleanly machine-readable — ATS parsers can extract it.",
+    "sections": "Uses standard, clearly-labelled sections (experience, education, skills).",
+    "headings": "Section headings use conventional names ATS software recognizes.",
+    "contact": "Contact details (email and phone) are present and readable.",
+    "formatting": "Single-column, parser-friendly layout with no tables to confuse ATS.",
+    "unfriendly_elements": "Clean, standard fonts and characters throughout.",
+    "content_quality": "Strong content — action verbs, quantified results, and good length.",
+    "dates": "Consistent, well-formatted dates in the work/education history.",
+}
+
+
+def _build_strengths(categories: list[dict]) -> list[dict]:
+    threshold = settings.ats_strength_threshold
+    strengths = []
+    for c in sorted(categories, key=lambda c: -c["weight"]):
+        if c["score"] >= threshold:
+            strengths.append({"category": c["key"], "message": _STRENGTH_MESSAGES.get(c["key"], f"{c['label']} looks good.")})
+    return strengths
+
+
+def _build_next_steps(issues: list[dict]) -> list[str]:
+    if not issues:
+        return ["Your CV is ATS-ready — no material issues detected. Keep it up to date."]
+    steps, seen = [], set()
+    for i in issues:  # already sorted by severity × weight
+        rec = i["recommendation"]
+        if rec not in seen:
+            seen.add(rec)
+            steps.append(rec)
+        if len(steps) >= settings.ats_next_steps_max:
+            break
+    return steps
+
+
+def _score_explanation(overall: float, categories: list[dict], issues: list[dict]) -> str:
+    if overall >= 80:
+        band = "strong — most automated screeners will parse and rank it well"
+    elif overall >= 60:
+        band = "decent, with clear room to improve"
+    elif overall >= 40:
+        band = "weak — many ATS filters would rank it poorly"
+    else:
+        band = "very likely to be filtered out by automated screeners"
+
+    weak = [c for c in sorted(categories, key=lambda c: c["score"]) if c["score"] < 0.9][:2]
+    if weak:
+        drivers = ", ".join(c["label"].lower() for c in weak)
+        return (f"Your CV scored {overall:.0f}/100 — {band}. "
+                f"The biggest factors holding the score down are: {drivers}. "
+                f"See the {len(issues)} issue(s) below for specific fixes.")
+    return (f"Your CV scored {overall:.0f}/100 — {band}. "
+            f"No weaknesses were detected across the checked categories.")
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -311,12 +422,11 @@ def _length_issue(signals: dict) -> list[dict]:
 def evaluate(text: str, signals: dict) -> dict:
     """Pure, deterministic ATS evaluation. Returns the ats_result payload."""
     text = text or ""
-    text_lower = text.lower()
     signals = signals or {}
 
     evaluations = [
         _eval_parseability(text, signals),
-        _eval_sections(text_lower),
+        _eval_sections(text),
         _eval_headings(text),
         _eval_contact(text),
         _eval_formatting(signals),
@@ -346,6 +456,10 @@ def evaluate(text: str, signals: dict) -> dict:
         "categories": categories,
         "issues": issues,
         "keyword_coverage": None,  # populated by the AI-assisted layer when a JD is supplied
+        # US5 enrichment (FR-036–039)
+        "strengths": _build_strengths(categories),
+        "next_steps": _build_next_steps(issues),
+        "score_explanation": _score_explanation(overall, categories, issues),
     }
 
 

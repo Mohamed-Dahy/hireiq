@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from models.user import CVSession, User
+from models.token_tracking import TokenUsageLog
 from services.auth_service import create_access_token, hash_password
 from tests.fixtures.sample_cvs import CLEAN_CV_TEXT, make_signals
 
@@ -159,3 +160,121 @@ class TestDeleteRemovesFile:
         resp = test_client.delete(f"/cv/{sid}", headers=auth_headers)
         assert resp.status_code == 204
         assert not os.path.exists(path)
+
+
+# ---------------------------------------------------------------------------
+# US4 — preserve the existing job-match analysis (regression)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture()
+def patched_job_match():
+    """Patch heavy job-match deps so upload is fast + deterministic."""
+    with patch("routers.cv.parse_cv", return_value=_PARSED), \
+         patch("routers.cv.compute_match_score", return_value=72.0), \
+         patch("routers.cv.store_embeddings", return_value=None):
+        yield
+
+
+class TestJobMatchRegression:
+    def test_job_match_upload_computes_match_score(self, test_client, test_user, auth_headers, patched_job_match):
+        resp = test_client.post(
+            "/cv/upload", headers=auth_headers,
+            files=_files(), data={"analysis_mode": "job_match", "jd_text": "Senior Python engineer, FastAPI, Docker"},
+        )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["analysis_mode"] == "job_match"
+        assert body["match_score"] == 72.0
+        assert body["ats_score"] is None
+
+    def test_sessions_list_exposes_mode_fields(self, test_client, test_user, auth_headers, patched_parse, patched_job_match):
+        # one ATS session…
+        test_client.post("/cv/upload", headers=auth_headers, files=_files(), data={"analysis_mode": "ats_check"})
+        resp = test_client.get("/cv/sessions", headers=auth_headers)
+        assert resp.status_code == 200
+        items = resp.json()
+        assert items, "expected at least one session"
+        for it in items:
+            assert "analysis_mode" in it and "ats_score" in it and "has_ats_result" in it
+        ats = [i for i in items if i["analysis_mode"] == "ats_check"]
+        assert ats and ats[0]["has_ats_result"] is True and ats[0]["ats_score"] is not None
+
+    def test_analyze_rejects_ats_session(self, test_client, test_user, auth_headers, patched_parse):
+        up = test_client.post("/cv/upload", headers=auth_headers, files=_files(), data={"analysis_mode": "ats_check"})
+        sid = up.json()["session_id"]
+        token = create_access_token(test_user.id)
+        # /analyze must not run skill-gap on a JD-less ATS session (guards the null-JD 500)
+        resp = test_client.get(f"/analyze?session_id={sid}&token={token}")
+        assert resp.status_code == 400
+
+    def test_preexisting_job_match_session_loads(self, test_client, test_db, test_user, auth_headers):
+        s = CVSession(user_id=test_user.id, cv_filename="old.pdf", jd_text="legacy role",
+                      match_score=61.0, analysis_mode="job_match")
+        test_db.add(s); test_db.commit(); test_db.refresh(s)
+        resp = test_client.get(f"/cv/{s.id}/detail", headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json()["match_score"] == 61.0
+
+
+# ---------------------------------------------------------------------------
+# US3 — keyword coverage (JD-dependent, AI-assisted, degrades gracefully)
+# ---------------------------------------------------------------------------
+
+class TestKeywordCoverage:
+    def _upload_ats_with_jd(self, client, headers):
+        return client.post(
+            "/cv/upload", headers=headers, files=_files(),
+            data={"analysis_mode": "ats_check", "jd_text": "Senior Python engineer: FastAPI, Docker, Kubernetes"},
+        )
+
+    def test_coverage_present_when_jd_supplied(self, test_client, test_user, auth_headers, patched_parse):
+        cov = {"matched": ["python", "docker"], "missing": ["kubernetes"], "available": True}
+        with patch("routers.cv.compute_match_score", return_value=70.0), \
+             patch("routers.cv.store_embeddings", return_value=None), \
+             patch("routers.cv.ats_keywords.compute_keyword_coverage", return_value=cov):
+            up = self._upload_ats_with_jd(test_client, auth_headers)
+        assert up.status_code == 200, up.text
+        sid = up.json()["session_id"]
+        ats = test_client.get(f"/cv/{sid}/ats", headers=auth_headers).json()
+        assert ats["keyword_coverage"] is not None
+        assert ats["keyword_coverage"]["matched"] == ["python", "docker"]
+        assert ats["keyword_coverage"]["missing"] == ["kubernetes"]
+        assert ats["ai_sections_available"] is True
+
+    def test_ai_failure_degrades_and_is_not_charged(self, test_client, test_db, test_user, auth_headers, patched_parse):
+        cov = {"matched": [], "missing": [], "available": False}   # AI unavailable
+        with patch("routers.cv.compute_match_score", return_value=70.0), \
+             patch("routers.cv.store_embeddings", return_value=None), \
+             patch("routers.cv.ats_keywords.compute_keyword_coverage", return_value=cov):
+            up = self._upload_ats_with_jd(test_client, auth_headers)
+        assert up.status_code == 200
+        sid = up.json()["session_id"]
+        ats = test_client.get(f"/cv/{sid}/ats", headers=auth_headers).json()
+        # deterministic score still present; AI section marked unavailable
+        assert ats["overall_score"] is not None
+        assert ats["ai_sections_available"] is False
+        assert ats["keyword_coverage"]["available"] is False
+        # NOT charged: no keyword-coverage token log row
+        charged = test_db.query(TokenUsageLog).filter(
+            TokenUsageLog.user_id == test_user.id,
+            TokenUsageLog.operation_type == "ats_keyword_coverage",
+        ).count()
+        assert charged == 0
+
+    def test_success_logs_a_token_row(self, test_client, test_db, test_user, auth_headers, patched_parse):
+        cov = {"matched": ["python"], "missing": [], "available": True}
+        with patch("routers.cv.compute_match_score", return_value=70.0), \
+             patch("routers.cv.store_embeddings", return_value=None), \
+             patch("routers.cv.ats_keywords.compute_keyword_coverage", return_value=cov):
+            self._upload_ats_with_jd(test_client, auth_headers)
+        charged = test_db.query(TokenUsageLog).filter(
+            TokenUsageLog.user_id == test_user.id,
+            TokenUsageLog.operation_type == "ats_keyword_coverage",
+        ).count()
+        assert charged == 1
+
+    def test_no_jd_omits_coverage(self, test_client, test_user, auth_headers, patched_parse):
+        up = test_client.post("/cv/upload", headers=auth_headers, files=_files(), data={"analysis_mode": "ats_check"})
+        sid = up.json()["session_id"]
+        ats = test_client.get(f"/cv/{sid}/ats", headers=auth_headers).json()
+        assert ats["keyword_coverage"] is None

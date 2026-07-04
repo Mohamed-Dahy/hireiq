@@ -20,12 +20,15 @@ const FUNNEL_STAGES = ['saved', 'applied', 'phone_screen', 'technical', 'final_r
 export default function JobStatsPanel({ stats }: Props) {
   const pct = (v: number) => `${Math.round(v * 100)}%`
 
+  const byStatus = stats.by_status ?? {}
+  const bySource = stats.by_source ?? {}
+
   const funnelData = FUNNEL_STAGES.map(s => ({
     stage: s.replace('_', ' '),
-    count: stats.by_status[s] ?? 0,
+    count: byStatus[s] ?? 0,
   }))
 
-  const sourceData = Object.entries(stats.by_source).map(([source, count]) => ({ source, count }))
+  const sourceData = Object.entries(bySource).map(([source, count]) => ({ source, count }))
 
   return (
     <div className="space-y-6">

@@ -32,16 +32,23 @@ export default function Jobs({ onNavigateToRoadmap }: Props) {
   const [selectedJob, setSelectedJob] = useState<JobApplication | null>(null)
   const [showAdd, setShowAdd] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   const load = async () => {
     setLoading(true)
+    setError('')
     try {
       const [jobsRes, statsRes] = await Promise.all([
         getJobs({ is_archived: false }),
         getJobStats(),
       ])
-      setJobs(jobsRes.data)
-      setStats(statsRes.data)
+      // Never trust the shape blindly — a non-array here must not white-screen the app.
+      setJobs(Array.isArray(jobsRes.data) ? jobsRes.data : [])
+      setStats(statsRes.data ?? null)
+    } catch {
+      setJobs([])
+      setStats(null)
+      setError('Could not load your job pipeline. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -70,7 +77,7 @@ export default function Jobs({ onNavigateToRoadmap }: Props) {
     getJobStats().then(r => setStats(r.data)).catch(() => {})
   }
 
-  const filtered = jobs.filter(j => {
+  const filtered = (Array.isArray(jobs) ? jobs : []).filter(j => {
     const q = search.toLowerCase()
     const matchSearch = !q || j.company.toLowerCase().includes(q) || j.title.toLowerCase().includes(q)
     const matchStatus = !filterStatus || j.status === filterStatus
@@ -153,6 +160,13 @@ export default function Jobs({ onNavigateToRoadmap }: Props) {
           ))}
         </div>
       </div>
+
+      {error && !loading && (
+        <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3 mb-4 flex items-center justify-between gap-3">
+          <span className="text-sm text-red-600 dark:text-red-400">{error}</span>
+          <button onClick={load} className="text-xs font-medium text-red-600 dark:text-red-400 hover:underline cursor-pointer shrink-0">Retry</button>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-20">

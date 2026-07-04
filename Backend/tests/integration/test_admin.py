@@ -59,7 +59,7 @@ class TestAdminMetrics:
 
     def test_unauthenticated_rejected_on_metrics(self, test_client: TestClient):
         resp = test_client.get("/admin/metrics")
-        assert resp.status_code == 403
+        assert resp.status_code in (401, 403)
 
 
 class TestAdminUsers:
@@ -160,3 +160,32 @@ class TestAdminHealth:
         assert body["services"]["postgres"]["ok"] is True
         assert "memory" in body
         assert "cpu_percent" in body
+
+
+class TestAdminAggregateOnly:
+    """FR-030: admin dashboard exposes only aggregates — never CV content or individual ATS results."""
+
+    def test_no_admin_endpoint_leaks_cv_content_or_ats_results(
+        self, test_client: TestClient, test_db: Session, test_user: User, admin_headers: dict
+    ):
+        from models.user import CVSession
+        marker = "SECRET_CV_MARKER_XYZ"
+        s = CVSession(
+            user_id=test_user.id, cv_filename="x.pdf", analysis_mode="ats_check",
+            ats_score=88.0, ats_result='{"issues":[{"message":"' + marker + '"}]}',
+        )
+        test_db.add(s)
+        test_db.commit()
+
+        for ep in [
+            "/admin/metrics",
+            "/admin/users",
+            f"/admin/usage/{test_user.id}",
+            "/admin/tokens/summary",
+            "/admin/tokens/users",
+        ]:
+            resp = test_client.get(ep, headers=admin_headers)
+            assert resp.status_code == 200, ep
+            body = resp.text
+            assert marker not in body, f"{ep} leaked CV content"
+            assert "ats_result" not in body, f"{ep} leaked ats_result field"

@@ -1,0 +1,43 @@
+{
+  "_comment": "ATS skill vocabulary — baseline multi-industry set (spec 004; expanded in US5). Terms are lowercase; matched case-insensitively. Grouped by domain for maintainability; matching flattens all groups.",
+  "software": [
+    "python", "java", "javascript", "typescript", "c++", "c#", "go", "rust", "ruby", "php", "sql",
+    "react", "angular", "vue", "node.js", "django", "flask", "fastapi", "spring", ".net",
+    "postgresql", "mysql", "mongodb", "redis", "docker", "kubernetes", "aws", "azure", "gcp",
+    "git", "ci/cd", "terraform", "graphql", "rest api", "microservices", "machine learning",
+    "deep learning", "tensorflow", "pytorch", "pandas", "numpy", "spark", "kafka", "linux"
+  ],
+  "data_analytics": [
+    "excel", "power bi", "tableau", "looker", "data analysis", "data visualization", "statistics",
+    "sql", "r", "etl", "data modeling", "a/b testing", "forecasting", "dashboards"
+  ],
+  "healthcare": [
+    "patient care", "clinical documentation", "electronic health records", "ehr", "epic",
+    "medication administration", "iv therapy", "vital signs", "triage", "phlebotomy",
+    "hipaa", "cpr", "bls", "acls", "care planning", "wound care", "infection control"
+  ],
+  "finance_accounting": [
+    "financial reporting", "accounts payable", "accounts receivable", "reconciliation",
+    "budgeting", "forecasting", "gaap", "ifrs", "auditing", "tax preparation", "quickbooks",
+    "sap", "financial modeling", "variance analysis", "payroll", "cost accounting"
+  ],
+  "marketing_sales": [
+    "seo", "sem", "content marketing", "social media marketing", "google analytics", "hubspot",
+    "salesforce", "crm", "email marketing", "lead generation", "copywriting", "brand strategy",
+    "market research", "campaign management", "ppc", "account management", "cold calling"
+  ],
+  "operations_pm": [
+    "project management", "agile", "scrum", "kanban", "jira", "stakeholder management",
+    "process improvement", "lean", "six sigma", "supply chain", "logistics", "procurement",
+    "vendor management", "inventory management", "quality assurance", "risk management"
+  ],
+  "trades_technical": [
+    "welding", "electrical wiring", "plumbing", "hvac", "cnc machining", "blueprint reading",
+    "preventive maintenance", "forklift operation", "osha", "hydraulics", "carpentry", "soldering"
+  ],
+  "general_professional": [
+    "communication", "leadership", "teamwork", "problem solving", "time management",
+    "customer service", "public speaking", "negotiation", "critical thinking", "bilingual",
+    "microsoft office", "data entry", "scheduling", "training", "conflict resolution"
+  ]
+}

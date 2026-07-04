@@ -176,9 +176,18 @@ export default function History({ onSelect }: Props) {
               </button>
 
               <div className="flex items-center gap-2 shrink-0 pr-4">
-                <span className={`text-xs font-medium px-2 py-0.5 rounded ${scoreClass(s.match_score)}`}>
-                  {s.match_score != null ? `${s.match_score}%` : '—'}
-                </span>
+                {s.analysis_mode === 'ats_check' ? (
+                  <span
+                    className={`text-xs font-medium px-2 py-0.5 rounded ${scoreClass(s.ats_score ?? null)}`}
+                    title="ATS compatibility score"
+                  >
+                    ATS {s.ats_score != null ? `${Math.round(s.ats_score)}` : '—'}
+                  </span>
+                ) : (
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${scoreClass(s.match_score)}`} title="Job match score">
+                    {s.match_score != null ? `${s.match_score}%` : '—'}
+                  </span>
+                )}
 
                 {s.has_interview_questions && (
                   <button
