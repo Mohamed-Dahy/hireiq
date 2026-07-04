@@ -69,6 +69,9 @@ class Settings(BaseSettings):
     ats_keyword_timeout_seconds: int = 20     # hard cap on the JD keyword-coverage LLM call
     ats_strength_threshold: float = 0.9       # category sub-score at/above which it counts as a "strength"
     ats_next_steps_max: int = 3               # max prioritized actions in the "what to do next" summary
+    # Spec 004 — ATS-grade upgrade (non-secret data-file locations)
+    ats_vocab_dir: str = "./data/vocab"           # action_verbs.txt, skills.json, keyword_synonyms.json
+    ats_calibration_dir: str = "./data/ats_calibration"  # labeled/ CVs + labels.json (evaluation only)
     ats_category_weights: dict[str, float] = {
         "parseability": 0.20,
         "sections": 0.18,

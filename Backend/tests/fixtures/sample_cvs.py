@@ -152,3 +152,41 @@ YEARS_ONLY_CV = (
     YEARS_ONLY_CV_TEXT,
     make_signals(total_chars=len(YEARS_ONLY_CV_TEXT), chars_per_page=[len(YEARS_ONLY_CV_TEXT)]),
 )
+
+
+# ---------------------------------------------------------------------------
+# Parsing fixtures (spec 004 US2 — resume_parser). Plain text so the parser's
+# regex/heuristic core can be unit-tested WITHOUT the spaCy model.
+# ---------------------------------------------------------------------------
+
+# Well-structured CV: full contact, two dated roles, education, skills line.
+PARSE_FULL_CV_TEXT = """Jane Developer
+jane.developer@example.com | +1 555 987 6543 | linkedin.com/in/janedev
+
+Experience
+Senior Software Engineer, Acme Corp — Jan 2019 - Present
+- Led a migration that reduced latency by 40%.
+Software Engineer, Beta Inc — Jun 2015 - Dec 2018
+- Developed REST APIs in Python.
+
+Education
+B.Sc. Computer Science, State University — 2011 - 2015
+
+Skills
+Python, PostgreSQL, Docker, Kubernetes, AWS
+"""
+
+# CV with a parse GAP: an experience entry with NO detectable dates, and no phone.
+PARSE_GAP_CV_TEXT = """Sam Candidate
+sam.candidate@example.com
+
+Experience
+Operations Lead, Globex
+- Ran the daily standup and coordinated vendors.
+
+Education
+B.A. Management, City College — 2014 - 2018
+
+Skills
+Project management, Scheduling, Communication
+"""

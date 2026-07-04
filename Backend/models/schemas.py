@@ -129,6 +129,12 @@ class AnalysisPendingResponse(BaseModel):
 # Spec 003: ATS Score Checker response schemas
 # ---------------------------------------------------------------------------
 
+class AtsSubCheck(BaseModel):
+    name: str
+    passed: bool
+    detail: str = ""
+
+
 class AtsCategory(BaseModel):
     key: str
     label: str
@@ -136,6 +142,14 @@ class AtsCategory(BaseModel):
     weight: float
     ai_dependent: bool = False
     confidence: str = "high"  # high | medium | best_effort
+    # Spec 004 US6 (additive): exact points this category cost, and drill-down sub-checks
+    point_impact: float = 0.0
+    sub_checks: list[AtsSubCheck] = []
+
+
+class AtsIssueExample(BaseModel):
+    before: str
+    after: str
 
 
 class AtsIssue(BaseModel):
@@ -143,17 +157,62 @@ class AtsIssue(BaseModel):
     severity: str           # high | medium | low
     message: str
     recommendation: str
+    # Spec 004 US6 (additive): indicative apportioned impact + illustrative fix example
+    point_impact: float = 0.0
+    example: Optional[AtsIssueExample] = None
 
 
 class AtsKeywordCoverage(BaseModel):
     matched: list[str] = []
     missing: list[str] = []
     available: bool = True
+    source: Optional[str] = None   # spec 004 US3: "ai" | "deterministic"
 
 
 class AtsStrength(BaseModel):
     category: str
     message: str
+
+
+# --- Spec 004 US2: parsed résumé record ("what an ATS reads") ---
+
+class AtsContact(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    links: list[str] = []
+    confidence: float = 0.0
+
+
+class AtsExperienceEntry(BaseModel):
+    role: Optional[str] = None
+    employer: Optional[str] = None
+    start: Optional[str] = None
+    end: Optional[str] = None
+    confidence: float = 0.0
+    gaps: list[str] = []
+
+
+class AtsEducationEntry(BaseModel):
+    institution: Optional[str] = None
+    qualification: Optional[str] = None
+    year: Optional[str] = None
+    confidence: float = 0.0
+
+
+class ParsedResumeRecord(BaseModel):
+    contact: AtsContact = AtsContact()
+    experience: list[AtsExperienceEntry] = []
+    education: list[AtsEducationEntry] = []
+    skills: list[str] = []
+    overall_parse_confidence: float = 0.0
+    unextractable: list[str] = []
+
+
+class AtsChangedSincePrevious(BaseModel):
+    previous_score: float
+    delta: float
+    resolved_issues: list[str] = []
 
 
 class AtsResultResponse(BaseModel):
@@ -167,6 +226,10 @@ class AtsResultResponse(BaseModel):
     strengths: list[AtsStrength] = []
     next_steps: list[str] = []
     score_explanation: Optional[str] = None
+    # Spec 004 (additive; pre-004 results default to None/empty)
+    parsed_record: Optional[ParsedResumeRecord] = None
+    target_role: Optional[str] = None
+    changed_since_previous: Optional[AtsChangedSincePrevious] = None
 
 
 # ---------------------------------------------------------------------------

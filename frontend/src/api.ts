@@ -172,6 +172,12 @@ export interface CVUploadResponse {
 
 // ── Spec 003: ATS Score Checker ───────────────────────────────────────────
 
+export interface AtsSubCheck {
+  name: string
+  passed: boolean
+  detail?: string
+}
+
 export interface AtsCategory {
   key: string
   label: string
@@ -179,6 +185,13 @@ export interface AtsCategory {
   weight: number
   ai_dependent: boolean
   confidence: 'high' | 'medium' | 'best_effort'
+  point_impact?: number          // spec 004 US6: exact points this category cost
+  sub_checks?: AtsSubCheck[]      // spec 004 US6: drill-down
+}
+
+export interface AtsIssueExample {
+  before: string
+  after: string
 }
 
 export interface AtsIssue {
@@ -186,17 +199,60 @@ export interface AtsIssue {
   severity: 'high' | 'medium' | 'low'
   message: string
   recommendation: string
+  point_impact?: number           // spec 004 US6: indicative (apportioned)
+  example?: AtsIssueExample | null // spec 004 US6: illustrative before→after
 }
 
 export interface AtsKeywordCoverage {
   matched: string[]
   missing: string[]
   available: boolean
+  source?: 'ai' | 'deterministic' | null  // spec 004 US3
 }
 
 export interface AtsStrength {
   category: string
   message: string
+}
+
+// ── Spec 004: parsed résumé record ("what an ATS reads") ──────────────────
+export interface AtsContact {
+  name?: string | null
+  email?: string | null
+  phone?: string | null
+  links?: string[]
+  confidence?: number
+}
+
+export interface AtsExperienceEntry {
+  role?: string | null
+  employer?: string | null
+  start?: string | null
+  end?: string | null
+  confidence?: number
+  gaps?: string[]
+}
+
+export interface AtsEducationEntry {
+  institution?: string | null
+  qualification?: string | null
+  year?: string | null
+  confidence?: number
+}
+
+export interface ParsedResumeRecord {
+  contact: AtsContact
+  experience: AtsExperienceEntry[]
+  education: AtsEducationEntry[]
+  skills: string[]
+  overall_parse_confidence: number
+  unextractable: string[]
+}
+
+export interface AtsChangedSincePrevious {
+  previous_score: number
+  delta: number
+  resolved_issues: string[]
 }
 
 export interface AtsResult {
@@ -209,6 +265,10 @@ export interface AtsResult {
   strengths?: AtsStrength[]
   next_steps?: string[]
   score_explanation?: string | null
+  // spec 004 (additive; pre-004 results omit these)
+  parsed_record?: ParsedResumeRecord | null
+  target_role?: string | null
+  changed_since_previous?: AtsChangedSincePrevious | null
 }
 
 export interface SkillItem {
@@ -296,20 +356,22 @@ export const deleteAccount = () =>
 
 // ── CV ───────────────────────────────────────────────────────────────────────
 
-export const uploadCV = (file: File, jdText?: string, analysisMode: AnalysisMode = 'job_match') => {
+export const uploadCV = (file: File, jdText?: string, analysisMode: AnalysisMode = 'job_match', targetRole?: string) => {
   const form = new FormData()
-  form.append('cv_file', file)
+  form.append('cv_file', file)          // PDF or .docx (spec 004 US1)
   if (jdText && jdText.trim()) form.append('jd_text', jdText)
   form.append('analysis_mode', analysisMode)
+  if (targetRole && targetRole.trim()) form.append('target_role', targetRole)
   return api.post<CVUploadResponse>('/cv/upload', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 }
 
-export const useStoredCv = (jdText?: string, analysisMode: AnalysisMode = 'job_match') =>
+export const useStoredCv = (jdText?: string, analysisMode: AnalysisMode = 'job_match', targetRole?: string) =>
   api.post<CVUploadResponse>('/cv/use-stored', {
     jd_text: jdText && jdText.trim() ? jdText : null,
     analysis_mode: analysisMode,
+    target_role: targetRole && targetRole.trim() ? targetRole : null,
   })
 
 export const getAtsResult = (sessionId: number) =>
